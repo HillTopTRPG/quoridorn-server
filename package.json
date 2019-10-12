@@ -1,0 +1,25 @@
+{
+  "name": "quoridorn-server",
+  "version": "1.0.0",
+  "description": "Application server of the Quoridorn.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "tsc": "tsc"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/HillTopTRPG/quoridorn-server.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/HillTopTRPG/quoridorn-server/issues"
+  },
+  "homepage": "https://github.com/HillTopTRPG/quoridorn-server#readme",
+  "dependencies": {
+    "nekostore": "^0.4.1",
+    "typescript": "^3.6.4"
+  }
+}
