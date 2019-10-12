@@ -20,6 +20,7 @@
   "homepage": "https://github.com/HillTopTRPG/quoridorn-server#readme",
   "dependencies": {
     "nekostore": "^0.4.1",
+    "socket.io": "^2.3.0",
     "typescript": "^3.6.4"
   }
 }
