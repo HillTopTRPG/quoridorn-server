@@ -9,5 +9,6 @@ nekostore：<https://github.com/esnya/nekostore>
 
 # 使い方
 1. `git clone https://github.com/HillTopTRPG/quoridorn-server.git`
+1. `cd quoridorn-server`
 1. `npm install`
 1. `npx ts-node server.ts`
