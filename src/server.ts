@@ -14,6 +14,8 @@ import * as path from "path";
 
 const serverSetting: ServerSetting = YAML.parse(fs.readFileSync(path.resolve(__dirname, "../conf/server.yaml"), "utf8"));
 
+const driver = new BasicDriver();
+
 /**
  * 部屋情報一覧（サーバ設定の部屋数の数の長さの配列）を返却する
  * @param driver
@@ -22,20 +24,19 @@ async function getRoomList(driver: Driver): Promise<(StoreObj<RoomInfo> & StoreM
   try {
     const c = driver.collection<StoreObj<StoreRoomInfo>>("quoridorn-room-list");
     const infoList: (StoreObj<RoomInfo> & StoreMetaData)[] = (await c.orderBy("order").get()).docs
-    .filter(doc => doc.exists())
-    .map(doc => {
-      const data: StoreObj<StoreRoomInfo> = doc.data!;
-      console.log(data);
-      if (data.data.password) data.data.password = "exist";
-      const result = {
-        ...data,
-        id: doc.ref.id,
-        createTime: doc.createTime ? doc.createTime.toDate() : null,
-        updateTime: doc.updateTime ? doc.updateTime.toDate() : null
-      };
-      delete result.data.tableName;
-      return result;
-    });
+      .filter(doc => doc.exists())
+      .map(doc => {
+        const data: StoreObj<StoreRoomInfo> = doc.data!;
+        if (data.data.password) data.data.password = "exist";
+        const result = {
+          ...data,
+          id: doc.ref.id,
+          createTime: doc.createTime ? doc.createTime.toDate() : null,
+          updateTime: doc.updateTime ? doc.updateTime.toDate() : null
+        };
+        delete result.data.tableName;
+        return result;
+      });
     for (let i = 0; i < serverSetting.roomNum; i++) {
       if (infoList[i] && infoList[i].order === i) continue;
       infoList.splice(i, 1, {
@@ -60,9 +61,12 @@ async function getRoomList(driver: Driver): Promise<(StoreObj<RoomInfo> & StoreM
  * @param exclusionOwner
  */
 async function touchRoom(driver: Driver, no: number, exclusionOwner: string): Promise<void> {
+  // console.log(`touchRoom room-no=${no}, exclusionOwner=${exclusionOwner}`);
   const c = await driver.collection<StoreObj<StoreRoomInfo>>("quoridorn-room-list");
   const docList = (await c.where("order", "==", no).get()).docs;
+  // console.log(docList.length);
   if (!docList.length) {
+    // console.log("add");
     c.add({
       order: no,
       exclusionOwner
@@ -70,6 +74,7 @@ async function touchRoom(driver: Driver, no: number, exclusionOwner: string): Pr
     return;
   }
 
+  // console.log("update");
   const doc = docList[0];
   if (doc.data.exclusionOwner) throw new ApplicationError(`Already touched room. room-no=${no}`);
   doc.ref.update({
@@ -85,6 +90,7 @@ async function touchRoom(driver: Driver, no: number, exclusionOwner: string): Pr
  * @param exclusionOwner
  */
 async function createRoom(driver: Driver, no: number, roomInfo: RoomInfo, exclusionOwner: string): Promise<string> {
+  // console.log("createRoom", no, roomInfo);
   const c = await driver.collection<StoreObj<StoreRoomInfo>>("quoridorn-room-list");
   const docList = (await c.where("order", "==", no).get()).docs;
   if (!docList.length) throw new Error(`No such room error. room-no=${no}`);
@@ -147,7 +153,6 @@ function main(socket: any) {
   console.log("Connected", socket.id);
 
   // nekostore起動！
-  const driver = new BasicDriver();
   new SocketDriverServer(driver, socket);
 
   // 部屋情報一覧取得リクエスト
@@ -155,6 +160,7 @@ function main(socket: any) {
     try {
       socket.emit("result-get-room-list", null, await getRoomList(driver));
     } catch(err) {
+      console.error(err.toString());
       socket.emit("result-get-room-list", err, null);
     }
   });
@@ -165,6 +171,7 @@ function main(socket: any) {
       await touchRoom(driver, no, socket.id);
       socket.emit("result-touch-room", null, null);
     } catch(err) {
+      console.error(err.toString());
       socket.emit("result-touch-room", err.toString(), null);
     }
   });
@@ -174,6 +181,7 @@ function main(socket: any) {
     try {
       socket.emit("result-create-room", null, await createRoom(driver, no, roomInfo, socket.id));
     } catch(err) {
+      console.error(err.toString());
       socket.emit("result-create-room", err.toString(), null);
     }
   });
@@ -183,6 +191,7 @@ function main(socket: any) {
     try {
       socket.emit("result-login", null, await login(driver, no, password));
     } catch(err) {
+      console.error(err.toString());
       socket.emit("result-login", err.toString(), null);
     }
   });
