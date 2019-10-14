@@ -1,0 +1,15 @@
+# サーバのポート
+port: 2222
+
+# データの保存の仕方（memory or mongodb）
+storeType: memory
+
+# mongodbの接続文字列
+mongodbConnectionStrings: mongodb://localhost:27017/quoridorn
+
+# 設置できる部屋の数
+roomNum: 100
+
+# 無人になった部屋が削除されるまでの期間（単位：分）初期値：3日間(4320)
+# 無限にする場合は -1 を設定
+roomAutoRemove: 4320

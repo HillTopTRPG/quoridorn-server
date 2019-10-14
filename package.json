@@ -5,7 +5,9 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "tsc": "tsc"
+    "tsc": "tsc -t ES5",
+    "serve": "npx ts-node src/server.ts",
+    "serve-client": "npx ts-node client.ts"
   },
   "repository": {
     "type": "git",
@@ -19,8 +21,15 @@
   },
   "homepage": "https://github.com/HillTopTRPG/quoridorn-server#readme",
   "dependencies": {
+    "@types/uuid": "^3.4.5",
+    "argon2": "^0.25.0",
+    "bcrypt": "^3.0.6",
+    "moment": "^2.24.0",
+    "mongodb": "^3.3.2",
     "nekostore": "^0.4.1",
     "socket.io": "^2.3.0",
-    "typescript": "^3.6.4"
+    "typescript": "^3.6.4",
+    "uuid": "^3.3.3",
+    "yaml": "^1.7.1"
   }
 }
