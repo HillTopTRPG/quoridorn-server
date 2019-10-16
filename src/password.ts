@@ -1,18 +1,20 @@
-import {ApplicationError} from "./ApplicationError";
-
+import {ApplicationError} from "./error/ApplicationError";
 // const argon2 = require("argon2");
 const bcrypt = require("bcrypt");
 
 type HashAlgorithmType = "argon2" | "bcrypt";
 
-const generateDefaultPromiseCallback = (resolve, reject) => (err, result) => {
-  if (err) {
-    reject(err);
-    return;
-  }
-  resolve(result);
-};
+/* TODO
+ * 現在、Argon2 がビルドできないためサポート外の暗号化アルゴリズムとなっている。
+ * この問題がクリアできれば、Argon2 アルゴリズムを使いたい。
+ */
 
+/**
+ * パスワードをハッシュ化する
+ * @param planeText
+ * @param type
+ * @param option
+ */
 export async function hash(
   planeText: string,
   type: HashAlgorithmType = "argon2",
@@ -28,6 +30,13 @@ export async function hash(
   throw new ApplicationError(`Unsupported algorithm type. ${type}`);
 }
 
+/**
+ * パスワードを照合する
+ * @param hash
+ * @param planeText
+ * @param type
+ * @param args
+ */
 export async function verify(
   hash: string,
   planeText: string,
@@ -42,3 +51,11 @@ export async function verify(
   // if (type === "argon2") return await argon2.verify(hash, planeText);
   throw new ApplicationError(`Unsupported algorithm type. ${type}`);
 }
+
+const generateDefaultPromiseCallback = (resolve, reject) => (err, result) => {
+  if (err) {
+    reject(err);
+    return;
+  }
+  resolve(result);
+};
