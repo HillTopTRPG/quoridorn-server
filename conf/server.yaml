@@ -2,7 +2,8 @@
 port: 2222
 
 # データ保持の手段（memory or mongodb）
-storeType: memory
+#storeType: memory
+storeType: mongodb
 
 # 【注意】
 # この設定値は必ず書き換え、他人に漏らさないこと。
@@ -25,11 +26,12 @@ storeType: memory
 secretCollectionSuffix: c8c4b7f3-ce60-41ba-a0d3-e90876d09c1a
 
 # MongoDBの接続文字列
-mongodbConnectionStrings: mongodb://localhost:27017/quoridorn
+mongodbConnectionStrings: mongodb://localhost:27017/
 
 # 設置できる部屋の数
 roomNum: 100
 
 # 無人になった部屋が削除されるまでの期間（単位：分）初期値：3日間(4320)
 # 無限にする場合は -1 を設定
+# ※ 未実装
 roomAutoRemove: 4320

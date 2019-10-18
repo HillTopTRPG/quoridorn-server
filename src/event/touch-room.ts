@@ -7,7 +7,7 @@ import Driver from "nekostore/lib/Driver";
 
 // インタフェース
 const eventName = "touch-room";
-type RequestType = number;
+type RequestType = { order: number };
 type ResponseType = void;
 
 /**
@@ -19,23 +19,17 @@ type ResponseType = void;
 async function touchRoom(driver: Driver, exclusionOwner: string, arg: RequestType): Promise<ResponseType> {
   // console.log(`touchRoom room-no=${no}, exclusionOwner=${exclusionOwner}`);
   const c = await driver.collection<StoreObj<RoomInfo>>(SYSTEM_COLLECTION.ROOM_LIST);
-  const docList = (await c.where("order", "==", arg).get()).docs;
-  // console.log(docList.length);
+  const docList = (await c.where("order", "==", arg.order).get()).docs;
   if (!docList.length) {
     // console.log("add");
     c.add({
-      order: arg,
+      order: arg.order,
       exclusionOwner
     });
     return;
   }
 
-  // console.log("update");
-  const doc = docList[0];
-  if (doc.data.exclusionOwner) throw new ApplicationError(`Already touched room. room-no=${arg}`);
-  doc.ref.update({
-    exclusionOwner
-  });
+  throw new ApplicationError(`Already touched or created room. room-no=${arg.order + 1}`);
 }
 
 const resist: Resister = (driver: Driver, socket: any): void => {

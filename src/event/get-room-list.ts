@@ -19,10 +19,12 @@ async function getRoomList(driver: Driver): Promise<ResponseType> {
     .filter(doc => doc.exists())
     .map(doc => getStoreObj(doc));
 
+    console.log(infoList);
+
     // サーバ設定部屋数の数だけ要素のある配列に整えていく
     for (let i = 0; i < serverSetting.roomNum; i++) {
       if (infoList[i] && infoList[i].order === i) continue;
-      infoList.splice(i, 1, {
+      infoList.splice(i, 0, {
         order: i,
         exclusionOwner: null,
         id: null,
