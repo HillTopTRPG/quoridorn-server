@@ -1,18 +1,23 @@
 import Nekostore from "nekostore";
 import SocketDriver from "nekostore/lib/driver/socket";
-import * as Socket from "socket.io-client";
 import moment from "moment";
+import * as Socket from 'socket.io-client';
 
 const host = "127.0.0.1";
-const port = 2222;
+const port = 8000;
 
-async function client(): Promise<void> {
+interface Data {
+  foo: string;
+  bar?: number;
+}
+
+async function test_client(): Promise<void> {
   const socket = Socket.connect(`http://${host}:${port}`);
 
   const driver = new SocketDriver({ socket });
   const nekostore = new Nekostore(driver);
 
-  const c1Ref = nekostore.collection<any>("c1");
+  const c1Ref = nekostore.collection<Data>("c1");
 
   const unsubscribe1 = await c1Ref.onSnapshot(snapshot => {
     snapshot.docs.forEach(doc => {
@@ -26,14 +31,14 @@ async function client(): Promise<void> {
     });
   });
 
-
   const d1Ref = await c1Ref.doc("d1");
   await d1Ref.set({ foo: "a", bar: 0 });
 
   await unsubscribe1();
-  socket.disconnect();
+  // socket.disconnect();
 }
-client().then(() => {}, err => {
-  console.error(err);
+
+test_client().then(() => {}, err => {
+  console.log(err);
   process.exit(err);
 });

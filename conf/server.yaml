@@ -1,5 +1,5 @@
 # サーバのポート
-port: 2222
+port: 8000
 
 # データ保持の手段（memory or mongodb）
 #storeType: memory

@@ -4,10 +4,13 @@
   "description": "Application server of the Quoridorn.",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "tsc": "tsc -t ES5",
-    "serve": "npx ts-node src/server.ts",
-    "serve-client": "npx ts-node client.ts"
+    "build": "tsc -t ES5",
+    "node-server": "node dist/server.js",
+
+    "server": "npx ts-node src/server.ts",
+    "test-server": "npx ts-node src/nekostore_test/test_server.ts",
+    "test-client": "npx ts-node src/nekostore_test/test_client.ts",
+    "node-server-test": "node dist/nekostore_test/test_server.js"
   },
   "repository": {
     "type": "git",
