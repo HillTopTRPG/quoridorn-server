@@ -1,11 +1,11 @@
 # quoridorn-server
 Application server of the Quoridorn.
 
-対応するクライアント<br>
-quoridorn-mark2：<https://github.com/HillTopTRPG/quoridorn-mark2>
+クライアント：quoridorn-mark2([GitHub](https://github.com/HillTopTRPG/quoridorn-mark2))<br>
 
-*producing by HillTop*<br>
-Twitter：<https://twitter.com/HillTop_TRPG>
+## Quoridornとは？
+* [公式サイト](http://quoridorn.com)<br>
+* 制作者：HillTop([Twitter](https://twitter.com/HillTop_TRPG))
 
 ## 構成物
 * Node.js
