@@ -1,7 +1,7 @@
 # quoridorn-server
 Application server of the Quoridorn.
 
-クライアント：quoridorn-mark2([GitHub](https://github.com/HillTopTRPG/quoridorn-mark2))<br>
+クライアント：quoridorn-mark2([GitHub](https://github.com/HillTopTRPG/quoridorn-mark2))
 
 ## Quoridornとは？
 * [公式サイト](http://quoridorn.com)<br>
@@ -40,8 +40,8 @@ Application server of the Quoridorn.
 
 1. Quoridornサーバの設定を編集
    1. 「quoridorn-server/conf/server.yaml」を編集する（テキストエディタで編集可能）<br>
-      書き方や注意点はyamlファイル内にコメントを書いてあるので、それを見ながら頑張って設定値を書いて欲しい。<br>
-      前項でメモしておいたMongoDBの接続文字列はこのファイルに設定する。
+      書き方や注意点はyamlファイル内にコメントを書いてあるので、それを見ながら頑張って設定値を書いて欲しい<br>
+      前項でメモしておいたMongoDBの接続文字列はこのファイルに設定する
 
 1. Quoridornサーバを起動
    1. `npm run node-server` Node.jsサーバを起動
