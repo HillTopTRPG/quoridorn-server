@@ -16,10 +16,10 @@ async function getRoomList(driver: Driver): Promise<ResponseType> {
   try {
     const c = driver.collection<StoreObj<RoomInfo>>(SYSTEM_COLLECTION.ROOM_LIST);
     const infoList: ResponseType = (await c.orderBy("order").get()).docs
-    .filter(doc => doc.exists())
-    .map(doc => getStoreObj(doc));
+      .filter(doc => doc.exists())
+      .map(doc => getStoreObj(doc));
 
-    console.log(infoList);
+    // console.log("roomList:", infoList);
 
     // サーバ設定部屋数の数だけ要素のある配列に整えていく
     for (let i = 0; i < serverSetting.roomNum; i++) {

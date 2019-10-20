@@ -5,7 +5,6 @@ import YAML from "yaml";
 import {ServerSetting} from "./@types/server";
 import * as path from "path";
 import resistGetRoomListEvent from "./event/get-room-list";
-import resistTouchRoomEvent from "./event/touch-room";
 import resistCreateRoomEvent from "./event/create-room";
 import resistLoginEvent from "./event/login";
 import Driver from "nekostore/lib/Driver";
@@ -22,9 +21,13 @@ export const serverSetting: ServerSetting = YAML.parse(fs.readFileSync(path.reso
  */
 export namespace SYSTEM_COLLECTION {
   /** 部屋一覧 */
-  export const ROOM_LIST = "quoridorn-room-list";
+  export const ROOM_LIST = "quoridorn-rooms";
+  /** ユーザ一覧 */
+  export const USER_LIST = "quoridorn-users";
   /** 部屋に関するシークレットコレクション */
-  export const ROOM_SECRET= `room-secret-collection-${serverSetting.secretCollectionSuffix}`;
+  export const ROOM_SECRET= `quoridorn-secret-rooms-${serverSetting.secretCollectionSuffix}`;
+  /** ユーザ情報に関するシークレットコレクション */
+  export const USER_SECRET= `quoridorn-secret-user-${serverSetting.secretCollectionSuffix}`;
 }
 
 async function getStore(setting: ServerSetting): Promise<Store> {
@@ -75,14 +78,21 @@ async function main(): Promise<void> {
       [
         // 部屋情報一覧取得リクエスト
         resistGetRoomListEvent,
-        // 部屋作成着手リクエスト
-        resistTouchRoomEvent,
         // 部屋作成リクエスト
         resistCreateRoomEvent,
         // ログインリクエスト
         resistLoginEvent
       ].forEach((r: Resister) => r(driver, socket));
     });
+
+    // 5分おきに...
+    // TODO systemCollectionTouchTimeoutの処理
+    // setInterval(async () => {
+    //   const roomDocList = (await driver.collection<StoreObj<RoomInfo>>(SYSTEM_COLLECTION.ROOM_LIST)
+    //     .where("data", "==", null)
+    //     .get()).docs;
+    //
+    // }, 1000 * 60 * 5);
   } catch (err) {
     console.error("MongoDB connect fail.");
     console.error(err);

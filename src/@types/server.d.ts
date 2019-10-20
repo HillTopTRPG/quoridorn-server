@@ -5,9 +5,10 @@ export type ServerSetting = {
   mongodbConnectionStrings: string;
   roomNum: number;
   roomAutoRemove: number;
+  systemCollectionTouchTimeout: number;
 };
 
-export type RoomPrivateCollection = {
+export type RoomSecretInfo = {
   roomId: string;
   password: string;
   roomCollectionSuffix: string;

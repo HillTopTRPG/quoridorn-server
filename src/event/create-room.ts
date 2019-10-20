@@ -1,16 +1,16 @@
 import {StoreObj} from "../@types/store";
 import {RoomInfo} from "../@types/room";
 import {Resister, SYSTEM_COLLECTION} from "../server";
-import {ApplicationError} from "../error/ApplicationError";
-import {RoomPrivateCollection} from "../@types/server";
+import {RoomSecretInfo} from "../@types/server";
 import {hash} from "../password";
 import uuid from "uuid";
-import {setEvent} from "./common";
+import {getRoomInfo, setEvent} from "./common";
 import Driver from "nekostore/lib/Driver";
+import DocumentSnapshot from "nekostore/lib/DocumentSnapshot";
 
 // インタフェース
 const eventName = "create-room";
-type RequestType = { no: number; password: string; roomInfo: RoomInfo };
+type RequestType = { roomNo: number; password: string; roomInfo: RoomInfo };
 type ResponseType = string;
 
 /**
@@ -21,27 +21,22 @@ type ResponseType = string;
  */
 async function createRoom(driver: Driver, exclusionOwner: string, arg: RequestType): Promise<ResponseType> {
   // 部屋一覧の更新
-  const docList = (await driver.collection<StoreObj<RoomInfo>>(SYSTEM_COLLECTION.ROOM_LIST)
-    .where("order", "==", arg.no)
-    .get()).docs;
-  if (!docList.length) throw new Error(`No such room error. room-no=${arg.no}`);
-
-  const doc = docList[0];
-  const data = doc.data;
-
-  // 排他チェック
-  if (!data.exclusionOwner) throw new ApplicationError(`Illegal operation. room-no=${arg.no}`);
-  if (data.exclusionOwner !== exclusionOwner) throw new ApplicationError(`Other player touched. room-no=${arg.no}`);
+  const roomInfoSnapshot: DocumentSnapshot<StoreObj<RoomInfo>> = await getRoomInfo(
+    driver,
+    arg.roomNo,
+    { exclusionOwner }
+  );
+  if (!roomInfoSnapshot) throw new Error(`No such room error. room-no=${arg.roomNo}`);
 
   arg.roomInfo.hasPassword = !!arg.password;
 
-  await doc.ref.update({
+  await roomInfoSnapshot.ref.update({
     exclusionOwner: null,
     data: arg.roomInfo
   });
 
   // シークレットコレクションへの書き込み
-  const roomSecretCollection = await driver.collection<RoomPrivateCollection>(SYSTEM_COLLECTION.ROOM_SECRET);
+  const roomSecretCollection = await driver.collection<RoomSecretInfo>(SYSTEM_COLLECTION.ROOM_SECRET);
 
   // パスワードのハッシュ化
   const hashedPassword = await hash(arg.password, "bcrypt");
@@ -49,7 +44,7 @@ async function createRoom(driver: Driver, exclusionOwner: string, arg: RequestTy
   const roomCollectionSuffix = uuid.v4();
 
   roomSecretCollection.add({
-    roomId: doc.ref.id,
+    roomId: roomInfoSnapshot.ref.id,
     password: hashedPassword,
     roomCollectionSuffix
   });
