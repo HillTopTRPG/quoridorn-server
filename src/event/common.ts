@@ -51,7 +51,7 @@ export async function getRoomInfo(
   option: GetRoomInfoOption = {}
 ): Promise<DocumentSnapshot<StoreObj<RoomInfo>> | null> {
   const roomDocList = (await driver.collection<StoreObj<RoomInfo>>(SYSTEM_COLLECTION.ROOM_LIST)
-    .where("order", "==", roomNo - 1)
+    .where("order", "==", roomNo)
     .get()
   ).docs;
 
