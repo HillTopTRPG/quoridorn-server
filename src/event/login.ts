@@ -1,17 +1,16 @@
-import {Resister} from "../server";
+import {hashAlgorithm, Resister} from "../server";
 import {SystemError} from "../error/SystemError";
 import {verify} from "../password";
-import {setEvent, getRoomInfo, removeRoomViewer} from "./common";
+import {setEvent, getRoomInfo, removeRoomViewer, userLogin} from "./common";
 import Driver from "nekostore/lib/Driver";
 import DocumentSnapshot from "nekostore/lib/DocumentSnapshot";
-import {LoginResponse, RoomStore} from "../@types/room";
+import {LoginRequest, LoginResponse, RoomStore, UserLoginRequest, UserType} from "../@types/room";
 import {StoreObj} from "../@types/store";
 import {ApplicationError} from "../error/ApplicationError";
-import {log} from "util";
 
 // インタフェース
 const eventName = "login";
-type RequestType = { id: string; roomNo: number; password: string };
+type RequestType = LoginRequest;
 type ResponseType = LoginResponse | null;
 
 /**
@@ -21,18 +20,23 @@ type ResponseType = LoginResponse | null;
  * @param arg
  */
 async function login(driver: Driver, exclusionOwner: string, arg: RequestType): Promise<ResponseType> {
-  const roomInfoSnapshot: DocumentSnapshot<StoreObj<RoomStore>> = await getRoomInfo(driver, arg.roomNo);
+  // 部屋一覧の更新
+  const roomInfoSnapshot: DocumentSnapshot<StoreObj<RoomStore>> = await getRoomInfo(
+    driver,
+    arg.roomNo,
+    { exclusionOwner, id: arg.roomId }
+  );
+  if (!roomInfoSnapshot) throw new ApplicationError(`Untouched room error. room-no=${arg.roomNo}`);
 
-  // 部屋存在チェック
-  if (!roomInfoSnapshot || !roomInfoSnapshot.data || !roomInfoSnapshot.data.data || roomInfoSnapshot.ref.id !== arg.id)
-    throw new ApplicationError(`No such room error. room-no=${arg.roomNo}`);
+  const data = roomInfoSnapshot.data;
+  if (data.data)
+    throw new ApplicationError(`Already created room error. room-no=${arg.roomNo}`);
 
+  // 部屋パスワードチェック
   try {
-    if (await verify(roomInfoSnapshot.data.data.password, arg.password, "bcrypt")) {
+    if (await verify(roomInfoSnapshot.data.data.roomPassword, arg.roomPassword, hashAlgorithm)) {
       // パスワードチェックOK
-      delete roomInfoSnapshot.data.data.password;
-      removeRoomViewer(driver, exclusionOwner);
-      return roomInfoSnapshot.data.data;
+      delete roomInfoSnapshot.data.data.roomPassword;
     } else {
       // パスワードチェックで引っかかった
       return null;
@@ -40,6 +44,21 @@ async function login(driver: Driver, exclusionOwner: string, arg: RequestType): 
   } catch (err) {
     throw new SystemError(`Login verify fatal error. room-no=${arg.roomNo}`);
   }
+
+  // ユーザログイン処理
+  const userLoginInfo: UserLoginRequest = {
+    roomId: arg.roomId,
+    userName: arg.userName,
+    userType: arg.userType,
+    userPassword: arg.userPassword
+  };
+  if (!await userLogin(driver, userLoginInfo)) {
+    // ログイン失敗
+    return null;
+  }
+
+  await removeRoomViewer(driver, exclusionOwner);
+  return roomInfoSnapshot.data.data;
 }
 
 const resist: Resister = (driver: Driver, socket: any): void => {

@@ -1,11 +1,12 @@
 import {StoreObj} from "../@types/store";
 import {CreateRoomRequest, RoomStore} from "../@types/room";
-import {Resister} from "../server";
+import {hashAlgorithm, Resister} from "../server";
 import {hash} from "../password";
 import uuid from "uuid";
-import {getRoomInfo, removeRoomViewer, setEvent} from "./common";
+import {getRoomInfo, removeRoomViewer, setEvent, userLogin} from "./common";
 import Driver from "nekostore/lib/Driver";
 import DocumentSnapshot from "nekostore/lib/DocumentSnapshot";
+import {ApplicationError} from "../error/ApplicationError";
 
 // インタフェース
 const eventName = "create-room";
@@ -23,18 +24,22 @@ async function createRoom(driver: Driver, exclusionOwner: string, arg: RequestTy
   const roomInfoSnapshot: DocumentSnapshot<StoreObj<RoomStore>> = await getRoomInfo(
     driver,
     arg.roomNo,
-    { exclusionOwner }
+    { exclusionOwner, id: arg.roomId }
   );
-  if (!roomInfoSnapshot) throw new Error(`No such room error. room-no=${arg.roomNo}`);
+  if (!roomInfoSnapshot) throw new ApplicationError(`Untouched room error. room-no=${arg.roomNo}`);
+
+  const data = roomInfoSnapshot.data;
+  if (data.data)
+    throw new ApplicationError(`Already created room error. room-no=${arg.roomNo}`);
 
   // リクエスト情報の加工
-  arg.password = await hash(arg.password, "bcrypt");
+  arg.roomPassword = await hash(arg.roomPassword, hashAlgorithm);
   delete arg.roomNo;
 
   const storeData: RoomStore = {
     ...arg,
     memberNum: 1,
-    hasPassword: !!arg.password,
+    hasPassword: !!arg.roomPassword,
     roomCollectionSuffix: uuid.v4()
   };
 
@@ -43,7 +48,10 @@ async function createRoom(driver: Driver, exclusionOwner: string, arg: RequestTy
     data: storeData
   });
 
-  removeRoomViewer(driver, exclusionOwner);
+  // つくりたてほやほやの部屋にユーザを追加する
+  await userLogin(driver, arg);
+
+  await removeRoomViewer(driver, exclusionOwner);
 
   return storeData.roomCollectionSuffix;
 }

@@ -3,11 +3,11 @@ import {Resister, SYSTEM_COLLECTION} from "../server";
 import {ApplicationError} from "../error/ApplicationError";
 import {getRoomInfo, setEvent} from "./common";
 import Driver from "nekostore/lib/Driver";
-import {RoomStore} from "../@types/room";
+import {RoomStore, TouchRequest} from "../@types/room";
 
 // インタフェース
 const eventName = "touch-room";
-type RequestType = { roomNo: number };
+type RequestType = TouchRequest;
 type ResponseType = void;
 
 /**

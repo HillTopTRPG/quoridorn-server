@@ -22,7 +22,7 @@ async function getRoomList(driver: Driver, socket: any): Promise<ResponseType> {
       .map(doc => {
         const roomStore: StoreObj<RoomStore> & StoreMetaData = getStoreObj<RoomStore>(doc)!;
         if (roomStore.data) {
-          delete roomStore.data.password;
+          delete roomStore.data.roomPassword;
           delete roomStore.data.roomCollectionSuffix;
         }
         return roomStore as StoreObj<GetRoomListResponse> & StoreMetaData;
@@ -42,7 +42,7 @@ async function getRoomList(driver: Driver, socket: any): Promise<ResponseType> {
               const updateTime: Date = change.updateTime ? change.updateTime.toDate() : null;
 
               if (data && data.data) {
-                delete data.data.password;
+                delete data.data.roomPassword;
                 delete data.data.roomCollectionSuffix;
               }
               return {

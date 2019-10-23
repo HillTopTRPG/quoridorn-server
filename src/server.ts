@@ -14,10 +14,13 @@ import Store from "nekostore/src/store/Store";
 import MongoStore from "nekostore/lib/store/MongoStore";
 import MemoryStore from "nekostore/lib/store/MemoryStore";
 import {removeRoomViewer} from "./event/common";
-const co = require('co');
+import {HashAlgorithmType} from "./password";
+const co = require("co");
 
 export type Resister = (d: Driver, socket: any) => void;
 export const serverSetting: ServerSetting = YAML.parse(fs.readFileSync(path.resolve(__dirname, "../conf/server.yaml"), "utf8"));
+
+export const hashAlgorithm: HashAlgorithmType = "bcrypt";
 
 /**
  * データストアにおいてサーバプログラムが直接参照するコレクションテーブルの名前
@@ -36,12 +39,12 @@ async function getStore(setting: ServerSetting): Promise<Store> {
   return new Promise((resolve, reject) => {
     if (setting.storeType === "mongodb") {
       co(function* () {
-        const MongoClient = require('mongodb').MongoClient;
+        const MongoClient = require("mongodb").MongoClient;
         const client = yield MongoClient.connect(setting.mongodbConnectionStrings, { useNewUrlParser: true, useUnifiedTopology: true });
         const db = client.db("quoridorn");
         resolve(new MongoStore({ db }));
       }).catch(err => {
-        console.log(err.stack);
+        console.error(err.stack);
         reject(err);
       });
     } else {
@@ -55,7 +58,7 @@ async function main(): Promise<void> {
     const store = await getStore(serverSetting);
     const driver = new BasicDriver({ store });
 
-    const io = require('socket.io').listen(serverSetting.port);
+    const io = require("socket.io").listen(serverSetting.port);
 
     // 🐧ハート💖ビート🕺
     io.set("heartbeat interval", 5000);
@@ -69,12 +72,12 @@ async function main(): Promise<void> {
       // nekostore起動！
       new SocketDriverServer(driver, socket);
 
-      socket.on('disconnect', () => {
-        console.log('disconnected', socket.id);
-        removeRoomViewer(driver, socket.id);
+      socket.on("disconnect", async () => {
+        console.log("disconnected", socket.id);
+        await removeRoomViewer(driver, socket.id);
       });
-      socket.on('error', () => {
-        console.log('error', socket.id);
+      socket.on("error", () => {
+        console.log("error", socket.id);
       });
 
       // socket.ioの各リクエストに対する処理の登録

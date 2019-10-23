@@ -2,7 +2,7 @@ import {ApplicationError} from "./error/ApplicationError";
 // const argon2 = require("argon2");
 const bcrypt = require("bcrypt");
 
-type HashAlgorithmType = "argon2" | "bcrypt";
+export type HashAlgorithmType = "argon2" | "bcrypt";
 
 /* TODO
  * 現在、Argon2 がビルドできないためサポート外の暗号化アルゴリズムとなっている。

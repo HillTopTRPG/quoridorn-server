@@ -1,6 +1,6 @@
 import Nekostore from "nekostore";
 import SocketDriver from "nekostore/lib/driver/socket";
-import * as Socket from 'socket.io-client';
+import * as Socket from "socket.io-client";
 import QuerySnapshot from "nekostore/lib/QuerySnapshot";
 
 // const host = "http://127.0.0.1";

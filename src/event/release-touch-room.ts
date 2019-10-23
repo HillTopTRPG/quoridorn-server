@@ -2,10 +2,11 @@ import {Resister} from "../server";
 import {ApplicationError} from "../error/ApplicationError";
 import {getRoomInfo, setEvent} from "./common";
 import Driver from "nekostore/lib/Driver";
+import {ReleaseTouchRequest} from "../@types/room";
 
 // インタフェース
 const eventName = "release-touch-room";
-type RequestType = { roomNo: number };
+type RequestType = ReleaseTouchRequest;
 type ResponseType = void;
 
 /**
