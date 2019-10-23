@@ -7,9 +7,3 @@ export type ServerSetting = {
   roomAutoRemove: number;
   systemCollectionTouchTimeout: number;
 };
-
-export type RoomSecretInfo = {
-  roomId: string;
-  password: string;
-  roomCollectionSuffix: string;
-};

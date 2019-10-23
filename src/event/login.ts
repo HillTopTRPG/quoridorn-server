@@ -1,38 +1,38 @@
 import {Resister} from "../server";
-import {RoomSecretInfo} from "../@types/server";
 import {SystemError} from "../error/SystemError";
 import {verify} from "../password";
-import {setEvent, getSecretRoomInfo, getRoomInfo} from "./common";
+import {setEvent, getRoomInfo, removeRoomViewer} from "./common";
 import Driver from "nekostore/lib/Driver";
 import DocumentSnapshot from "nekostore/lib/DocumentSnapshot";
-import {RoomInfo} from "../@types/room";
+import {LoginResponse, RoomStore} from "../@types/room";
 import {StoreObj} from "../@types/store";
 import {ApplicationError} from "../error/ApplicationError";
+import {log} from "util";
 
 // インタフェース
 const eventName = "login";
 type RequestType = { id: string; roomNo: number; password: string };
-type ResponseType = string | null;
+type ResponseType = LoginResponse | null;
 
 /**
  * ログイン処理
  * @param driver
+ * @param exclusionOwner
  * @param arg
  */
-async function login(driver: Driver, arg: RequestType): Promise<ResponseType> {
-  const roomInfoSnapshot: DocumentSnapshot<StoreObj<RoomInfo>> = await getRoomInfo(driver, arg.roomNo);
+async function login(driver: Driver, exclusionOwner: string, arg: RequestType): Promise<ResponseType> {
+  const roomInfoSnapshot: DocumentSnapshot<StoreObj<RoomStore>> = await getRoomInfo(driver, arg.roomNo);
 
   // 部屋存在チェック
-  if (!roomInfoSnapshot || !roomInfoSnapshot.data || roomInfoSnapshot.ref.id !== arg.id)
+  if (!roomInfoSnapshot || !roomInfoSnapshot.data || !roomInfoSnapshot.data.data || roomInfoSnapshot.ref.id !== arg.id)
     throw new ApplicationError(`No such room error. room-no=${arg.roomNo}`);
 
-  const secretRoomInfo: RoomSecretInfo = await getSecretRoomInfo(driver, arg.roomNo, arg.id);
-
   try {
-    if (await verify(secretRoomInfo.password, arg.password, "bcrypt")) {
+    if (await verify(roomInfoSnapshot.data.data.password, arg.password, "bcrypt")) {
       // パスワードチェックOK
-      // 部屋データコレクションの接尾子を返却する
-      return secretRoomInfo.roomCollectionSuffix;
+      delete roomInfoSnapshot.data.data.password;
+      removeRoomViewer(driver, exclusionOwner);
+      return roomInfoSnapshot.data.data;
     } else {
       // パスワードチェックで引っかかった
       return null;
@@ -43,6 +43,6 @@ async function login(driver: Driver, arg: RequestType): Promise<ResponseType> {
 }
 
 const resist: Resister = (driver: Driver, socket: any): void => {
-  setEvent<RequestType, ResponseType>(driver, socket, eventName, login);
+  setEvent<RequestType, ResponseType>(driver, socket, eventName, (driver: Driver, arg: RequestType) => login(driver, socket.id, arg));
 };
 export default resist;

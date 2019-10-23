@@ -5,12 +5,15 @@ import YAML from "yaml";
 import {ServerSetting} from "./@types/server";
 import * as path from "path";
 import resistGetRoomListEvent from "./event/get-room-list";
+import resistTouchRoomEvent from "./event/touch-room";
+import resistReleaseTouchRoomEvent from "./event/release-touch-room";
 import resistCreateRoomEvent from "./event/create-room";
 import resistLoginEvent from "./event/login";
 import Driver from "nekostore/lib/Driver";
 import Store from "nekostore/src/store/Store";
 import MongoStore from "nekostore/lib/store/MongoStore";
 import MemoryStore from "nekostore/lib/store/MemoryStore";
+import {removeRoomViewer} from "./event/common";
 const co = require('co');
 
 export type Resister = (d: Driver, socket: any) => void;
@@ -21,14 +24,13 @@ export const serverSetting: ServerSetting = YAML.parse(fs.readFileSync(path.reso
  */
 export namespace SYSTEM_COLLECTION {
   /** 部屋一覧 */
-  export const ROOM_LIST = "quoridorn-rooms";
+  export const ROOM_LIST = `rooms-${serverSetting.secretCollectionSuffix}`;
+  /** 部屋一覧情報を受信するsocket.idの一覧 */
+  export const ROOM_VIEWER_LIST = `room-viewer-list-${serverSetting.secretCollectionSuffix}`;
   /** ユーザ一覧 */
-  export const USER_LIST = "quoridorn-users";
-  /** 部屋に関するシークレットコレクション */
-  export const ROOM_SECRET= `quoridorn-secret-rooms-${serverSetting.secretCollectionSuffix}`;
-  /** ユーザ情報に関するシークレットコレクション */
-  export const USER_SECRET= `quoridorn-secret-user-${serverSetting.secretCollectionSuffix}`;
+  export const USER_LIST = `users-${serverSetting.secretCollectionSuffix}`;
 }
+
 
 async function getStore(setting: ServerSetting): Promise<Store> {
   return new Promise((resolve, reject) => {
@@ -69,6 +71,7 @@ async function main(): Promise<void> {
 
       socket.on('disconnect', () => {
         console.log('disconnected', socket.id);
+        removeRoomViewer(driver, socket.id);
       });
       socket.on('error', () => {
         console.log('error', socket.id);
@@ -78,6 +81,10 @@ async function main(): Promise<void> {
       [
         // 部屋情報一覧取得リクエスト
         resistGetRoomListEvent,
+        // 部屋（作成・編集）着手リクエスト
+        resistTouchRoomEvent,
+        // 部屋（作成・編集）キャンセル処理
+        resistReleaseTouchRoomEvent,
         // 部屋作成リクエスト
         resistCreateRoomEvent,
         // ログインリクエスト
