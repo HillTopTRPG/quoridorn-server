@@ -1,15 +1,29 @@
 import {StoreMetaData, StoreObj} from "../@types/store";
-import {GetRoomListResponse, RoomStore, RoomViewerStore, RoomViewResponse} from "../@types/room";
+import {
+  ClientRoomInfo,
+  GetRoomListResponse,
+  Message,
+  RoomStore,
+  RoomViewerStore,
+  RoomViewResponse
+} from "../@types/room";
 import {Resister, serverSetting, SYSTEM_COLLECTION} from "../server";
 import {setEvent, getStoreObj} from "./common";
 import Driver from "nekostore/lib/Driver";
 import {ChangeType} from "nekostore/lib/DocumentChange";
 import Unsubscribe from "nekostore/src/Unsubscribe";
+import fs from "fs";
+import YAML from "yaml";
+import * as path from "path";
+
+const message: Message = YAML.parse(fs.readFileSync(path.resolve(__dirname, "../../message/message.yaml"), "utf8"));
+const termsOfUse: string = fs.readFileSync(path.resolve(__dirname, "../../message/terms-of-use.txt"), "utf8").replace(/(\r\n)/g, "\n");
+message.termOfUse = termsOfUse;
 
 // インタフェース
 const eventName = "get-room-list";
 type RequestType = never;
-type ResponseType = (StoreObj<GetRoomListResponse> & StoreMetaData)[];
+type ResponseType = GetRoomListResponse;
 
 /**
  * 部屋情報一覧（サーバ設定の部屋数の数の長さの配列）を返却する
@@ -17,7 +31,7 @@ type ResponseType = (StoreObj<GetRoomListResponse> & StoreMetaData)[];
 async function getRoomList(driver: Driver, socket: any): Promise<ResponseType> {
   try {
     const c = driver.collection<StoreObj<RoomStore>>(SYSTEM_COLLECTION.ROOM_LIST);
-    const infoList: ResponseType = (await c.orderBy("order").get()).docs
+    const infoList: (StoreObj<ClientRoomInfo> & StoreMetaData)[] = (await c.orderBy("order").get()).docs
       .filter(doc => doc.exists())
       .map(doc => {
         const roomStore: StoreObj<RoomStore> & StoreMetaData = getStoreObj<RoomStore>(doc)!;
@@ -25,7 +39,7 @@ async function getRoomList(driver: Driver, socket: any): Promise<ResponseType> {
           delete roomStore.data.roomPassword;
           delete roomStore.data.roomCollectionSuffix;
         }
-        return roomStore as StoreObj<GetRoomListResponse> & StoreMetaData;
+        return roomStore as StoreObj<ClientRoomInfo> & StoreMetaData;
       });
 
     // コレクションに変更があるたびに、「result-room-view」イベントをクライアントに送信し続ける
@@ -80,7 +94,10 @@ async function getRoomList(driver: Driver, socket: any): Promise<ResponseType> {
         updateTime: null
       });
     }
-    return infoList;
+    return {
+      roomList: infoList,
+      message
+    };
   } catch(err) {
     console.error(err);
     throw err;
