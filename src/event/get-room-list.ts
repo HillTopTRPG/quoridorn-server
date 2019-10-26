@@ -104,7 +104,7 @@ async function getRoomList(driver: Driver, socket: any): Promise<ResponseType> {
   }
 }
 
-async function checkViewer(driver: Driver, exclusionOwner: string, isAdd: boolean): Promise<boolean> {
+export async function checkViewer(driver: Driver, exclusionOwner: string, isAdd: boolean): Promise<boolean> {
   const c = driver.collection<RoomViewerStore>(SYSTEM_COLLECTION.ROOM_VIEWER_LIST);
   const viewerInfo: RoomViewerStore | null = (await c
     .where("socketId", "==", exclusionOwner)
