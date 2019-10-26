@@ -56,7 +56,7 @@ export type ClientRoomInfo = BaseRoomInfo & {
 export type Message = {
   title: string;
   descriptions: string[];
-  termOfUse: string;
+  termsOfUse: string;
 };
 export type GetRoomListResponse = {
   roomList: (StoreObj<ClientRoomInfo> & StoreMetaData)[],

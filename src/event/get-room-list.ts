@@ -17,8 +17,8 @@ import YAML from "yaml";
 import * as path from "path";
 
 export const message: Message = YAML.parse(fs.readFileSync(path.resolve(__dirname, "../../message/message.yaml"), "utf8"));
-const termsOfUse: string = fs.readFileSync(path.resolve(__dirname, "../../message/terms-of-use.txt"), "utf8").replace(/(\r\n)/g, "\n");
-message.termOfUse = termsOfUse;
+const termsOfUse: string = fs.readFileSync(path.resolve(__dirname, "../../message/termsOfUse.txt"), "utf8");
+message.termsOfUse = termsOfUse.trim().replace(/(\r\n)/g, "\n");
 
 // インタフェース
 const eventName = "get-room-list";
