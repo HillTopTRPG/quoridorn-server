@@ -86,3 +86,7 @@ export type RoomViewerStore = {
 export type UseStore = UserLoginRequest & {
   userType: UserType;
 };
+
+export type GetVersionResponse = {
+  version: string;
+};

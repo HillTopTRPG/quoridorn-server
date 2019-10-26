@@ -9,6 +9,7 @@ import resistTouchRoomEvent from "./event/touch-room";
 import resistReleaseTouchRoomEvent from "./event/release-touch-room";
 import resistCreateRoomEvent from "./event/create-room";
 import resistLoginEvent from "./event/login";
+import resistGetVersionEvent from "./event/get-version";
 import Driver from "nekostore/lib/Driver";
 import Store from "nekostore/src/store/Store";
 import MongoStore from "nekostore/lib/store/MongoStore";
@@ -18,9 +19,10 @@ import {HashAlgorithmType} from "./password";
 const co = require("co");
 
 export type Resister = (d: Driver, socket: any) => void;
-export const serverSetting: ServerSetting = YAML.parse(fs.readFileSync(path.resolve(__dirname, "../conf/server.yaml"), "utf8"));
+export const serverSetting: ServerSetting = YAML.parse(fs.readFileSync(path.resolve(__dirname, "../config/server.yaml"), "utf8"));
 
 export const hashAlgorithm: HashAlgorithmType = "bcrypt";
+export const version: string = "Quoridorn 1.0.0a5";
 
 /**
  * データストアにおいてサーバプログラムが直接参照するコレクションテーブルの名前
@@ -91,7 +93,9 @@ async function main(): Promise<void> {
         // 部屋作成リクエスト
         resistCreateRoomEvent,
         // ログインリクエスト
-        resistLoginEvent
+        resistLoginEvent,
+        // バージョン番号取得処理
+        resistGetVersionEvent
       ].forEach((r: Resister) => r(driver, socket));
     });
 
