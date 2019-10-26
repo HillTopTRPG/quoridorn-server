@@ -22,7 +22,7 @@ export type Resister = (d: Driver, socket: any) => void;
 export const serverSetting: ServerSetting = YAML.parse(fs.readFileSync(path.resolve(__dirname, "../config/server.yaml"), "utf8"));
 
 export const hashAlgorithm: HashAlgorithmType = "bcrypt";
-export const version: string = "Quoridorn 1.0.0a5";
+export const version: string = "Quoridorn 1.0.0a6";
 
 /**
  * データストアにおいてサーバプログラムが直接参照するコレクションテーブルの名前
