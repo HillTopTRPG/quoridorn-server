@@ -89,4 +89,5 @@ export type UseStore = UserLoginRequest & {
 
 export type GetVersionResponse = {
   version: string;
+  title: string;
 };

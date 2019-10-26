@@ -16,7 +16,7 @@ import fs from "fs";
 import YAML from "yaml";
 import * as path from "path";
 
-const message: Message = YAML.parse(fs.readFileSync(path.resolve(__dirname, "../../message/message.yaml"), "utf8"));
+export const message: Message = YAML.parse(fs.readFileSync(path.resolve(__dirname, "../../message/message.yaml"), "utf8"));
 const termsOfUse: string = fs.readFileSync(path.resolve(__dirname, "../../message/terms-of-use.txt"), "utf8").replace(/(\r\n)/g, "\n");
 message.termOfUse = termsOfUse;
 

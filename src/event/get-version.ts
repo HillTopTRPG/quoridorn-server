@@ -4,6 +4,7 @@ import {
 import {Resister, version} from "../server";
 import {setEvent} from "./common";
 import Driver from "nekostore/lib/Driver";
+import {message} from "./get-room-list";
 
 // インタフェース
 const eventName = "get-version";
@@ -15,7 +16,8 @@ type ResponseType = GetVersionResponse;
  */
 async function getVersion(): Promise<ResponseType> {
   return {
-    version
+    version,
+    title: message.title
   }
 }
 
