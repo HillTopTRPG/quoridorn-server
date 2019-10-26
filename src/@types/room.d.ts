@@ -48,6 +48,7 @@ export type ReleaseTouchRequest = TouchRequest
 
 export type LoginRequest = RoomLoginInfo & UserLoginRequest;
 export type CreateRoomRequest = LoginRequest & BaseRoomInfo;
+export type DeleteRoomRequest = RoomLoginInfo;
 
 export type ClientRoomInfo = BaseRoomInfo & {
   memberNum: number;

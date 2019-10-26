@@ -10,7 +10,7 @@ type RequestType = ReleaseTouchRequest;
 type ResponseType = void;
 
 /**
- * 部屋（作成・編集）キャンセル処理
+ * 部屋（作成・編集・削除）キャンセル処理
  * @param driver
  * @param exclusionOwner
  * @param arg 部屋番号

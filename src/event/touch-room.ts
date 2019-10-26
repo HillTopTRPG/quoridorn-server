@@ -12,7 +12,7 @@ type RequestType = TouchRequest;
 type ResponseType = void;
 
 /**
- * 部屋（作成・編集）着手リクエスト
+ * 部屋（作成）着手リクエスト
  * @param driver
  * @param exclusionOwner
  * @param arg 部屋番号

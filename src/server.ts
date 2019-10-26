@@ -6,8 +6,10 @@ import {ServerSetting} from "./@types/server";
 import * as path from "path";
 import resistGetRoomListEvent from "./event/get-room-list";
 import resistTouchRoomEvent from "./event/touch-room";
+import resistTouchRoomModifyEvent from "./event/touch-room-modify";
 import resistReleaseTouchRoomEvent from "./event/release-touch-room";
 import resistCreateRoomEvent from "./event/create-room";
+import resistDeleteRoomEvent from "./event/delete-room";
 import resistLoginEvent from "./event/login";
 import resistGetVersionEvent from "./event/get-version";
 import Driver from "nekostore/lib/Driver";
@@ -22,7 +24,7 @@ export type Resister = (d: Driver, socket: any) => void;
 export const serverSetting: ServerSetting = YAML.parse(fs.readFileSync(path.resolve(__dirname, "../config/server.yaml"), "utf8"));
 
 export const hashAlgorithm: HashAlgorithmType = "bcrypt";
-export const version: string = "Quoridorn 1.0.0a8";
+export const version: string = "Quoridorn 1.0.0a9";
 
 /**
  * データストアにおいてサーバプログラムが直接参照するコレクションテーブルの名前
@@ -86,12 +88,16 @@ async function main(): Promise<void> {
       [
         // 部屋情報一覧取得リクエスト
         resistGetRoomListEvent,
-        // 部屋（作成・編集）着手リクエスト
+        // 部屋（作成）着手リクエスト
         resistTouchRoomEvent,
-        // 部屋（作成・編集）キャンセル処理
+        // 部屋（編集・削除）着手リクエスト
+        resistTouchRoomModifyEvent,
+        // 部屋（作成・削除・編集）キャンセル処理
         resistReleaseTouchRoomEvent,
         // 部屋作成リクエスト
         resistCreateRoomEvent,
+        // 部屋削除リクエスト
+        resistDeleteRoomEvent,
         // ログインリクエスト
         resistLoginEvent,
         // バージョン番号取得処理
