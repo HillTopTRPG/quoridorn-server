@@ -7,6 +7,7 @@ import {getRoomInfo, removeRoomViewer, setEvent, userLogin} from "./common";
 import Driver from "nekostore/lib/Driver";
 import DocumentSnapshot from "nekostore/lib/DocumentSnapshot";
 import {ApplicationError} from "../error/ApplicationError";
+import {releaseTouchRoom} from "./release-touch-room";
 
 // インタフェース
 const eventName = "create-room";
@@ -26,10 +27,16 @@ async function createRoom(driver: Driver, exclusionOwner: string, arg: RequestTy
     arg.roomNo,
     { exclusionOwner, id: arg.roomId }
   );
-  if (!roomInfoSnapshot) throw new ApplicationError(`Untouched room error. room-no=${arg.roomNo}`);
 
-  const data = roomInfoSnapshot.data;
-  if (data.data)
+  // タッチ解除
+  await releaseTouchRoom(driver, exclusionOwner, {
+    roomNo: arg.roomNo
+  });
+
+  if (!roomInfoSnapshot)
+    throw new ApplicationError(`Untouched room error. room-no=${arg.roomNo}`);
+
+  if (roomInfoSnapshot.data.data)
     throw new ApplicationError(`Already created room error. room-no=${arg.roomNo}`);
 
   // リクエスト情報の加工
@@ -49,19 +56,19 @@ async function createRoom(driver: Driver, exclusionOwner: string, arg: RequestTy
 
   const storeData: RoomStore = {
     ...arg,
-    memberNum: 1,
+    memberNum: 0,
     hasPassword: !!arg.roomPassword,
     roomCollectionSuffix: uuid.v4()
   };
 
   await roomInfoSnapshot.ref.update({
-    exclusionOwner: null,
     data: storeData
   });
 
   // つくりたてほやほやの部屋にユーザを追加する
   await userLogin(driver, userInfo);
 
+  // 部屋情報一覧監視対象から外す
   await removeRoomViewer(driver, exclusionOwner);
 
   return storeData.roomCollectionSuffix;

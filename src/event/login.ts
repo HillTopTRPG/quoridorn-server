@@ -7,6 +7,7 @@ import DocumentSnapshot from "nekostore/lib/DocumentSnapshot";
 import {LoginRequest, LoginResponse, RoomStore, UserLoginRequest} from "../@types/room";
 import {StoreObj} from "../@types/store";
 import {ApplicationError} from "../error/ApplicationError";
+import {releaseTouchRoom} from "./release-touch-room";
 
 // インタフェース
 const eventName = "login";
@@ -26,10 +27,16 @@ async function login(driver: Driver, exclusionOwner: string, arg: RequestType): 
     arg.roomNo,
     { exclusionOwner, id: arg.roomId }
   );
-  if (!roomInfoSnapshot) throw new ApplicationError(`Untouched room error. room-no=${arg.roomNo}`);
 
-  const data = roomInfoSnapshot.data;
-  if (data.data)
+  // タッチ解除
+  await releaseTouchRoom(driver, exclusionOwner, {
+    roomNo: arg.roomNo
+  });
+
+  if (!roomInfoSnapshot)
+    throw new ApplicationError(`Untouched room error. room-no=${arg.roomNo}`);
+
+  if (roomInfoSnapshot.data.data)
     throw new ApplicationError(`Already created room error. room-no=${arg.roomNo}`);
 
   // 部屋パスワードチェック

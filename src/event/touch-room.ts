@@ -1,7 +1,7 @@
 import {StoreObj} from "../@types/store";
 import {Resister, SYSTEM_COLLECTION} from "../server";
 import {ApplicationError} from "../error/ApplicationError";
-import {getRoomInfo, setEvent} from "./common";
+import {addTouchier, getRoomInfo, setEvent} from "./common";
 import Driver from "nekostore/lib/Driver";
 import {RoomStore, TouchRequest} from "../@types/room";
 import {checkViewer} from "./get-room-list";
@@ -25,10 +25,11 @@ async function touchRoom(driver: Driver, exclusionOwner: string, arg: RequestTyp
     throw new ApplicationError(`Unsupported user.`);
 
   if (doc) throw new ApplicationError(`Already touched or created room. room-no=${arg.roomNo}`);
-  c.add({
+  const docRef = await c.add({
     order: arg.roomNo,
     exclusionOwner
   });
+  addTouchier(driver, exclusionOwner, SYSTEM_COLLECTION.ROOM_LIST, docRef.id);
 }
 
 const resist: Resister = (driver: Driver, socket: any): void => {

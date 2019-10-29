@@ -7,6 +7,7 @@ import Driver from "nekostore/lib/Driver";
 import DocumentSnapshot from "nekostore/lib/DocumentSnapshot";
 import {ApplicationError} from "../error/ApplicationError";
 import {SystemError} from "../error/SystemError";
+import {releaseTouchRoom} from "./release-touch-room";
 
 // インタフェース
 const eventName = "delete-room";
@@ -26,11 +27,16 @@ async function deleteRoom(driver: Driver, exclusionOwner: string, arg: RequestTy
     arg.roomNo,
     { exclusionOwner, id: arg.roomId }
   );
+
+  // タッチ解除
+  await releaseTouchRoom(driver, exclusionOwner, {
+    roomNo: arg.roomNo
+  });
+
   if (!roomInfoSnapshot) throw new ApplicationError(`Untouched room error. room-no=${arg.roomNo}`);
 
   const data = roomInfoSnapshot.data;
-  if (!data.data)
-    throw new ApplicationError(`Already deleted room error. room-no=${arg.roomNo}`);
+  if (!data || !data.data) throw new ApplicationError(`Already deleted room error. room-no=${arg.roomNo}`);
 
   // 部屋パスワードチェック
   try {
@@ -43,7 +49,6 @@ async function deleteRoom(driver: Driver, exclusionOwner: string, arg: RequestTy
   }
 
   roomInfoSnapshot.ref.delete();
-
   return true;
 }
 

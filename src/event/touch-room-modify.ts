@@ -1,6 +1,6 @@
-import {Resister} from "../server";
+import {Resister, SYSTEM_COLLECTION} from "../server";
 import {ApplicationError} from "../error/ApplicationError";
-import {getRoomInfo, setEvent} from "./common";
+import {addTouchier, getRoomInfo, setEvent} from "./common";
 import Driver from "nekostore/lib/Driver";
 import {TouchRequest} from "../@types/room";
 import {checkViewer} from "./get-room-list";
@@ -16,7 +16,7 @@ type ResponseType = void;
  * @param exclusionOwner
  * @param arg 部屋番号
  */
-async function touchRoomModify(driver: Driver, exclusionOwner: string, arg: RequestType): Promise<ResponseType> {
+export async function touchRoomModify(driver: Driver, exclusionOwner: string, arg: RequestType): Promise<ResponseType> {
   const doc = await getRoomInfo(driver, arg.roomNo);
 
   if (!await checkViewer(driver, exclusionOwner, false))
@@ -29,6 +29,7 @@ async function touchRoomModify(driver: Driver, exclusionOwner: string, arg: Requ
   doc.ref.update({
     exclusionOwner
   });
+  addTouchier(driver, exclusionOwner, SYSTEM_COLLECTION.ROOM_LIST, doc.ref.id);
 }
 
 const resist: Resister = (driver: Driver, socket: any): void => {

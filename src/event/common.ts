@@ -3,11 +3,12 @@ import DocumentSnapshot from "nekostore/lib/DocumentSnapshot";
 import {StoreMetaData, StoreObj} from "../@types/store";
 import {hashAlgorithm, SYSTEM_COLLECTION} from "../server";
 import {SystemError} from "../error/SystemError";
-import {RoomStore, RoomViewerStore, UserLoginRequest, UseStore} from "../@types/room";
+import {RoomStore, RoomViewerStore, TouchierStore, UserLoginRequest, UseStore} from "../@types/room";
 import {ApplicationError} from "../error/ApplicationError";
 import CollectionReference from "nekostore/src/CollectionReference";
 import DocumentChange from "nekostore/lib/DocumentChange";
 import {hash, verify} from "../password";
+import Query from "nekostore/lib/Query";
 
 export function setEvent<T, U>(driver: Driver, socket: any, event: string, func: (driver: Driver, arg: T) => Promise<U>) {
   const resultEvent = `result-${event}`;
@@ -88,39 +89,45 @@ export async function removeRoomViewer(
     .where("socketId", "==", socketId)
     .get()).docs
     .filter(doc => doc.exists())[0];
-  if (doc) doc.ref.delete();
+  if (doc) await doc.ref.delete();
 }
 
 export async function userLogin(
   driver: Driver,
   loginInfo: UserLoginRequest
 ): Promise<boolean> {
-  const c = driver.collection<UseStore>(SYSTEM_COLLECTION.USER_LIST);
-  const doc: DocumentChange<UseStore> = (await c
+  // 部屋コレクションの取得と部屋存在チェック
+  const roomCollection = driver.collection<StoreObj<RoomStore>>(SYSTEM_COLLECTION.ROOM_LIST);
+  const roomDoc = (await roomCollection.where("_id", "==", loginInfo.roomId).get()).docs[0];
+  if (!roomDoc || !roomDoc.exists() || !roomDoc.data.data)
+    // 部屋が存在しない場合
+    throw new ApplicationError(`No such room. id=${loginInfo.roomId}`);
+
+  // ユーザコレクションの取得とユーザ情報更新
+  const userCollection = driver.collection<UseStore>(SYSTEM_COLLECTION.USER_LIST);
+  const userDoc: DocumentChange<UseStore> = (await userCollection
     .where("roomId", "==", loginInfo.roomId)
     .where("userName", "==", loginInfo.userName)
     .get()).docs
       .filter(doc => doc.exists())[0];
-  if (!doc) {
+  if (!userDoc) {
     // ユーザが存在しない場合
     loginInfo.userPassword = await hash(loginInfo.userPassword, hashAlgorithm);
-    await c.add({
+    await userCollection.add({
       ...loginInfo,
       userType: loginInfo.userType || "PL"
     });
-    return true;
   } else {
     // ユーザが存在した場合
     try {
-      if (await verify(doc.data.userPassword, loginInfo.userPassword, hashAlgorithm)) {
+      if (await verify(userDoc.data.userPassword, loginInfo.userPassword, hashAlgorithm)) {
         // パスワードチェックOK
-        if (doc.data.userType !== loginInfo.userType) {
+        if (userDoc.data.userType !== loginInfo.userType) {
           // ユーザタイプの変更があれば反映する
-          await doc.ref.update({
+          await userDoc.ref.update({
             userType: loginInfo.userType
           });
         }
-        return true;
       } else {
         // パスワードチェックで引っかかった
         return false;
@@ -129,4 +136,55 @@ export async function userLogin(
       throw new SystemError(`Login verify fatal error. user-name=${loginInfo.userName}`);
     }
   }
+
+  // ログインできたので部屋の入室人数を更新
+  const roomData = roomDoc.data.data;
+  roomData.memberNum++;
+
+  await roomDoc.ref.update({
+    data: roomData
+  });
+
+  return true;
+}
+
+export async function addTouchier(
+  driver: Driver,
+  socketId: string,
+  collection: string,
+  id: string
+): Promise<void> {
+  const c = driver.collection<TouchierStore>(SYSTEM_COLLECTION.TOUCH_LIST);
+  const doc: DocumentChange<TouchierStore> = (await c
+    .where("socketId", "==", socketId)
+    .where("collection", "==", collection)
+    .where("id", "==", id)
+    .get()).docs[0];
+  if (doc) {
+    // あり得ないけど一応存在チェック
+    throw new SystemError(`Touchier is Exist. collection: ${collection}, id: ${id}, socketId: ${socketId}`);
+  }
+  c.add({
+    collection, id, socketId
+  });
+}
+
+export async function deleteTouchier(
+  driver: Driver,
+  socketId: string,
+  collection?: string,
+  id?: string
+): Promise<void> {
+  const c = driver.collection<TouchierStore>(SYSTEM_COLLECTION.TOUCH_LIST);
+  let q: Query<TouchierStore> = c.where("socketId", "==", socketId);
+  if (collection !== undefined)
+    q = q.where("collection", "==", collection);
+  if (id !== undefined)
+    q = q.where("id", "==", id);
+  const docList: DocumentChange<TouchierStore>[] = (await q.get()).docs;
+  if (!docList || !docList.length) return;
+  docList.forEach(doc => {
+    doc.ref.delete();
+  });
+
 }

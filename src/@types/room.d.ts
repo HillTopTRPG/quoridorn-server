@@ -92,3 +92,9 @@ export type GetVersionResponse = {
   version: string;
   title: string;
 };
+
+export type TouchierStore = {
+  collection: string;
+  id: string;
+  socketId: string;
+};

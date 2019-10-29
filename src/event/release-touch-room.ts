@@ -1,6 +1,6 @@
-import {Resister} from "../server";
+import {Resister, SYSTEM_COLLECTION} from "../server";
 import {ApplicationError} from "../error/ApplicationError";
-import {getRoomInfo, setEvent} from "./common";
+import {deleteTouchier, getRoomInfo, setEvent} from "./common";
 import Driver from "nekostore/lib/Driver";
 import {ReleaseTouchRequest} from "../@types/room";
 
@@ -15,15 +15,18 @@ type ResponseType = void;
  * @param exclusionOwner
  * @param arg 部屋番号
  */
-async function releaseTouchRoom(driver: Driver, exclusionOwner: string, arg: RequestType): Promise<ResponseType> {
-  const doc = await getRoomInfo(driver, arg.roomNo);
+export async function releaseTouchRoom(driver: Driver, exclusionOwner: string, arg: RequestType): Promise<ResponseType> {
+  const doc = await getRoomInfo(driver, arg.roomNo, {
+    exclusionOwner
+  });
   if (!doc) throw new ApplicationError(`Already released touch or created room. room-no=${arg.roomNo}`);
+  await deleteTouchier(driver, exclusionOwner, SYSTEM_COLLECTION.ROOM_LIST, doc.ref.id);
   if (doc.data!.data) {
-    doc.ref.update({
+    await doc.ref.update({
       exclusionOwner: null
     });
   } else {
-    doc.ref.delete();
+    await doc.ref.delete();
   }
 }
 
