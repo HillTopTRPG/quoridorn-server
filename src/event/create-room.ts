@@ -1,5 +1,5 @@
 import {StoreObj} from "../@types/store";
-import {CreateRoomRequest, RoomStore} from "../@types/room";
+import {CreateRoomRequest, RoomStore, UserLoginRequest} from "../@types/room";
 import {hashAlgorithm, Resister} from "../server";
 import {hash} from "../password";
 import uuid from "uuid";
@@ -36,6 +36,17 @@ async function createRoom(driver: Driver, exclusionOwner: string, arg: RequestTy
   arg.roomPassword = await hash(arg.roomPassword, hashAlgorithm);
   delete arg.roomNo;
 
+  const userInfo: UserLoginRequest = {
+    roomId: arg.roomId,
+    userName: arg.userName,
+    userPassword: arg.userPassword,
+    userType: arg.userType
+  };
+
+  delete arg.userName;
+  delete arg.userPassword;
+  delete arg.userType;
+
   const storeData: RoomStore = {
     ...arg,
     memberNum: 1,
@@ -49,7 +60,7 @@ async function createRoom(driver: Driver, exclusionOwner: string, arg: RequestTy
   });
 
   // つくりたてほやほやの部屋にユーザを追加する
-  await userLogin(driver, arg);
+  await userLogin(driver, userInfo);
 
   await removeRoomViewer(driver, exclusionOwner);
 
