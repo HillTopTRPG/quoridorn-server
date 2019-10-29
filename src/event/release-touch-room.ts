@@ -14,14 +14,15 @@ type ResponseType = void;
  * @param driver
  * @param exclusionOwner
  * @param arg 部屋番号
+ * @param updateForce
  */
-export async function releaseTouchRoom(driver: Driver, exclusionOwner: string, arg: RequestType): Promise<ResponseType> {
+export async function releaseTouchRoom(driver: Driver, exclusionOwner: string, arg: RequestType, updateForce?: boolean): Promise<ResponseType> {
   const doc = await getRoomInfo(driver, arg.roomNo, {
     exclusionOwner
   });
   if (!doc) throw new ApplicationError(`Already released touch or created room. room-no=${arg.roomNo}`);
   await deleteTouchier(driver, exclusionOwner, SYSTEM_COLLECTION.ROOM_LIST, doc.ref.id);
-  if (doc.data!.data) {
+  if (updateForce || doc.data!.data) {
     await doc.ref.update({
       exclusionOwner: null
     });

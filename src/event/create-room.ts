@@ -21,17 +21,17 @@ type ResponseType = string;
  * @param arg
  */
 async function createRoom(driver: Driver, exclusionOwner: string, arg: RequestType): Promise<ResponseType> {
+  // タッチ解除
+  await releaseTouchRoom(driver, exclusionOwner, {
+    roomNo: arg.roomNo
+  }, true);
+
   // 部屋一覧の更新
   const roomInfoSnapshot: DocumentSnapshot<StoreObj<RoomStore>> = await getRoomInfo(
     driver,
     arg.roomNo,
-    { exclusionOwner, id: arg.roomId }
+    { id: arg.roomId }
   );
-
-  // タッチ解除
-  await releaseTouchRoom(driver, exclusionOwner, {
-    roomNo: arg.roomNo
-  });
 
   if (!roomInfoSnapshot)
     throw new ApplicationError(`Untouched room error. room-no=${arg.roomNo}`);
