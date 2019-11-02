@@ -16,7 +16,7 @@ import Driver from "nekostore/lib/Driver";
 import Store from "nekostore/src/store/Store";
 import MongoStore from "nekostore/lib/store/MongoStore";
 import MemoryStore from "nekostore/lib/store/MemoryStore";
-import {deleteTouchier, removeRoomViewer} from "./event/common";
+import {releaseTouch, removeRoomViewer} from "./event/common";
 import {HashAlgorithmType} from "./password";
 const co = require("co");
 
@@ -24,7 +24,7 @@ export type Resister = (d: Driver, socket: any) => void;
 export const serverSetting: ServerSetting = YAML.parse(fs.readFileSync(path.resolve(__dirname, "../config/server.yaml"), "utf8"));
 
 export const hashAlgorithm: HashAlgorithmType = "bcrypt";
-export const version: string = "Quoridorn 1.0.0a10";
+export const version: string = "Quoridorn 1.0.0a11";
 
 /**
  * データストアにおいてサーバプログラムが直接参照するコレクションテーブルの名前
@@ -80,8 +80,12 @@ async function main(): Promise<void> {
 
       socket.on("disconnect", async () => {
         console.log("disconnected", socket.id);
-        await removeRoomViewer(driver, socket.id);
-        await deleteTouchier(driver, socket.id);
+        try {
+          await removeRoomViewer(driver, socket.id);
+          await releaseTouch(driver, socket.id);
+        } catch (err) {
+          console.error(err);
+        }
       });
       socket.on("error", () => {
         console.log("error", socket.id);

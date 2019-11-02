@@ -98,10 +98,11 @@ export async function userLogin(
 ): Promise<boolean> {
   // 部屋コレクションの取得と部屋存在チェック
   const roomCollection = driver.collection<StoreObj<RoomStore>>(SYSTEM_COLLECTION.ROOM_LIST);
-  const roomDoc = (await roomCollection.where("_id", "==", loginInfo.roomId).get()).docs[0];
-  if (!roomDoc || !roomDoc.exists() || !roomDoc.data.data)
+  const roomDoc = await roomCollection.doc(loginInfo.roomId).get();
+  if (!roomDoc || !roomDoc.exists() || !roomDoc.data) {
     // 部屋が存在しない場合
     throw new ApplicationError(`No such room. id=${loginInfo.roomId}`);
+  }
 
   // ユーザコレクションの取得とユーザ情報更新
   const userCollection = driver.collection<UseStore>(SYSTEM_COLLECTION.USER_LIST);
@@ -165,7 +166,7 @@ export async function addTouchier(
     throw new SystemError(`Touchier is Exist. collection: ${collection}, id: ${id}, socketId: ${socketId}`);
   }
   c.add({
-    collection, id, socketId
+    collection, docId: id, socketId
   });
 }
 
@@ -186,5 +187,37 @@ export async function deleteTouchier(
   docList.forEach(doc => {
     doc.ref.delete();
   });
+}
 
+export async function releaseTouch(
+  driver: Driver,
+  socketId: string,
+  collection?: string,
+  id?: string
+): Promise<void> {
+  const c = driver.collection<TouchierStore>(SYSTEM_COLLECTION.TOUCH_LIST);
+  let q: Query<TouchierStore> = c.where("socketId", "==", socketId);
+  if (collection !== undefined)
+    q = q.where("collection", "==", collection);
+  if (id !== undefined)
+    q = q.where("id", "==", id);
+  const docList: DocumentChange<TouchierStore>[] = (await q.get()).docs;
+  if (!docList || !docList.length) return;
+  docList.forEach(async doc => {
+    if (doc.exists()) {
+      const { collection, docId } = doc.data;
+      const targetCollection = driver.collection<StoreObj<any>>(collection);
+      const target = await targetCollection.doc(docId).get();
+      if (target.exists()) {
+        if (target.data.data) {
+          target.ref.update({
+            exclusionOwner: null
+          });
+        } else {
+          target.ref.delete();
+        }
+      }
+    }
+    doc.ref.delete();
+  });
 }
