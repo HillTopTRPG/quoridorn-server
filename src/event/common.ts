@@ -30,8 +30,6 @@ export function getStoreObj<T>(
     return {
       ...data,
       id: doc.ref.id,
-      createTime: doc.createTime ? doc.createTime.toDate() : null,
-      updateTime: doc.updateTime ? doc.updateTime.toDate() : null
     };
   } else {
     return null;
@@ -105,28 +103,48 @@ export async function userLogin(
   }
 
   // ユーザコレクションの取得とユーザ情報更新
-  const userCollection = driver.collection<UseStore>(SYSTEM_COLLECTION.USER_LIST);
-  const userDoc: DocumentChange<UseStore> = (await userCollection
-    .where("roomId", "==", loginInfo.roomId)
-    .where("userName", "==", loginInfo.userName)
+  const userCollection = driver.collection<StoreObj<UseStore>>(SYSTEM_COLLECTION.USER_LIST);
+  const userDoc: DocumentChange<StoreObj<UseStore>> = (await userCollection
+    .where("data.roomId", "==", loginInfo.roomId)
+    .where("data.userName", "==", loginInfo.userName)
     .get()).docs
       .filter(doc => doc.exists())[0];
   if (!userDoc) {
     // ユーザが存在しない場合
+
+    // パスワードを暗号化
     loginInfo.userPassword = await hash(loginInfo.userPassword, hashAlgorithm);
+    // リクエスト情報が定義に忠実とは限らないのでチェック
+    if (loginInfo.userType !== "PL" && loginInfo.userType !== "GM" && loginInfo.userType !== "VISITOR") {
+      loginInfo.userType = "VISITOR";
+    }
     await userCollection.add({
-      ...loginInfo,
-      userType: loginInfo.userType || "PL"
+      order: -1,
+      exclusionOwner: null,
+      createTime: new Date(),
+      updateTime: null,
+      data: {
+        ...loginInfo,
+        userType: loginInfo.userType || "PL"
+      }
     });
   } else {
     // ユーザが存在した場合
     try {
-      if (await verify(userDoc.data.userPassword, loginInfo.userPassword, hashAlgorithm)) {
+      const userData = userDoc.data.data;
+      if (await verify(userData.userPassword, loginInfo.userPassword, hashAlgorithm)) {
         // パスワードチェックOK
-        if (userDoc.data.userType !== loginInfo.userType) {
+        if (userData.userType !== loginInfo.userType) {
+          // ユーザ種別の変更がある場合はそれを反映する
+
+          // リクエスト情報が定義に忠実とは限らないのでチェック
+          if (loginInfo.userType !== "PL" && loginInfo.userType !== "GM" && loginInfo.userType !== "VISITOR") {
+            loginInfo.userType = "VISITOR";
+          }
+          userData.userType = loginInfo.userType;
           // ユーザタイプの変更があれば反映する
           await userDoc.ref.update({
-            userType: loginInfo.userType
+            data: userData
           });
         }
       } else {
@@ -181,7 +199,7 @@ export async function deleteTouchier(
   if (collection !== undefined)
     q = q.where("collection", "==", collection);
   if (id !== undefined)
-    q = q.where("id", "==", id);
+    q = q.where("docId", "==", id);
   const docList: DocumentChange<TouchierStore>[] = (await q.get()).docs;
   if (!docList || !docList.length) return;
   docList.forEach(doc => {

@@ -42,7 +42,7 @@ async function getRoomList(driver: Driver, socket: any): Promise<ResponseType> {
         return roomStore as StoreObj<ClientRoomInfo> & StoreMetaData;
       });
 
-    // コレクションに変更があるたびに、「result-room-view」イベントをクライアントに送信し続ける
+    // コレクションに変更があるたびに、「result-room-view」イベントをクライアントに送信する
     if (!await checkViewer(driver, socket.id, true)) {
       let unsubscribe: Unsubscribe | null = await c.onSnapshot(async snapshot => {
         try {
@@ -52,15 +52,13 @@ async function getRoomList(driver: Driver, socket: any): Promise<ResponseType> {
               const changeType: ChangeType = change.type;
               const data: StoreObj<RoomStore> = change.data;
               const id: string = change.ref.id;
-              const createTime: Date = change.createTime ? change.createTime.toDate() : null;
-              const updateTime: Date = change.updateTime ? change.updateTime.toDate() : null;
 
               if (data && data.data) {
                 delete data.data.roomPassword;
                 delete data.data.roomCollectionSuffix;
               }
               return {
-                changeType, data, id, createTime, updateTime
+                changeType, data, id
               }
             });
             socket.emit("result-room-view", null, changeList);

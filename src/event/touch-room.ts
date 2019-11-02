@@ -27,7 +27,9 @@ async function touchRoom(driver: Driver, exclusionOwner: string, arg: RequestTyp
   if (doc) throw new ApplicationError(`Already touched or created room. room-no=${arg.roomNo}`);
   const docRef = await c.add({
     order: arg.roomNo,
-    exclusionOwner
+    exclusionOwner,
+    createTime: new Date(),
+    updateTime: null
   });
   addTouchier(driver, exclusionOwner, SYSTEM_COLLECTION.ROOM_LIST, docRef.id);
 }

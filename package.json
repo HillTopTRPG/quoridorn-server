@@ -6,7 +6,6 @@
   "scripts": {
     "build": "tsc -t ES5",
     "node-server": "node dist/server.js",
-
     "server": "npx ts-node src/server.ts",
     "test-server": "npx ts-node src/nekostore_test/test_server.ts",
     "test-client": "npx ts-node src/nekostore_test/test_client.ts",
@@ -30,7 +29,7 @@
     "co": "^4.6.0",
     "moment": "^2.24.0",
     "mongodb": "^3.3.2",
-    "nekostore": "^0.4.1",
+    "nekostore": "^0.6.0",
     "socket.io": "^2.3.0",
     "typescript": "^3.6.4",
     "uuid": "^3.3.3",
