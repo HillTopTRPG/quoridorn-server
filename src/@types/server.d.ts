@@ -5,5 +5,4 @@ export type ServerSetting = {
   mongodbConnectionStrings: string;
   roomNum: number;
   roomAutoRemove: number;
-  systemCollectionTouchTimeout: number;
 };

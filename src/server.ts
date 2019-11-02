@@ -40,7 +40,6 @@ export namespace SYSTEM_COLLECTION {
   export const TOUCH_LIST = `touch-list-${serverSetting.secretCollectionSuffix}`;
 }
 
-
 async function getStore(setting: ServerSetting): Promise<Store> {
   return new Promise((resolve, reject) => {
     if (setting.storeType === "mongodb") {
@@ -81,7 +80,9 @@ async function main(): Promise<void> {
       socket.on("disconnect", async () => {
         console.log("disconnected", socket.id);
         try {
+          // 切断したら部屋情報更新通知対象者リストから削除
           await removeRoomViewer(driver, socket.id);
+          // 切断したらその人が行なっていたすべてのタッチを解除
           await releaseTouch(driver, socket.id);
         } catch (err) {
           console.error(err);
@@ -112,14 +113,6 @@ async function main(): Promise<void> {
       ].forEach((r: Resister) => r(driver, socket));
     });
 
-    // 5分おきに...
-    // TODO systemCollectionTouchTimeoutの処理
-    // setInterval(async () => {
-    //   const roomDocList = (await driver.collection<StoreObj<RoomInfo>>(SYSTEM_COLLECTION.ROOM_LIST)
-    //     .where("data", "==", null)
-    //     .get()).docs;
-    //
-    // }, 1000 * 60 * 5);
   } catch (err) {
     console.error("MongoDB connect fail.");
     console.error(err);
