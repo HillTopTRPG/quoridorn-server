@@ -17,19 +17,20 @@ type ResponseType = void;
  * @param arg 部屋番号
  */
 export async function touchRoomModify(driver: Driver, exclusionOwner: string, arg: RequestType): Promise<ResponseType> {
-  const doc = await getRoomInfo(driver, arg.roomNo);
+  const docSnap = await getRoomInfo(driver, arg.roomNo);
 
   if (!await checkViewer(driver, exclusionOwner, false))
     throw new ApplicationError(`Unsupported user.`);
 
-  if (!doc) throw new ApplicationError(`No such room. room-no=${arg.roomNo}`);
-  if (doc.data.exclusionOwner)
+  if (!docSnap) throw new ApplicationError(`No such room. room-no=${arg.roomNo}`);
+  if (docSnap.data.exclusionOwner)
     throw new ApplicationError(`Other player touched. room-no=${arg.roomNo}`);
 
-  doc.ref.update({
-    exclusionOwner
+  await docSnap.ref.update({
+    exclusionOwner,
+    updateTime: new Date()
   });
-  addTouchier(driver, exclusionOwner, SYSTEM_COLLECTION.ROOM_LIST, doc.ref.id);
+  await addTouchier(driver, exclusionOwner, SYSTEM_COLLECTION.ROOM_LIST, docSnap.ref.id);
 }
 
 const resist: Resister = (driver: Driver, socket: any): void => {

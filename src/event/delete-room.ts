@@ -27,20 +27,20 @@ async function deleteRoom(driver: Driver, exclusionOwner: string, arg: RequestTy
   }, true);
 
   // 部屋一覧の更新
-  const roomInfoSnapshot: DocumentSnapshot<StoreObj<RoomStore>> = await getRoomInfo(
+  const docSnap: DocumentSnapshot<StoreObj<RoomStore>> = await getRoomInfo(
     driver,
     arg.roomNo,
     { id: arg.roomId }
   );
 
-  if (!roomInfoSnapshot) throw new ApplicationError(`Untouched room error. room-no=${arg.roomNo}`);
+  if (!docSnap) throw new ApplicationError(`Untouched room error. room-no=${arg.roomNo}`);
 
-  const data = roomInfoSnapshot.data;
+  const data = docSnap.data;
   if (!data || !data.data) throw new ApplicationError(`Already deleted room error. room-no=${arg.roomNo}`);
 
   // 部屋パスワードチェック
   try {
-    if (!await verify(roomInfoSnapshot.data.data.roomPassword, arg.roomPassword, hashAlgorithm)) {
+    if (!await verify(docSnap.data.data.roomPassword, arg.roomPassword, hashAlgorithm)) {
       // パスワードチェックで引っかかった
       return false;
     }
@@ -48,7 +48,7 @@ async function deleteRoom(driver: Driver, exclusionOwner: string, arg: RequestTy
     throw new SystemError(`Login verify fatal error. room-no=${arg.roomNo}`);
   }
 
-  roomInfoSnapshot.ref.delete();
+  docSnap.ref.delete();
   return true;
 }
 

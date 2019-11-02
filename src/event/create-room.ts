@@ -27,16 +27,16 @@ async function createRoom(driver: Driver, exclusionOwner: string, arg: RequestTy
   }, true);
 
   // 部屋一覧の更新
-  const roomInfoSnapshot: DocumentSnapshot<StoreObj<RoomStore>> = await getRoomInfo(
+  const docSnap: DocumentSnapshot<StoreObj<RoomStore>> = await getRoomInfo(
     driver,
     arg.roomNo,
     { id: arg.roomId }
   );
 
-  if (!roomInfoSnapshot)
+  if (!docSnap || !docSnap.exists())
     throw new ApplicationError(`Untouched room error. room-no=${arg.roomNo}`);
 
-  if (roomInfoSnapshot.data.data)
+  if (docSnap.data.data)
     throw new ApplicationError(`Already created room error. room-no=${arg.roomNo}`);
 
   // リクエスト情報の加工
@@ -61,8 +61,9 @@ async function createRoom(driver: Driver, exclusionOwner: string, arg: RequestTy
     roomCollectionSuffix: uuid.v4()
   };
 
-  await roomInfoSnapshot.ref.update({
-    data: storeData
+  await docSnap.ref.update({
+    data: storeData,
+    updateTime: new Date()
   });
 
   // つくりたてほやほやの部屋にユーザを追加する

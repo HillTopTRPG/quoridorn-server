@@ -78,6 +78,34 @@ export async function getRoomInfo(
   return roomDocList[0];
 }
 
+/**
+ * コレクションから特定の情報を取得する
+ * @param driver
+ * @param collection
+ * @param id
+ * @param option
+ */
+export async function getData(
+  driver: Driver,
+  collection: string,
+  id: string,
+  option: GetRoomInfoOption = {}
+): Promise<DocumentSnapshot<StoreObj<any>> | null> {
+  const collectionReference = option.collectionReference || driver.collection<StoreObj<RoomStore>>(collection);
+  const docSnap = (await collectionReference.doc(id).get());
+
+  if (!docSnap || !docSnap.exists()) return null;
+
+  // 排他チェック
+  if (option.exclusionOwner !== undefined) {
+    const data = docSnap.data;
+    if (!data.exclusionOwner) throw new ApplicationError(`Illegal operation. id=${id}`);
+    if (data.exclusionOwner !== option.exclusionOwner) throw new ApplicationError(`Other player touched. id=${id}`);
+  }
+
+  return docSnap;
+}
+
 export async function removeRoomViewer(
   driver: Driver,
   socketId: string

@@ -17,17 +17,18 @@ type ResponseType = void;
  * @param updateForce
  */
 export async function releaseTouchRoom(driver: Driver, exclusionOwner: string, arg: RequestType, updateForce?: boolean): Promise<ResponseType> {
-  const doc = await getRoomInfo(driver, arg.roomNo, {
-    exclusionOwner
+  const docSnap = await getRoomInfo(driver, arg.roomNo, {
+    exclusionOwner,
   });
-  if (!doc) throw new ApplicationError(`Already released touch or created room. room-no=${arg.roomNo}`);
-  await deleteTouchier(driver, exclusionOwner, SYSTEM_COLLECTION.ROOM_LIST, doc.ref.id);
-  if (updateForce || doc.data!.data) {
-    await doc.ref.update({
-      exclusionOwner: null
+  if (!docSnap) throw new ApplicationError(`Already released touch or created room. room-no=${arg.roomNo}`);
+  await deleteTouchier(driver, exclusionOwner, SYSTEM_COLLECTION.ROOM_LIST, docSnap.ref.id);
+  if (updateForce || docSnap.data!.data) {
+    await docSnap.ref.update({
+      exclusionOwner: null,
+      updateTime: new Date()
     });
   } else {
-    await doc.ref.delete();
+    await docSnap.ref.delete();
   }
 }
 
@@ -35,4 +36,3 @@ const resist: Resister = (driver: Driver, socket: any): void => {
   setEvent<RequestType, ResponseType>(driver, socket, eventName, (driver: Driver, arg: RequestType) => releaseTouchRoom(driver, socket.id, arg));
 };
 export default resist;
-

@@ -19,12 +19,12 @@ type ResponseType = void;
  */
 async function touchRoom(driver: Driver, exclusionOwner: string, arg: RequestType): Promise<ResponseType> {
   const c = await driver.collection<StoreObj<RoomStore>>(SYSTEM_COLLECTION.ROOM_LIST);
-  const doc = await getRoomInfo(driver, arg.roomNo, { collectionReference: c });
+  const docSnap = await getRoomInfo(driver, arg.roomNo, { collectionReference: c });
 
   if (!await checkViewer(driver, exclusionOwner, false))
     throw new ApplicationError(`Unsupported user.`);
 
-  if (doc) throw new ApplicationError(`Already touched or created room. room-no=${arg.roomNo}`);
+  if (docSnap) throw new ApplicationError(`Already touched or created room. room-no=${arg.roomNo}`);
   const docRef = await c.add({
     order: arg.roomNo,
     exclusionOwner,

@@ -4,14 +4,19 @@ import fs from "fs";
 import YAML from "yaml";
 import {ServerSetting} from "./@types/server";
 import * as path from "path";
+import resistGetVersionEvent from "./event/get-version";
 import resistGetRoomListEvent from "./event/get-room-list";
+import resistLoginEvent from "./event/login";
 import resistTouchRoomEvent from "./event/touch-room";
 import resistTouchRoomModifyEvent from "./event/touch-room-modify";
 import resistReleaseTouchRoomEvent from "./event/release-touch-room";
 import resistCreateRoomEvent from "./event/create-room";
 import resistDeleteRoomEvent from "./event/delete-room";
-import resistLoginEvent from "./event/login";
-import resistGetVersionEvent from "./event/get-version";
+import resistTouchDataEvent from "./event/touch-data";
+import resistTouchDataModifyEvent from "./event/touch-data-modify";
+import resistReleaseTouchDataEvent from "./event/release-touch-data";
+import resistCreateDataEvent from "./event/create-data";
+import resistDeleteDataEvent from "./event/delete-data";
 import Driver from "nekostore/lib/Driver";
 import Store from "nekostore/src/store/Store";
 import MongoStore from "nekostore/lib/store/MongoStore";
@@ -94,8 +99,12 @@ async function main(): Promise<void> {
 
       // socket.ioの各リクエストに対する処理の登録
       [
+        // バージョン番号取得処理
+        resistGetVersionEvent,
         // 部屋情報一覧取得リクエスト
         resistGetRoomListEvent,
+        // ログインリクエスト
+        resistLoginEvent,
         // 部屋（作成）着手リクエスト
         resistTouchRoomEvent,
         // 部屋（編集・削除）着手リクエスト
@@ -106,10 +115,16 @@ async function main(): Promise<void> {
         resistCreateRoomEvent,
         // 部屋削除リクエスト
         resistDeleteRoomEvent,
-        // ログインリクエスト
-        resistLoginEvent,
-        // バージョン番号取得処理
-        resistGetVersionEvent
+        // データ（作成）着手リクエスト
+        resistTouchDataEvent,
+        // データ（編集・削除）着手リクエスト
+        resistTouchDataModifyEvent,
+        // データ（作成・削除・編集）キャンセル処理
+        resistReleaseTouchDataEvent,
+        // データ作成リクエスト
+        resistCreateDataEvent,
+        // データ削除リクエスト
+        resistDeleteDataEvent
       ].forEach((r: Resister) => r(driver, socket));
     });
 

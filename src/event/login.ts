@@ -27,23 +27,23 @@ async function login(driver: Driver, exclusionOwner: string, arg: RequestType): 
   }, true);
 
   // 部屋一覧の更新
-  const roomInfoSnapshot: DocumentSnapshot<StoreObj<RoomStore>> = await getRoomInfo(
+  const docSnap: DocumentSnapshot<StoreObj<RoomStore>> = await getRoomInfo(
     driver,
     arg.roomNo,
     { id: arg.roomId }
   );
 
-  if (!roomInfoSnapshot)
+  if (!docSnap)
     throw new ApplicationError(`Untouched room error. room-no=${arg.roomNo}`);
 
-  if (roomInfoSnapshot.data.data)
+  if (docSnap.data.data)
     throw new ApplicationError(`Already created room error. room-no=${arg.roomNo}`);
 
   // 部屋パスワードチェック
   try {
-    if (await verify(roomInfoSnapshot.data.data.roomPassword, arg.roomPassword, hashAlgorithm)) {
+    if (await verify(docSnap.data.data.roomPassword, arg.roomPassword, hashAlgorithm)) {
       // パスワードチェックOK
-      delete roomInfoSnapshot.data.data.roomPassword;
+      delete docSnap.data.data.roomPassword;
     } else {
       // パスワードチェックで引っかかった
       return null;
@@ -65,7 +65,7 @@ async function login(driver: Driver, exclusionOwner: string, arg: RequestType): 
   }
 
   await removeRoomViewer(driver, exclusionOwner);
-  return roomInfoSnapshot.data.data;
+  return docSnap.data.data;
 }
 
 const resist: Resister = (driver: Driver, socket: any): void => {
