@@ -36,8 +36,8 @@ async function login(driver: Driver, exclusionOwner: string, arg: RequestType): 
   if (!docSnap)
     throw new ApplicationError(`Untouched room error. room-no=${arg.roomNo}`);
 
-  if (docSnap.data.data)
-    throw new ApplicationError(`Already created room error. room-no=${arg.roomNo}`);
+  if (!docSnap.data.data)
+    throw new ApplicationError(`Until created room error. room-no=${arg.roomNo}`);
 
   // 部屋パスワードチェック
   try {

@@ -91,7 +91,7 @@ export async function getData(
   id: string,
   option: GetRoomInfoOption = {}
 ): Promise<DocumentSnapshot<StoreObj<any>> | null> {
-  const collectionReference = option.collectionReference || driver.collection<StoreObj<RoomStore>>(collection);
+  const collectionReference = option.collectionReference || driver.collection<StoreObj<any>>(collection);
   const docSnap = (await collectionReference.doc(id).get());
 
   if (!docSnap || !docSnap.exists()) return null;
@@ -99,8 +99,8 @@ export async function getData(
   // 排他チェック
   if (option.exclusionOwner !== undefined) {
     const data = docSnap.data;
-    if (!data.exclusionOwner) throw new ApplicationError(`Illegal operation. id=${id}`);
-    if (data.exclusionOwner !== option.exclusionOwner) throw new ApplicationError(`Other player touched. id=${id}`);
+    if (!data.exclusionOwner) throw new ApplicationError(`Illegal operation. collection=${collection} id=${id}`);
+    if (data.exclusionOwner !== option.exclusionOwner) throw new ApplicationError(`Other player touched. collection=${collection} id=${id}`);
   }
 
   return docSnap;

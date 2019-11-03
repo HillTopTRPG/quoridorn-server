@@ -31,7 +31,7 @@ async function touchRoom(driver: Driver, exclusionOwner: string, arg: RequestTyp
     createTime: new Date(),
     updateTime: null
   });
-  addTouchier(driver, exclusionOwner, SYSTEM_COLLECTION.ROOM_LIST, docRef.id);
+  await addTouchier(driver, exclusionOwner, SYSTEM_COLLECTION.ROOM_LIST, docRef.id);
 }
 
 const resist: Resister = (driver: Driver, socket: any): void => {

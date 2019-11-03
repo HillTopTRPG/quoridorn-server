@@ -24,12 +24,13 @@ import MemoryStore from "nekostore/lib/store/MemoryStore";
 import {releaseTouch, removeRoomViewer} from "./event/common";
 import {HashAlgorithmType} from "./password";
 const co = require("co");
+import { Db } from "mongodb";
 
 export type Resister = (d: Driver, socket: any) => void;
 export const serverSetting: ServerSetting = YAML.parse(fs.readFileSync(path.resolve(__dirname, "../config/server.yaml"), "utf8"));
 
 export const hashAlgorithm: HashAlgorithmType = "bcrypt";
-export const version: string = "Quoridorn 1.0.0a13";
+export const version: string = "Quoridorn 1.0.0a14";
 
 /**
  * データストアにおいてサーバプログラムが直接参照するコレクションテーブルの名前
@@ -45,27 +46,27 @@ export namespace SYSTEM_COLLECTION {
   export const TOUCH_LIST = `touch-list-${serverSetting.secretCollectionSuffix}`;
 }
 
-async function getStore(setting: ServerSetting): Promise<Store> {
+async function getStore(setting: ServerSetting): Promise<{store: Store, db?: Db}> {
   return new Promise((resolve, reject) => {
     if (setting.storeType === "mongodb") {
       co(function* () {
         const MongoClient = require("mongodb").MongoClient;
         const client = yield MongoClient.connect(setting.mongodbConnectionStrings, { useNewUrlParser: true, useUnifiedTopology: true });
         const db = client.db("quoridorn");
-        resolve(new MongoStore({ db }));
+        resolve({ store: new MongoStore({ db }), db });
       }).catch(err => {
         console.error(err.stack);
         reject(err);
       });
     } else {
-      resolve(new MemoryStore());
+      resolve({ store: new MemoryStore() });
     }
   });
 }
 
 async function main(): Promise<void> {
   try {
-    const store = await getStore(serverSetting);
+    const { store, db } = await getStore(serverSetting);
     const driver = new BasicDriver({ store });
 
     const io = require("socket.io").listen(serverSetting.port);
@@ -127,6 +128,21 @@ async function main(): Promise<void> {
         resistDeleteDataEvent
       ].forEach((r: Resister) => r(driver, socket));
     });
+
+    // setInterval(() => {
+    //   db.listCollections().toArray(function(err: any, collectionInfoList: any[]) {
+    //     console.log("=== All Collections START ===");
+    //     if (err) {
+    //       console.warn(err);
+    //       return;
+    //     }
+    //     const collectionNameList = collectionInfoList
+    //       .filter(collectionInfo => collectionInfo.type === "collection")
+    //       .map(collectionInfo => collectionInfo.name);
+    //
+    //     console.log("=== All Collections END ===");
+    //   });
+    // }, 1000 * 60 * 5);
 
   } catch (err) {
     console.error("MongoDB connect fail.");

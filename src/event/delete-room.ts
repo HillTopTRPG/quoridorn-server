@@ -1,6 +1,6 @@
 import {StoreObj} from "../@types/store";
-import {DeleteRoomRequest, RoomStore} from "../@types/room";
-import {hashAlgorithm, Resister} from "../server";
+import {DeleteRoomRequest, RoomStore, UseStore} from "../@types/room";
+import {hashAlgorithm, Resister, SYSTEM_COLLECTION} from "../server";
 import {verify} from "../password";
 import {getRoomInfo, setEvent} from "./common";
 import Driver from "nekostore/lib/Driver";
@@ -48,7 +48,18 @@ async function deleteRoom(driver: Driver, exclusionOwner: string, arg: RequestTy
     throw new SystemError(`Login verify fatal error. room-no=${arg.roomNo}`);
   }
 
+  const roomId = docSnap.ref.id;
   docSnap.ref.delete();
+
+  // 部屋に紐づくユーザの削除
+  const userCollection = driver.collection<StoreObj<UseStore>>(SYSTEM_COLLECTION.USER_LIST);
+  const docs = (await userCollection.where("data.roomId", "==", roomId).get()).docs;
+  docs.forEach(async doc => {
+    if (!doc || !doc.exists()) return;
+    await doc.ref.delete();
+  });
+
+  // TODO 各部屋情報コレクションの削除
   return true;
 }
 

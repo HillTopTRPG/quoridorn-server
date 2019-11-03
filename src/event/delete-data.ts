@@ -39,7 +39,7 @@ async function deleteData(driver: Driver, exclusionOwner: string, arg: RequestTy
   if (!data || !data.data)
     throw new ApplicationError(`Already deleted data error. id=${arg.id}`);
 
-  docSnap.ref.delete();
+  await docSnap.ref.delete();
 }
 
 const resist: Resister = (driver: Driver, socket: any): void => {

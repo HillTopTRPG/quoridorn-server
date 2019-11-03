@@ -1,7 +1,6 @@
 import {StoreObj} from "../@types/store";
-import {Resister, SYSTEM_COLLECTION} from "../server";
-import {ApplicationError} from "../error/ApplicationError";
-import {addTouchier, getData, setEvent} from "./common";
+import {Resister} from "../server";
+import {addTouchier, setEvent} from "./common";
 import Driver from "nekostore/lib/Driver";
 import {TouchRequest} from "../@types/data";
 
@@ -17,17 +16,14 @@ type ResponseType = string;
  * @param arg 部屋番号
  */
 async function touchData(driver: Driver, exclusionOwner: string, arg: RequestType): Promise<ResponseType> {
-  const c = await driver.collection<StoreObj<any>>(SYSTEM_COLLECTION.ROOM_LIST);
-  const docSnap = await getData(driver, arg.collection, arg.id, { collectionReference: c });
-
-  if (docSnap) throw new ApplicationError(`Already touched or created data. id=${arg.id}`);
+  const c = await driver.collection<StoreObj<any>>(arg.collection);
   const docRef = await c.add({
     order: -1,
     exclusionOwner,
     createTime: new Date(),
     updateTime: null
   });
-  addTouchier(driver, exclusionOwner, arg.collection, docRef.id);
+  await addTouchier(driver, exclusionOwner, arg.collection, docRef.id);
   return docRef.id;
 }
 

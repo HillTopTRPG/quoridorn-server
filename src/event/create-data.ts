@@ -10,7 +10,7 @@ import {CreateDataRequest} from "../@types/data";
 // インタフェース
 const eventName = "create-data";
 type RequestType = CreateDataRequest;
-type ResponseType = void;
+type ResponseType = string;
 
 /**
  * データ作成処理
@@ -26,10 +26,7 @@ async function createData(driver: Driver, exclusionOwner: string, arg: RequestTy
   const docSnap: DocumentSnapshot<StoreObj<any>> = await getData(
     driver,
     arg.collection,
-    arg.id,
-    {
-      exclusionOwner
-    }
+    arg.id
   );
 
   if (!docSnap || !docSnap.exists())
@@ -42,6 +39,8 @@ async function createData(driver: Driver, exclusionOwner: string, arg: RequestTy
     data: arg.data,
     updateTime: new Date()
   });
+
+  return docSnap.ref.id;
 }
 
 const resist: Resister = (driver: Driver, socket: any): void => {

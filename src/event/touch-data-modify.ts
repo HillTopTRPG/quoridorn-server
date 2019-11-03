@@ -2,12 +2,12 @@ import {Resister} from "../server";
 import {ApplicationError} from "../error/ApplicationError";
 import {addTouchier, getData, setEvent} from "./common";
 import Driver from "nekostore/lib/Driver";
-import {TouchRequest} from "../@types/data";
+import {TouchModifyRequest} from "../@types/data";
 
 // インタフェース
 const eventName = "touch-data-modify";
-type RequestType = TouchRequest;
-type ResponseType = void;
+type RequestType = TouchModifyRequest;
+type ResponseType = string;
 
 /**
  * データ（編集・削除）着手リクエスト
@@ -18,7 +18,7 @@ type ResponseType = void;
 export async function touchDataModify(driver: Driver, exclusionOwner: string, arg: RequestType): Promise<ResponseType> {
   const docSnap = await getData(driver, arg.collection, arg.id);
 
-  if (!docSnap) throw new ApplicationError(`No such data. id=${arg.id}`);
+  if (!docSnap || !docSnap.exists()) throw new ApplicationError(`No such data. id=${arg.id}`);
   if (docSnap.data.exclusionOwner)
     throw new ApplicationError(`Other player touched. id=${arg.id}`);
 
@@ -27,6 +27,7 @@ export async function touchDataModify(driver: Driver, exclusionOwner: string, ar
     updateTime: new Date()
   });
   await addTouchier(driver, exclusionOwner, arg.collection, docSnap.ref.id);
+  return docSnap.ref.id;
 }
 
 const resist: Resister = (driver: Driver, socket: any): void => {
