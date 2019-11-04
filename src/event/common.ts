@@ -164,7 +164,8 @@ export async function userLogin(
       createTime: new Date(),
       updateTime: null,
       data: {
-        ...loginInfo,
+        userName: loginInfo.userName,
+        userPassword: loginInfo.userPassword, // TODO パスワードの実データはコレクションを分ける
         userType: loginInfo.userType || "PL",
         login: 1
       }

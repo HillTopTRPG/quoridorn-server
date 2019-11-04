@@ -78,7 +78,9 @@ export type RoomStore = LoginResponse & {
   roomPassword: string;
 };
 
-export type UserStore = UserLoginRequest & {
+export type UserStore = {
+  userName: string;
+  userPassword: string;
   userType: UserType;
   login: number;
 };
