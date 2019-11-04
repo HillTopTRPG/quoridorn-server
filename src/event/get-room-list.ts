@@ -4,11 +4,10 @@ import {
   GetRoomListResponse,
   Message,
   RoomStore,
-  RoomViewerStore,
   RoomViewResponse
 } from "../@types/socket";
 import {Resister, serverSetting, SYSTEM_COLLECTION} from "../server";
-import {setEvent, getStoreObj} from "./common";
+import {setEvent, getStoreObj, checkViewer} from "./common";
 import Driver from "nekostore/lib/Driver";
 import {ChangeType} from "nekostore/lib/DocumentChange";
 import Unsubscribe from "nekostore/src/Unsubscribe";
@@ -37,7 +36,7 @@ async function getRoomList(driver: Driver, socket: any): Promise<ResponseType> {
         const roomStore: StoreObj<RoomStore> & StoreMetaData = getStoreObj<RoomStore>(doc)!;
         if (roomStore.data) {
           delete roomStore.data.roomPassword;
-          delete roomStore.data.roomCollectionSuffix;
+          delete roomStore.data.roomCollectionPrefix;
         }
         return roomStore as StoreObj<ClientRoomInfo> & StoreMetaData;
       });
@@ -55,7 +54,7 @@ async function getRoomList(driver: Driver, socket: any): Promise<ResponseType> {
 
               if (data && data.data) {
                 delete data.data.roomPassword;
-                delete data.data.roomCollectionSuffix;
+                delete data.data.roomCollectionPrefix;
               }
               return {
                 changeType, data, id
@@ -100,25 +99,6 @@ async function getRoomList(driver: Driver, socket: any): Promise<ResponseType> {
     console.error(err);
     throw err;
   }
-}
-
-export async function checkViewer(driver: Driver, exclusionOwner: string, isAdd: boolean): Promise<boolean> {
-  const c = driver.collection<RoomViewerStore>(SYSTEM_COLLECTION.ROOM_VIEWER_LIST);
-  const viewerInfo: RoomViewerStore | null = (await c
-    .where("socketId", "==", exclusionOwner)
-    .get()).docs
-    .filter(doc => doc.exists())
-    .map(doc => doc.data!)[0];
-
-  if (isAdd && !viewerInfo) {
-    // 初回かつ登録する場合
-    c.add({
-      socketId: exclusionOwner
-    });
-  }
-
-  // 登録されていないかどうかを返却
-  return !!viewerInfo;
 }
 
 const resist: Resister = (driver: Driver, socket: any): void => {

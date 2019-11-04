@@ -3,7 +3,7 @@ import DocumentSnapshot from "nekostore/lib/DocumentSnapshot";
 import {StoreMetaData, StoreObj} from "../@types/store";
 import {hashAlgorithm, SYSTEM_COLLECTION} from "../server";
 import {SystemError} from "../error/SystemError";
-import {RoomStore, RoomViewerStore, TouchierStore, UserLoginRequest, UseStore} from "../@types/socket";
+import {RoomStore, SocketStore, TouchierStore, UserLoginRequest, UseStore} from "../@types/socket";
 import {ApplicationError} from "../error/ApplicationError";
 import CollectionReference from "nekostore/src/CollectionReference";
 import DocumentChange from "nekostore/lib/DocumentChange";
@@ -106,20 +106,20 @@ export async function getData(
   return docSnap;
 }
 
-export async function removeRoomViewer(
-  driver: Driver,
-  socketId: string
-) {
-  const c = driver.collection<RoomViewerStore>(SYSTEM_COLLECTION.ROOM_VIEWER_LIST);
-  const doc: DocumentChange<RoomViewerStore> = (await c
-    .where("socketId", "==", socketId)
+export async function checkViewer(driver: Driver, exclusionOwner: string, isAdd: boolean): Promise<boolean> {
+  const c = driver.collection<SocketStore>(SYSTEM_COLLECTION.SOCKET_LIST);
+  const viewerInfo: SocketStore | null = (await c
+    .where("socketId", "==", exclusionOwner)
     .get()).docs
-    .filter(doc => doc.exists())[0];
-  if (doc) await doc.ref.delete();
+    .filter(doc => doc.exists())
+    .map(doc => doc.data!)[0];
+
+  return !viewerInfo || !viewerInfo.roomId;
 }
 
 export async function userLogin(
   driver: Driver,
+  socketId: string,
   loginInfo: UserLoginRequest
 ): Promise<boolean> {
   // 部屋コレクションの取得と部屋存在チェック
@@ -132,12 +132,15 @@ export async function userLogin(
 
   // ユーザコレクションの取得とユーザ情報更新
   const userCollection = driver.collection<StoreObj<UseStore>>(SYSTEM_COLLECTION.USER_LIST);
-  const userDoc: DocumentChange<StoreObj<UseStore>> = (await userCollection
+  const userDocSnap: DocumentChange<StoreObj<UseStore>> = (await userCollection
     .where("data.roomId", "==", loginInfo.roomId)
     .where("data.userName", "==", loginInfo.userName)
     .get()).docs
       .filter(doc => doc.exists())[0];
-  if (!userDoc) {
+
+  let addRoomMember: boolean = true;
+  let userId: string;
+  if (!userDocSnap || !userDocSnap.exists()) {
     // ユーザが存在しない場合
 
     // パスワードを暗号化
@@ -146,20 +149,24 @@ export async function userLogin(
     if (loginInfo.userType !== "PL" && loginInfo.userType !== "GM" && loginInfo.userType !== "VISITOR") {
       loginInfo.userType = "VISITOR";
     }
-    await userCollection.add({
+
+    const userDocRef = await userCollection.add({
       order: -1,
       exclusionOwner: null,
       createTime: new Date(),
       updateTime: null,
       data: {
         ...loginInfo,
-        userType: loginInfo.userType || "PL"
+        userType: loginInfo.userType || "PL",
+        login: 1
       }
     });
+    userId = userDocRef.id;
   } else {
     // ユーザが存在した場合
+    userId = userDocSnap.ref.id;
     try {
-      const userData = userDoc.data.data;
+      const userData = userDocSnap.data.data;
       if (await verify(userData.userPassword, loginInfo.userPassword, hashAlgorithm)) {
         // パスワードチェックOK
         if (userData.userType !== loginInfo.userType) {
@@ -170,11 +177,12 @@ export async function userLogin(
             loginInfo.userType = "VISITOR";
           }
           userData.userType = loginInfo.userType;
-          // ユーザタイプの変更があれば反映する
-          await userDoc.ref.update({
-            data: userData
-          });
         }
+        userData.login++;
+        addRoomMember = userData.login === 1;
+        await userDocSnap.ref.update({
+          data: userData
+        });
       } else {
         // パスワードチェックで引っかかった
         return false;
@@ -184,13 +192,27 @@ export async function userLogin(
     }
   }
 
-  // ログインできたので部屋の入室人数を更新
-  const roomData = roomDoc.data.data;
-  roomData.memberNum++;
+  if (addRoomMember) {
+    // ログインできたので部屋の入室人数を更新
+    const roomData = roomDoc.data.data;
+    roomData.memberNum++;
 
-  await roomDoc.ref.update({
-    data: roomData
-  });
+    await roomDoc.ref.update({
+      data: roomData
+    });
+  }
+
+  (await driver.collection<SocketStore>(SYSTEM_COLLECTION.SOCKET_LIST)
+    .where("socketId", "==", socketId)
+    .get()).docs
+    .forEach(doc => {
+      if (doc.exists()) {
+        doc.ref.update({
+          roomId: loginInfo.roomId,
+          userId
+        });
+      }
+    });
 
   return true;
 }

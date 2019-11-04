@@ -71,19 +71,16 @@ export type RoomViewResponse = {
 };
 
 export type LoginResponse = ClientRoomInfo & {
-  roomCollectionSuffix: string;
+  roomCollectionPrefix: string;
 };
 
 export type RoomStore = LoginResponse & {
   roomPassword: string;
 };
 
-export type RoomViewerStore = {
-  socketId: string;
-};
-
 export type UseStore = UserLoginRequest & {
   userType: UserType;
+  login: number;
 };
 
 export type GetVersionResponse = {
@@ -96,3 +93,10 @@ export type TouchierStore = {
   docId: string;
   socketId: string;
 };
+
+export type SocketStore = {
+  socketId: string;
+  roomId: string | null;
+  userId: string | null;
+  connectTime: Date;
+}

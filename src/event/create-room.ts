@@ -3,7 +3,7 @@ import {CreateRoomRequest, RoomStore, UserLoginRequest} from "../@types/socket";
 import {hashAlgorithm, Resister} from "../server";
 import {hash} from "../password";
 import uuid from "uuid";
-import {getRoomInfo, removeRoomViewer, setEvent, userLogin} from "./common";
+import {getRoomInfo, setEvent, userLogin} from "./common";
 import Driver from "nekostore/lib/Driver";
 import DocumentSnapshot from "nekostore/lib/DocumentSnapshot";
 import {ApplicationError} from "../error/ApplicationError";
@@ -58,7 +58,7 @@ async function createRoom(driver: Driver, exclusionOwner: string, arg: RequestTy
     ...arg,
     memberNum: 0,
     hasPassword: !!arg.roomPassword,
-    roomCollectionSuffix: uuid.v4()
+    roomCollectionPrefix: uuid.v4()
   };
 
   await docSnap.ref.update({
@@ -67,12 +67,9 @@ async function createRoom(driver: Driver, exclusionOwner: string, arg: RequestTy
   });
 
   // つくりたてほやほやの部屋にユーザを追加する
-  await userLogin(driver, userInfo);
+  await userLogin(driver, exclusionOwner, userInfo);
 
-  // 部屋情報一覧監視対象から外す
-  await removeRoomViewer(driver, exclusionOwner);
-
-  return storeData.roomCollectionSuffix;
+  return storeData.roomCollectionPrefix;
 }
 
 const resist: Resister = (driver: Driver, socket: any): void => {

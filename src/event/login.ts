@@ -1,7 +1,7 @@
 import {hashAlgorithm, Resister} from "../server";
 import {SystemError} from "../error/SystemError";
 import {verify} from "../password";
-import {setEvent, getRoomInfo, removeRoomViewer, userLogin} from "./common";
+import {setEvent, getRoomInfo, userLogin} from "./common";
 import Driver from "nekostore/lib/Driver";
 import DocumentSnapshot from "nekostore/lib/DocumentSnapshot";
 import {LoginRequest, LoginResponse, RoomStore, UserLoginRequest} from "../@types/socket";
@@ -59,12 +59,11 @@ async function login(driver: Driver, exclusionOwner: string, arg: RequestType): 
     userType: arg.userType,
     userPassword: arg.userPassword
   };
-  if (!await userLogin(driver, userLoginInfo)) {
+  if (!await userLogin(driver, exclusionOwner, userLoginInfo)) {
     // ログイン失敗
     return null;
   }
 
-  await removeRoomViewer(driver, exclusionOwner);
   return docSnap.data.data;
 }
 
