@@ -6,7 +6,7 @@ import {
   RoomStore,
   RoomViewerStore,
   RoomViewResponse
-} from "../@types/room";
+} from "../@types/socket";
 import {Resister, serverSetting, SYSTEM_COLLECTION} from "../server";
 import {setEvent, getStoreObj} from "./common";
 import Driver from "nekostore/lib/Driver";

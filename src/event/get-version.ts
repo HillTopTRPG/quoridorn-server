@@ -1,6 +1,6 @@
 import {
   GetVersionResponse
-} from "../@types/room";
+} from "../@types/socket";
 import {Resister, version} from "../server";
 import {setEvent} from "./common";
 import Driver from "nekostore/lib/Driver";

@@ -1,5 +1,5 @@
 import {StoreObj} from "../@types/store";
-import {DeleteRoomRequest, RoomStore, UseStore} from "../@types/room";
+import {DeleteRoomRequest, RoomStore, UseStore} from "../@types/socket";
 import {hashAlgorithm, Resister, SYSTEM_COLLECTION} from "../server";
 import {verify} from "../password";
 import {getRoomInfo, setEvent} from "./common";

@@ -3,7 +3,7 @@ import DocumentSnapshot from "nekostore/lib/DocumentSnapshot";
 import {StoreMetaData, StoreObj} from "../@types/store";
 import {hashAlgorithm, SYSTEM_COLLECTION} from "../server";
 import {SystemError} from "../error/SystemError";
-import {RoomStore, RoomViewerStore, TouchierStore, UserLoginRequest, UseStore} from "../@types/room";
+import {RoomStore, RoomViewerStore, TouchierStore, UserLoginRequest, UseStore} from "../@types/socket";
 import {ApplicationError} from "../error/ApplicationError";
 import CollectionReference from "nekostore/src/CollectionReference";
 import DocumentChange from "nekostore/lib/DocumentChange";

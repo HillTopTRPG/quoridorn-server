@@ -4,7 +4,7 @@ import {verify} from "../password";
 import {setEvent, getRoomInfo, removeRoomViewer, userLogin} from "./common";
 import Driver from "nekostore/lib/Driver";
 import DocumentSnapshot from "nekostore/lib/DocumentSnapshot";
-import {LoginRequest, LoginResponse, RoomStore, UserLoginRequest} from "../@types/room";
+import {LoginRequest, LoginResponse, RoomStore, UserLoginRequest} from "../@types/socket";
 import {StoreObj} from "../@types/store";
 import {ApplicationError} from "../error/ApplicationError";
 import {releaseTouchRoom} from "./release-touch-room";

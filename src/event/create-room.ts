@@ -1,5 +1,5 @@
 import {StoreObj} from "../@types/store";
-import {CreateRoomRequest, RoomStore, UserLoginRequest} from "../@types/room";
+import {CreateRoomRequest, RoomStore, UserLoginRequest} from "../@types/socket";
 import {hashAlgorithm, Resister} from "../server";
 import {hash} from "../password";
 import uuid from "uuid";
