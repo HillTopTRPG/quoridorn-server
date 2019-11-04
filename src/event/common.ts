@@ -3,7 +3,13 @@ import DocumentSnapshot from "nekostore/lib/DocumentSnapshot";
 import {StoreMetaData, StoreObj} from "../@types/store";
 import {hashAlgorithm, SYSTEM_COLLECTION} from "../server";
 import {SystemError} from "../error/SystemError";
-import {RoomStore, SocketStore, TouchierStore, UserLoginRequest, UseStore} from "../@types/socket";
+import {
+  RoomStore,
+  SocketStore,
+  TouchierStore,
+  UserLoginRequest,
+  UserStore
+} from "../@types/socket";
 import {ApplicationError} from "../error/ApplicationError";
 import CollectionReference from "nekostore/src/CollectionReference";
 import DocumentChange from "nekostore/lib/DocumentChange";
@@ -72,7 +78,7 @@ export async function getRoomInfo(
 
   // idチェック
   if (option.id !== undefined) {
-    if (roomDocList[0].ref.id !== option.id) throw new ApplicationError(`Already recreated room. room-no=${roomNo}`);
+    if (roomDocList[0].ref.id !== option.id) throw new ApplicationError(`Already recreated room. room-no=${roomNo} storeId=${roomDocList[0].ref.id}, room-id=${option.id}`);
   }
 
   return roomDocList[0];
@@ -125,18 +131,20 @@ export async function userLogin(
   // 部屋コレクションの取得と部屋存在チェック
   const roomCollection = driver.collection<StoreObj<RoomStore>>(SYSTEM_COLLECTION.ROOM_LIST);
   const roomDoc = await roomCollection.doc(loginInfo.roomId).get();
-  if (!roomDoc || !roomDoc.exists() || !roomDoc.data) {
+  if (!roomDoc || !roomDoc.exists() || !roomDoc.data.data) {
     // 部屋が存在しない場合
     throw new ApplicationError(`No such room. id=${loginInfo.roomId}`);
   }
 
   // ユーザコレクションの取得とユーザ情報更新
-  const userCollection = driver.collection<StoreObj<UseStore>>(SYSTEM_COLLECTION.USER_LIST);
-  const userDocSnap: DocumentChange<StoreObj<UseStore>> = (await userCollection
-    .where("data.roomId", "==", loginInfo.roomId)
-    .where("data.userName", "==", loginInfo.userName)
-    .get()).docs
-      .filter(doc => doc.exists())[0];
+  const roomUserCollectionName = `${roomDoc.data.data.roomCollectionPrefix}-DATA-user-list`;
+  const userCollection = driver.collection<StoreObj<UserStore>>(roomUserCollectionName);
+  const userDocSnap: DocumentChange<StoreObj<UserStore>> =
+    (await userCollection
+      .where("data.roomId", "==", loginInfo.roomId)
+      .where("data.userName", "==", loginInfo.userName)
+      .get()).docs
+        .filter(doc => doc.exists())[0];
 
   let addRoomMember: boolean = true;
   let userId: string;
@@ -233,8 +241,8 @@ export async function addTouchier(
     // あり得ないけど一応存在チェック
     throw new SystemError(`Touchier is Exist. collection: ${collection}, id: ${id}, socketId: ${socketId}`);
   }
-  c.add({
-    collection, docId: id, socketId
+  await c.add({
+    socketId, collection, docId: id, time: new Date()
   });
 }
 
@@ -251,10 +259,17 @@ export async function deleteTouchier(
   if (id !== undefined)
     q = q.where("docId", "==", id);
   const docList: DocumentChange<TouchierStore>[] = (await q.get()).docs;
-  if (!docList || !docList.length) return;
-  docList.forEach(doc => {
-    doc.ref.delete();
-  });
+  if (!docList || !docList.length) {
+    console.warn(`deleteTouchier失敗 socket: ${socketId}, collection: ${collection}, id: ${id}`);
+    return;
+  }
+
+  const deleteList = async (doc: DocumentSnapshot<TouchierStore>): Promise<void> => {
+    await doc.ref.delete();
+  };
+  await docList
+    .map((doc: DocumentSnapshot<TouchierStore>) => () => deleteList(doc))
+    .reduce((prev, curr) => prev.then(curr), Promise.resolve());
 }
 
 export async function releaseTouch(
@@ -278,14 +293,14 @@ export async function releaseTouch(
       const target = await targetCollection.doc(docId).get();
       if (target.exists()) {
         if (target.data.data) {
-          target.ref.update({
+          await target.ref.update({
             exclusionOwner: null
           });
         } else {
-          target.ref.delete();
+          await target.ref.delete();
         }
       }
     }
-    doc.ref.delete();
+    await doc.ref.delete();
   });
 }

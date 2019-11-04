@@ -26,14 +26,14 @@ import {HashAlgorithmType} from "./password";
 const co = require("co");
 import { Db } from "mongodb";
 import {StoreObj} from "./@types/store";
-import {RoomStore, SocketStore, UseStore} from "./@types/socket";
+import {RoomStore, SocketStore, TouchierStore, UserStore} from "./@types/socket";
 import {ApplicationError} from "./error/ApplicationError";
 
 export type Resister = (d: Driver, socket: any) => void;
 export const serverSetting: ServerSetting = YAML.parse(fs.readFileSync(path.resolve(__dirname, "../config/server.yaml"), "utf8"));
 
 export const hashAlgorithm: HashAlgorithmType = "bcrypt";
-export const version: string = "Quoridorn 1.0.0a15";
+export const version: string = "Quoridorn 1.0.0a16";
 
 /**
  * データストアにおいてサーバプログラムが直接参照するコレクションテーブルの名前
@@ -43,8 +43,6 @@ export namespace SYSTEM_COLLECTION {
   export const ROOM_LIST = `rooms-${serverSetting.secretCollectionSuffix}`;
   /** 部屋一覧情報を受信するsocket.idの一覧 */
   export const ROOM_VIEWER_LIST = `room-viewer-list-${serverSetting.secretCollectionSuffix}`;
-  /** ユーザ一覧 */
-  export const USER_LIST = `users-${serverSetting.secretCollectionSuffix}`;
   /** タッチしているsocket.idの一覧 */
   export const TOUCH_LIST = `touch-list-${serverSetting.secretCollectionSuffix}`;
   /** 接続中のsocket.idの一覧 */
@@ -69,7 +67,7 @@ async function getStore(setting: ServerSetting): Promise<{store: Store, db?: Db}
   });
 }
 
-async function addSocketList(driver: Driver, socketId: string) {
+async function addSocketList(driver: Driver, socketId: string): Promise<void> {
   await driver.collection<SocketStore>(SYSTEM_COLLECTION.SOCKET_LIST).add({
     socketId,
     roomId: null,
@@ -78,7 +76,7 @@ async function addSocketList(driver: Driver, socketId: string) {
   });
 }
 
-async function logout(driver: Driver, socketId: string) {
+async function logout(driver: Driver, socketId: string): Promise<void> {
   (await driver.collection<SocketStore>(SYSTEM_COLLECTION.SOCKET_LIST)
     .where("socketId", "==", socketId)
     .get()).docs
@@ -86,10 +84,18 @@ async function logout(driver: Driver, socketId: string) {
     .forEach(async doc => {
       const socketData: SocketStore = doc.data;
       if (socketData.roomId && socketData.userId) {
-        // ログアウト処理
-        const userDocSnap = await driver.collection<StoreObj<UseStore>>(SYSTEM_COLLECTION.USER_LIST)
-        .doc(socketData.userId)
+        const roomDocSnap = await driver.collection<StoreObj<RoomStore>>(SYSTEM_COLLECTION.ROOM_LIST)
+        .doc(socketData.roomId)
         .get();
+        if (!roomDocSnap || !roomDocSnap.exists())
+          throw new ApplicationError(`No such room. room-id=${socketData.roomId}`);
+        const roomData = roomDocSnap.data.data;
+
+        // ログアウト処理
+        const roomUserCollectionName = `${roomData.roomCollectionPrefix}-DATA-user-list`;
+        const userDocSnap = await driver.collection<StoreObj<UserStore>>(roomUserCollectionName)
+          .doc(socketData.userId)
+          .get();
         if (!userDocSnap || !userDocSnap.exists())
           throw new ApplicationError(`No such user. user-id=${socketData.userId}`);
         const userData = userDocSnap.data.data;
@@ -99,12 +105,6 @@ async function logout(driver: Driver, socketId: string) {
         });
 
         if (userData.login === 0) {
-          const roomDocSnap = await driver.collection<StoreObj<RoomStore>>(SYSTEM_COLLECTION.ROOM_LIST)
-          .doc(socketData.roomId)
-          .get();
-          if (!roomDocSnap || !roomDocSnap.exists())
-            throw new ApplicationError(`No such room. room-id=${socketData.roomId}`);
-          const roomData = roomDocSnap.data.data;
           roomData.memberNum--;
           roomDocSnap.ref.update({
             data: roomData
@@ -119,6 +119,9 @@ async function main(): Promise<void> {
   try {
     const { store, db } = await getStore(serverSetting);
     const driver = new BasicDriver({ store });
+
+    // DBを誰も接続してない状態にする
+    await initDataBase(driver);
 
     const io = require("socket.io").listen(serverSetting.port);
 
@@ -203,6 +206,59 @@ async function main(): Promise<void> {
     console.error("MongoDB connect fail.");
     console.error(err);
   }
+}
+
+async function initDataBase(driver: Driver): Promise<void> {
+  // 部屋情報の入室人数を0人にリセット
+  (await driver.collection<StoreObj<RoomStore>>(SYSTEM_COLLECTION.ROOM_LIST).get()).docs.forEach(async roomDoc => {
+    if (roomDoc.exists()) {
+      const roomData = roomDoc.data.data;
+      roomData.memberNum = 0;
+      const roomCollectionPrefix = roomData.roomCollectionPrefix;
+      roomDoc.ref.update({
+        data: roomData
+      });
+
+      const roomUserCollectionName = `${roomCollectionPrefix}-DATA-user-list`;
+      (await driver.collection<StoreObj<UserStore>>(roomUserCollectionName).get()).docs.forEach(userDoc => {
+        if (userDoc.exists()) {
+          const userData = userDoc.data.data;
+          userData.login = 0;
+          userDoc.ref.update({
+            data: userData
+          });
+        }
+      });
+    }
+  });
+
+  // 全てのタッチ状態を解除
+  await Promise.all((await driver.collection<TouchierStore>(SYSTEM_COLLECTION.TOUCH_LIST).get()).docs
+    .filter(doc => doc && doc.exists())
+    .map(doc => doc.data.socketId)
+    .filter((socketId, i, self) => self.indexOf(socketId) === i)
+    .map(socketId => new Promise(async (resolve, reject) => {
+      try {
+        await releaseTouch(driver, socketId);
+        resolve();
+      } catch (err) {
+        reject(err);
+      }
+    })));
+
+  // タッチ情報を全削除
+  (await driver.collection<TouchierStore>(SYSTEM_COLLECTION.TOUCH_LIST).get()).docs.forEach(doc => {
+    if (doc.exists()) {
+      doc.ref.delete();
+    }
+  });
+
+  // Socket接続情報を全削除
+  (await driver.collection<StoreObj<SocketStore>>(SYSTEM_COLLECTION.SOCKET_LIST).get()).docs.forEach(doc => {
+    if (doc.exists()) {
+      doc.ref.delete();
+    }
+  });
 }
 
 main();

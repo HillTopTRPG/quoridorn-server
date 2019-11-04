@@ -78,7 +78,7 @@ export type RoomStore = LoginResponse & {
   roomPassword: string;
 };
 
-export type UseStore = UserLoginRequest & {
+export type UserStore = UserLoginRequest & {
   userType: UserType;
   login: number;
 };
@@ -92,6 +92,7 @@ export type TouchierStore = {
   collection: string;
   docId: string;
   socketId: string;
+  time: Date;
 };
 
 export type SocketStore = {

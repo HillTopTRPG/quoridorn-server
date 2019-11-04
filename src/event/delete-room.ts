@@ -1,6 +1,6 @@
 import {StoreObj} from "../@types/store";
-import {DeleteRoomRequest, RoomStore, UseStore} from "../@types/socket";
-import {hashAlgorithm, Resister, SYSTEM_COLLECTION} from "../server";
+import {DeleteRoomRequest, RoomStore, UserStore} from "../@types/socket";
+import {hashAlgorithm, Resister} from "../server";
 import {verify} from "../password";
 import {getRoomInfo, setEvent} from "./common";
 import Driver from "nekostore/lib/Driver";
@@ -33,10 +33,10 @@ async function deleteRoom(driver: Driver, exclusionOwner: string, arg: RequestTy
     { id: arg.roomId }
   );
 
-  if (!docSnap) throw new ApplicationError(`Untouched room error. room-no=${arg.roomNo}`);
+  if (!docSnap || !docSnap.exists()) throw new ApplicationError(`Untouched room error. room-no=${arg.roomNo}`);
 
-  const data = docSnap.data;
-  if (!data || !data.data) throw new ApplicationError(`Already deleted room error. room-no=${arg.roomNo}`);
+  const data = docSnap.data.data;
+  if (!data) throw new ApplicationError(`Already deleted room error. room-no=${arg.roomNo}`);
 
   // 部屋パスワードチェック
   try {
@@ -52,7 +52,8 @@ async function deleteRoom(driver: Driver, exclusionOwner: string, arg: RequestTy
   docSnap.ref.delete();
 
   // 部屋に紐づくユーザの削除
-  const userCollection = driver.collection<StoreObj<UseStore>>(SYSTEM_COLLECTION.USER_LIST);
+  const roomUserCollectionName = `${data.roomCollectionPrefix}-DATA-user-list`;
+  const userCollection = driver.collection<StoreObj<UserStore>>(roomUserCollectionName);
   const docs = (await userCollection.where("data.roomId", "==", roomId).get()).docs;
   docs.forEach(async doc => {
     if (!doc || !doc.exists()) return;

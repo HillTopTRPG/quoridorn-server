@@ -42,43 +42,41 @@ async function getRoomList(driver: Driver, socket: any): Promise<ResponseType> {
       });
 
     // コレクションに変更があるたびに、「result-room-view」イベントをクライアントに送信する
-    if (!await checkViewer(driver, socket.id, true)) {
-      let unsubscribe: Unsubscribe | null = await c.onSnapshot(async snapshot => {
-        try {
-          if (!unsubscribe) return;
-          if (await checkViewer(driver, socket.id, false)) {
-            const changeList: RoomViewResponse[] = snapshot.docs.map(change => {
-              const changeType: ChangeType = change.type;
-              const data: StoreObj<RoomStore> = change.data;
-              const id: string = change.ref.id;
+    let unsubscribe: Unsubscribe | null = await c.onSnapshot(async snapshot => {
+      try {
+        if (!unsubscribe) return;
+        if (await checkViewer(driver, socket.id, false)) {
+          const changeList: RoomViewResponse[] = snapshot.docs.map(change => {
+            const changeType: ChangeType = change.type;
+            const data: StoreObj<RoomStore> = change.data;
+            const id: string = change.ref.id;
 
-              if (data && data.data) {
-                delete data.data.roomPassword;
-                delete data.data.roomCollectionPrefix;
-              }
-              return {
-                changeType, data, id
-              }
-            });
-            socket.emit("result-room-view", null, changeList);
-          } else {
-            if (unsubscribe) {
-              // snapshotの解除
-              unsubscribe();
-              unsubscribe = null;
+            if (data && data.data) {
+              delete data.data.roomPassword;
+              delete data.data.roomCollectionPrefix;
             }
-          }
-        } catch (err) {
+            return {
+              changeType, data, id
+            }
+          });
+          socket.emit("result-room-view", null, changeList);
+        } else {
           if (unsubscribe) {
             // snapshotの解除
             unsubscribe();
             unsubscribe = null;
           }
-          console.error(err);
-          socket.emit("result-room-view", err, null);
         }
-      });
-    }
+      } catch (err) {
+        if (unsubscribe) {
+          // snapshotの解除
+          unsubscribe();
+          unsubscribe = null;
+        }
+        console.error(err);
+        socket.emit("result-room-view", err, null);
+      }
+    });
 
     // サーバ設定部屋数の数だけ要素のある配列に整えていく
     for (let i = 0; i < serverSetting.roomNum; i++) {
