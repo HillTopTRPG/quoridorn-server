@@ -4,7 +4,7 @@ import {Property} from "../@types/property";
 
 export function readProperty(filePath: string): Property {
   const propertyInfo: {[key: string]: string} = {};
-  fs.readFileSync(path.resolve(__dirname, filePath), "utf8")
+  fs.readFileSync(filePath, "utf8")
   .split("\n")
   .forEach(line => {
     const matchResult = line.match(/([a-zA-Z_]+) *= *"([0-9a-zA-Z.]+)"/);
