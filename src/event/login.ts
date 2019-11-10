@@ -1,6 +1,6 @@
 import {hashAlgorithm, Resister} from "../server";
 import {SystemError} from "../error/SystemError";
-import {verify} from "../password";
+import {verify} from "../utility/password";
 import {setEvent, getRoomInfo, userLogin} from "./common";
 import Driver from "nekostore/lib/Driver";
 import DocumentSnapshot from "nekostore/lib/DocumentSnapshot";

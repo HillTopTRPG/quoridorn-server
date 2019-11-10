@@ -13,7 +13,7 @@ import {
 import {ApplicationError} from "../error/ApplicationError";
 import CollectionReference from "nekostore/src/CollectionReference";
 import DocumentChange from "nekostore/lib/DocumentChange";
-import {hash, verify} from "../password";
+import {hash, verify} from "../utility/password";
 import Query from "nekostore/lib/Query";
 
 export function setEvent<T, U>(driver: Driver, socket: any, event: string, func: (driver: Driver, arg: T) => Promise<U>) {

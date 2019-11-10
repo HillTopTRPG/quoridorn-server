@@ -1,7 +1,7 @@
 import {StoreObj} from "../@types/store";
 import {DeleteRoomRequest, RoomStore, UserStore} from "../@types/socket";
 import {hashAlgorithm, Resister} from "../server";
-import {verify} from "../password";
+import {verify} from "../utility/password";
 import {getRoomInfo, setEvent} from "./common";
 import Driver from "nekostore/lib/Driver";
 import DocumentSnapshot from "nekostore/lib/DocumentSnapshot";

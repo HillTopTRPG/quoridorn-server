@@ -62,6 +62,7 @@ export type Message = {
 export type GetRoomListResponse = {
   roomList: (StoreObj<ClientRoomInfo> & StoreMetaData)[],
   message: Message;
+  version: string;
 };
 
 export type RoomViewResponse = {

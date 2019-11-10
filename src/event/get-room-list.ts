@@ -6,7 +6,7 @@ import {
   RoomStore,
   RoomViewResponse
 } from "../@types/socket";
-import {Resister, serverSetting, SYSTEM_COLLECTION} from "../server";
+import {Resister, serverSetting, SYSTEM_COLLECTION, version} from "../server";
 import {setEvent, getStoreObj, checkViewer} from "./common";
 import Driver from "nekostore/lib/Driver";
 import {ChangeType} from "nekostore/lib/DocumentChange";
@@ -91,7 +91,8 @@ async function getRoomList(driver: Driver, socket: any): Promise<ResponseType> {
     }
     return {
       roomList: infoList,
-      message
+      message,
+      version
     };
   } catch(err) {
     console.error(err);

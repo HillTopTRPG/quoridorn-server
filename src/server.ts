@@ -22,18 +22,26 @@ import Store from "nekostore/src/store/Store";
 import MongoStore from "nekostore/lib/store/MongoStore";
 import MemoryStore from "nekostore/lib/store/MemoryStore";
 import {releaseTouch} from "./event/common";
-import {HashAlgorithmType} from "./password";
+import {HashAlgorithmType} from "./utility/password";
 const co = require("co");
 import { Db } from "mongodb";
 import {StoreObj} from "./@types/store";
 import {RoomStore, SocketStore, TouchierStore, UserStore} from "./@types/socket";
 import {ApplicationError} from "./error/ApplicationError";
+import {SystemError} from "./error/SystemError";
+import {readProperty} from "./utility/propertyFile";
+import {Property} from "./@types/property";
 
 export type Resister = (d: Driver, socket: any) => void;
 export const serverSetting: ServerSetting = YAML.parse(fs.readFileSync(path.resolve(__dirname, "../config/server.yaml"), "utf8"));
 
-export const hashAlgorithm: HashAlgorithmType = "bcrypt";
-export const version: string = "Quoridorn 1.0.0a17";
+const envProperty: Property = readProperty("./.env");
+export const version: string = `Quoridorn ${envProperty["VERSION"]}`;
+const hashAlgorithmStr: string = envProperty["HASH_ALGORITHM"];
+if (hashAlgorithmStr !== "argon2" && hashAlgorithmStr !== "bcrypt") {
+  throw new SystemError(`Unsupported hash algorithm. hashAlgorithm: ${hashAlgorithmStr}`);
+}
+export const hashAlgorithm: HashAlgorithmType = hashAlgorithmStr;
 
 /**
  * データストアにおいてサーバプログラムが直接参照するコレクションテーブルの名前

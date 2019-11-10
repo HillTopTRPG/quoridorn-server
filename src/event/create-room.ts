@@ -1,7 +1,7 @@
 import {StoreObj} from "../@types/store";
 import {CreateRoomRequest, RoomStore, UserLoginRequest} from "../@types/socket";
 import {hashAlgorithm, Resister} from "../server";
-import {hash} from "../password";
+import {hash} from "../utility/password";
 import uuid from "uuid";
 import {getRoomInfo, setEvent, userLogin} from "./common";
 import Driver from "nekostore/lib/Driver";

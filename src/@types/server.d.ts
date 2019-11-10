@@ -6,3 +6,8 @@ export type ServerSetting = {
   roomNum: number;
   roomAutoRemove: number;
 };
+
+export type Interoperability = {
+  server: string;
+  client: string;
+};

@@ -1,4 +1,4 @@
-import {ApplicationError} from "./error/ApplicationError";
+import {ApplicationError} from "../error/ApplicationError";
 // const argon2 = require("argon2");
 const bcrypt = require("bcrypt");
 
