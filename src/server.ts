@@ -6,7 +6,8 @@ import {ServerSetting} from "./@types/server";
 import * as path from "path";
 import resistGetVersionEvent from "./event/get-version";
 import resistGetRoomListEvent from "./event/get-room-list";
-import resistLoginEvent from "./event/login";
+import resistRoomLoginEvent from "./event/room-login";
+import resistUserLoginEvent from "./event/user-login";
 import resistTouchRoomEvent from "./event/touch-room";
 import resistTouchRoomModifyEvent from "./event/touch-room-modify";
 import resistReleaseTouchRoomEvent from "./event/release-touch-room";
@@ -170,8 +171,10 @@ async function main(): Promise<void> {
         resistGetVersionEvent,
         // 部屋情報一覧取得リクエスト
         resistGetRoomListEvent,
-        // ログインリクエスト
-        resistLoginEvent,
+        // 部屋ログインリクエスト
+        resistRoomLoginEvent,
+        // ユーザログインリクエスト
+        resistUserLoginEvent,
         // 部屋（作成）着手リクエスト
         resistTouchRoomEvent,
         // 部屋（編集・削除）着手リクエスト

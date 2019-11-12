@@ -7,14 +7,14 @@ import {
   RoomStore,
   SocketStore,
   TouchierStore,
-  UserLoginRequest,
-  UserStore
+  UserStore,
+  UserType
 } from "../@types/socket";
 import {ApplicationError} from "../error/ApplicationError";
 import CollectionReference from "nekostore/src/CollectionReference";
 import DocumentChange from "nekostore/lib/DocumentChange";
-import {hash, verify} from "../utility/password";
 import Query from "nekostore/lib/Query";
+import {hash} from "../utility/password";
 
 export function setEvent<T, U>(driver: Driver, socket: any, event: string, func: (driver: Driver, arg: T) => Promise<U>) {
   const resultEvent = `result-${event}`;
@@ -120,109 +120,34 @@ export async function checkViewer(driver: Driver, exclusionOwner: string, isAdd:
     .filter(doc => doc.exists())
     .map(doc => doc.data!)[0];
 
-  return !viewerInfo || !viewerInfo.roomId;
+  return !(viewerInfo && viewerInfo.roomId && viewerInfo.userId);
 }
 
-export async function userLogin(
-  driver: Driver,
-  socketId: string,
-  loginInfo: UserLoginRequest
-): Promise<boolean> {
-  // 部屋コレクションの取得と部屋存在チェック
-  const roomCollection = driver.collection<StoreObj<RoomStore>>(SYSTEM_COLLECTION.ROOM_LIST);
-  const roomDoc = await roomCollection.doc(loginInfo.roomId).get();
-  if (!roomDoc || !roomDoc.exists() || !roomDoc.data.data) {
-    // 部屋が存在しない場合
-    throw new ApplicationError(`No such room. id=${loginInfo.roomId}`);
-  }
+export async function addUser(
+  userCollection: CollectionReference<StoreObj<UserStore>>,
+  socketDocSnap: DocumentSnapshot<SocketStore>,
+  userName: string,
+  userPassword: string,
+  userType: UserType
+): Promise<void> {
+  userPassword = await hash(userPassword, hashAlgorithm);
 
-  // ユーザコレクションの取得とユーザ情報更新
-  const roomUserCollectionName = `${roomDoc.data.data.roomCollectionPrefix}-DATA-user-list`;
-  const userCollection = driver.collection<StoreObj<UserStore>>(roomUserCollectionName);
-  const userDocSnap: DocumentChange<StoreObj<UserStore>> =
-    (await userCollection
-      .where("data.userName", "==", loginInfo.userName)
-      .get()).docs
-        .filter(doc => doc.exists())[0];
-
-  let addRoomMember: boolean = true;
-  let userId: string;
-  if (!userDocSnap || !userDocSnap.exists()) {
-    // ユーザが存在しない場合
-
-    // パスワードを暗号化
-    loginInfo.userPassword = await hash(loginInfo.userPassword, hashAlgorithm);
-    // リクエスト情報が定義に忠実とは限らないのでチェック
-    if (loginInfo.userType !== "PL" && loginInfo.userType !== "GM" && loginInfo.userType !== "VISITOR") {
-      loginInfo.userType = "VISITOR";
+  const userDocRef = await userCollection.add({
+    order: -1,
+    exclusionOwner: null,
+    createTime: new Date(),
+    updateTime: null,
+    data: {
+      userName,
+      userPassword, // TODO パスワードの実データはコレクションを分ける
+      userType,
+      login: 1
     }
+  });
 
-    const userDocRef = await userCollection.add({
-      order: -1,
-      exclusionOwner: null,
-      createTime: new Date(),
-      updateTime: null,
-      data: {
-        userName: loginInfo.userName,
-        userPassword: loginInfo.userPassword, // TODO パスワードの実データはコレクションを分ける
-        userType: loginInfo.userType || "PL",
-        login: 1
-      }
-    });
-    userId = userDocRef.id;
-  } else {
-    // ユーザが存在した場合
-    userId = userDocSnap.ref.id;
-    try {
-      const userData = userDocSnap.data.data;
-      if (await verify(userData.userPassword, loginInfo.userPassword, hashAlgorithm)) {
-        // パスワードチェックOK
-        if (userData.userType !== loginInfo.userType) {
-          // ユーザ種別の変更がある場合はそれを反映する
-
-          // リクエスト情報が定義に忠実とは限らないのでチェック
-          if (loginInfo.userType !== "PL" && loginInfo.userType !== "GM" && loginInfo.userType !== "VISITOR") {
-            loginInfo.userType = "VISITOR";
-          }
-          userData.userType = loginInfo.userType;
-        }
-        userData.login++;
-        addRoomMember = userData.login === 1;
-        await userDocSnap.ref.update({
-          data: userData
-        });
-      } else {
-        // パスワードチェックで引っかかった
-        return false;
-      }
-    } catch (err) {
-      throw new SystemError(`Login verify fatal error. user-name=${loginInfo.userName}`);
-    }
-  }
-
-  if (addRoomMember) {
-    // ログインできたので部屋の入室人数を更新
-    const roomData = roomDoc.data.data;
-    roomData.memberNum++;
-
-    await roomDoc.ref.update({
-      data: roomData
-    });
-  }
-
-  (await driver.collection<SocketStore>(SYSTEM_COLLECTION.SOCKET_LIST)
-    .where("socketId", "==", socketId)
-    .get()).docs
-    .forEach(doc => {
-      if (doc.exists()) {
-        doc.ref.update({
-          roomId: loginInfo.roomId,
-          userId
-        });
-      }
-    });
-
-  return true;
+  socketDocSnap.ref.update({
+    userId: userDocRef.id
+  });
 }
 
 export async function addTouchier(

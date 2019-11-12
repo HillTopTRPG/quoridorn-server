@@ -1,9 +1,9 @@
 import {StoreObj} from "../@types/store";
-import {CreateRoomRequest, RoomStore, UserLoginRequest} from "../@types/socket";
-import {hashAlgorithm, Resister} from "../server";
+import {CreateRoomRequest, RoomStore, SocketStore} from "../@types/socket";
+import {hashAlgorithm, Resister, SYSTEM_COLLECTION} from "../server";
 import {hash} from "../utility/password";
 import uuid from "uuid";
-import {getRoomInfo, setEvent, userLogin} from "./common";
+import {getRoomInfo, setEvent} from "./common";
 import Driver from "nekostore/lib/Driver";
 import DocumentSnapshot from "nekostore/lib/DocumentSnapshot";
 import {ApplicationError} from "../error/ApplicationError";
@@ -21,6 +21,14 @@ type ResponseType = string;
  * @param arg
  */
 async function createRoom(driver: Driver, exclusionOwner: string, arg: RequestType): Promise<ResponseType> {
+  const socketDocSnap: DocumentSnapshot<SocketStore> =
+    (await driver.collection<SocketStore>(SYSTEM_COLLECTION.SOCKET_LIST)
+      .where("socketId", "==", exclusionOwner)
+      .get())
+      .docs
+      .filter(doc => doc && doc.exists())[0];
+  if (!socketDocSnap) throw new ApplicationError(`No such socket.`);
+
   // タッチ解除
   await releaseTouchRoom(driver, exclusionOwner, {
     roomNo: arg.roomNo
@@ -43,17 +51,6 @@ async function createRoom(driver: Driver, exclusionOwner: string, arg: RequestTy
   arg.roomPassword = await hash(arg.roomPassword, hashAlgorithm);
   delete arg.roomNo;
 
-  const userInfo: UserLoginRequest = {
-    roomId: arg.roomId,
-    userName: arg.userName,
-    userPassword: arg.userPassword,
-    userType: arg.userType
-  };
-
-  delete arg.userName;
-  delete arg.userPassword;
-  delete arg.userType;
-
   const storeData: RoomStore = {
     ...arg,
     memberNum: 0,
@@ -66,8 +63,9 @@ async function createRoom(driver: Driver, exclusionOwner: string, arg: RequestTy
     updateTime: new Date()
   });
 
-  // つくりたてほやほやの部屋にユーザを追加する
-  await userLogin(driver, exclusionOwner, userInfo);
+  socketDocSnap.ref.update({
+    roomId: arg.roomId
+  });
 
   return storeData.roomCollectionPrefix;
 }
