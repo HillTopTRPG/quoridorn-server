@@ -141,7 +141,6 @@ export async function userLogin(
   const userCollection = driver.collection<StoreObj<UserStore>>(roomUserCollectionName);
   const userDocSnap: DocumentChange<StoreObj<UserStore>> =
     (await userCollection
-      .where("data.roomId", "==", loginInfo.roomId)
       .where("data.userName", "==", loginInfo.userName)
       .get()).docs
         .filter(doc => doc.exists())[0];
