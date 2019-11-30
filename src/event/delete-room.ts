@@ -21,6 +21,7 @@ type ResponseType = boolean;
  * @param arg
  */
 async function deleteRoom(driver: Driver, exclusionOwner: string, arg: RequestType): Promise<ResponseType> {
+  console.log("deleteRoom");
   // タッチ解除
   await releaseTouchRoom(driver, exclusionOwner, {
     roomNo: arg.roomNo

@@ -4,14 +4,14 @@ import {verify} from "../utility/password";
 import {setEvent, getRoomInfo} from "./common";
 import Driver from "nekostore/lib/Driver";
 import DocumentSnapshot from "nekostore/lib/DocumentSnapshot";
-import {RoomLoginInfo, RoomStore, SocketStore} from "../@types/socket";
+import {RoomLoginRequest, RoomStore, SocketStore} from "../@types/socket";
 import {StoreObj} from "../@types/store";
 import {ApplicationError} from "../error/ApplicationError";
 import {releaseTouchRoom} from "./release-touch-room";
 
 // インタフェース
 const eventName = "room-login";
-type RequestType = RoomLoginInfo;
+type RequestType = RoomLoginRequest;
 type ResponseType = string;
 
 /**
@@ -59,9 +59,6 @@ async function roomLogin(driver: Driver, exclusionOwner: string, arg: RequestTyp
     // パスワードチェックで引っかかった
     throw new ApplicationError(`Password mismatch. room-no=${arg.roomNo}`);
   }
-
-  // パスワードチェックOK
-  delete docSnap.data.data.roomPassword;
 
   socketDocSnap.ref.update({
     roomId: arg.roomId

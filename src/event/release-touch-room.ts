@@ -20,6 +20,7 @@ export async function releaseTouchRoom(driver: Driver, exclusionOwner: string, a
   const docSnap = await getRoomInfo(driver, arg.roomNo, {
     exclusionOwner,
   });
+  console.log("releaseTouchRoom");
   if (!docSnap) throw new ApplicationError(`Already released touch or created room. room-no=${arg.roomNo}`);
   await deleteTouchier(driver, exclusionOwner, SYSTEM_COLLECTION.ROOM_LIST, docSnap.ref.id);
   if (updateForce || docSnap.data!.data) {

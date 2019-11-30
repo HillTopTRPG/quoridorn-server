@@ -28,6 +28,7 @@ type ResponseType = GetRoomListResponse;
  * 部屋情報一覧（サーバ設定の部屋数の数の長さの配列）を返却する
  */
 async function getRoomList(driver: Driver, socket: any): Promise<ResponseType> {
+  console.log("getRoomList");
   try {
     const c = driver.collection<StoreObj<RoomStore>>(SYSTEM_COLLECTION.ROOM_LIST);
     const infoList: (StoreObj<ClientRoomInfo> & StoreMetaData)[] = (await c.orderBy("order").get()).docs

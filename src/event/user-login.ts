@@ -21,6 +21,7 @@ type ResponseType = void;
  * @param arg
  */
 async function userLogin(driver: Driver, exclusionOwner: string, arg: RequestType): Promise<ResponseType> {
+  console.log("userLogin");
   // 部屋一覧の更新
   const socketDocSnap: DocumentSnapshot<SocketStore> =
     (await driver.collection<SocketStore>(SYSTEM_COLLECTION.SOCKET_LIST)

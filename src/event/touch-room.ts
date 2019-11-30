@@ -17,6 +17,7 @@ type ResponseType = void;
  * @param arg 部屋番号
  */
 async function touchRoom(driver: Driver, exclusionOwner: string, arg: RequestType): Promise<ResponseType> {
+  console.log("touchRoom");
   const c = await driver.collection<StoreObj<RoomStore>>(SYSTEM_COLLECTION.ROOM_LIST);
   const docSnap = await getRoomInfo(driver, arg.roomNo, { collectionReference: c });
 

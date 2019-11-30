@@ -17,6 +17,7 @@ type ResponseType = void;
  * @param arg
  */
 export async function updateData(driver: Driver, exclusionOwner: string, arg: RequestType): Promise<ResponseType> {
+  console.log("updateData");
   // タッチ解除
   await releaseTouchData(driver, exclusionOwner, arg, true);
 

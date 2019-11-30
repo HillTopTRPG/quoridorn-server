@@ -17,6 +17,7 @@ type ResponseType = void;
  * @param updateForce
  */
 export async function releaseTouchData(driver: Driver, exclusionOwner: string, arg: RequestType, updateForce?: boolean): Promise<ResponseType> {
+  console.log("releaseTouchData", arg.id);
   const docSnap = await getData(driver, arg.collection, arg.id, {
     exclusionOwner
   });

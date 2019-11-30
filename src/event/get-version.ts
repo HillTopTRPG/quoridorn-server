@@ -15,6 +15,7 @@ type ResponseType = GetVersionResponse;
  * サーバのバージョン番号を返却する
  */
 async function getVersion(): Promise<ResponseType> {
+  console.log("getVersion");
   return {
     version,
     title: message.title

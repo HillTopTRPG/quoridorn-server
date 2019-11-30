@@ -19,6 +19,7 @@ type ResponseType = void;
  * @param arg
  */
 async function deleteData(driver: Driver, exclusionOwner: string, arg: RequestType): Promise<ResponseType> {
+  console.log("deleteData", arg.id);
   // タッチ解除
   await releaseTouchData(driver, exclusionOwner, arg, true);
 
@@ -26,10 +27,7 @@ async function deleteData(driver: Driver, exclusionOwner: string, arg: RequestTy
   const docSnap: DocumentSnapshot<StoreObj<any>> = await getData(
     driver,
     arg.collection,
-    arg.id,
-    {
-      exclusionOwner
-    }
+    arg.id
   );
 
   if (!docSnap || !docSnap.exists())

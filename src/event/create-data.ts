@@ -19,6 +19,7 @@ type ResponseType = string;
  * @param arg
  */
 async function createData(driver: Driver, exclusionOwner: string, arg: RequestType): Promise<ResponseType> {
+  console.log("createData");
   // タッチ解除
   await releaseTouchData(driver, exclusionOwner, arg, true);
 

@@ -32,6 +32,8 @@ export type RoomLoginInfo = {
   roomPassword: string;
 };
 
+export type RoomLoginRequest = RoomLoginInfo;
+
 type UserType = "GM" | "PL" | "VISITOR";
 
 export type UserLoginRequest = {

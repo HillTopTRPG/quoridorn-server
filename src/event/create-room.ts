@@ -21,6 +21,7 @@ type ResponseType = string;
  * @param arg
  */
 async function createRoom(driver: Driver, exclusionOwner: string, arg: RequestType): Promise<ResponseType> {
+  console.log("createRoom");
   const socketDocSnap: DocumentSnapshot<SocketStore> =
     (await driver.collection<SocketStore>(SYSTEM_COLLECTION.SOCKET_LIST)
       .where("socketId", "==", exclusionOwner)

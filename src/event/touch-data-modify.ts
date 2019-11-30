@@ -16,6 +16,7 @@ type ResponseType = string;
  * @param arg
  */
 export async function touchDataModify(driver: Driver, exclusionOwner: string, arg: RequestType): Promise<ResponseType> {
+  console.log("touchDataModify", arg.id);
   const docSnap = await getData(driver, arg.collection, arg.id);
 
   if (!docSnap || !docSnap.exists()) throw new ApplicationError(`No such data. id=${arg.id}`);

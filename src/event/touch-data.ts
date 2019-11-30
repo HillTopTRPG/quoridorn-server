@@ -16,9 +16,22 @@ type ResponseType = string;
  * @param arg 部屋番号
  */
 async function touchData(driver: Driver, exclusionOwner: string, arg: RequestType): Promise<ResponseType> {
+  console.log("touchData");
   const c = await driver.collection<StoreObj<any>>(arg.collection);
+  let maxOrder: number;
+  const docs = (await c
+    .orderBy("order", "desc")
+    .get())
+    .docs
+    .filter(doc => doc && doc.exists());
+  if (!docs.length) {
+    maxOrder = -1;
+  } else {
+    maxOrder = docs[0].data!.order;
+  }
+  const order = maxOrder + 1;
   const docRef = await c.add({
-    order: -1,
+    order,
     exclusionOwner,
     createTime: new Date(),
     updateTime: null
