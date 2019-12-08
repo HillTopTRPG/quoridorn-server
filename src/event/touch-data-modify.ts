@@ -16,18 +16,42 @@ type ResponseType = string;
  * @param arg
  */
 export async function touchDataModify(driver: Driver, exclusionOwner: string, arg: RequestType): Promise<ResponseType> {
-  console.log("touchDataModify", arg.id);
-  const docSnap = await getData(driver, arg.collection, arg.id);
+  console.log(`START [touchDataModify (${exclusionOwner})] collection=${arg.collection}, id=${arg.id}`);
 
-  if (!docSnap || !docSnap.exists()) throw new ApplicationError(`No such data. id=${arg.id}`);
-  if (docSnap.data.exclusionOwner)
+  let docSnap;
+  try {
+    docSnap = await getData(driver, arg.collection, arg.id);
+  } catch (err) {
+    console.log(`ERROR [touchDataModify (${exclusionOwner})] collection=${arg.collection}, id=${arg.id}`);
+    throw err;
+  }
+
+  if (!docSnap || !docSnap.exists()) {
+    console.log(`ERROR [touchDataModify (${exclusionOwner})] collection=${arg.collection}, id=${arg.id}`);
+    throw new ApplicationError(`[touchDataModify] No such data. collection=${arg.collection} id=${arg.id}`);
+  }
+  if (docSnap.data.exclusionOwner) {
+    console.log(`ERROR [touchDataModify (${exclusionOwner})] collection=${arg.collection}, id=${arg.id}`);
     throw new ApplicationError(`Other player touched. id=${arg.id}`);
+  }
 
-  await docSnap.ref.update({
-    exclusionOwner,
-    updateTime: new Date()
-  });
-  await addTouchier(driver, exclusionOwner, arg.collection, docSnap.ref.id);
+  try {
+    await docSnap.ref.update({
+      exclusionOwner,
+      status: "modify-touched",
+      updateTime: new Date()
+    });
+  } catch (err) {
+    console.log(`ERROR [touchDataModify (${exclusionOwner})] collection=${arg.collection}, id=${arg.id}`);
+  }
+
+  try {
+    await addTouchier(driver, exclusionOwner, arg.collection, docSnap.ref.id);
+  } catch (err) {
+    console.log(`ERROR [touchDataModify (${exclusionOwner})] collection=${arg.collection}, id=${arg.id}`);
+  }
+
+  console.log(`END [touchDataModify (${exclusionOwner})] collection=${arg.collection}, id=${arg.id}`);
   return docSnap.ref.id;
 }
 

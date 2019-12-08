@@ -17,20 +17,45 @@ type ResponseType = void;
  * @param updateForce
  */
 export async function releaseTouchData(driver: Driver, exclusionOwner: string, arg: RequestType, updateForce?: boolean): Promise<ResponseType> {
-  console.log("releaseTouchData", arg.id);
-  const docSnap = await getData(driver, arg.collection, arg.id, {
-    exclusionOwner
-  });
-  if (!docSnap) throw new ApplicationError(`Already released touch or created data. id=${arg.id}`);
-  await deleteTouchier(driver, exclusionOwner, arg.collection, docSnap.ref.id);
-  if (updateForce || docSnap.data!.data) {
-    await docSnap.ref.update({
-      exclusionOwner: null,
-      updateTime: new Date()
+  console.log(`START [releaseTouchData (${exclusionOwner}) collection=${arg.collection} id=${arg.id}`);
+
+  let docSnap;
+  try {
+    docSnap = await getData(driver, arg.collection, arg.id, {
+      exclusionOwner
     });
-  } else {
-    await docSnap.ref.delete();
+  } catch (err) {
+    console.log(`ERROR [releaseTouchData (${exclusionOwner}) collection=${arg.collection} id=${arg.id}`);
+    throw err;
   }
+
+  if (!docSnap) {
+    console.log(`ERROR [releaseTouchData (${exclusionOwner}) collection=${arg.collection} id=${arg.id}`);
+    throw new ApplicationError(`Already released touch or created data. collection=${arg.collection} id=${arg.id} exclusionOwner=${exclusionOwner}`);
+  }
+
+  try {
+    await deleteTouchier(driver, exclusionOwner, arg.collection, docSnap.ref.id);
+  } catch (err) {
+    console.log(`ERROR [releaseTouchData (${exclusionOwner}) collection=${arg.collection} id=${arg.id}`);
+    throw err;
+  }
+
+  try {
+    if (updateForce || docSnap.data!.data) {
+      await docSnap.ref.update({
+        exclusionOwner: null,
+        updateTime: new Date()
+      });
+    } else {
+      await docSnap.ref.delete();
+    }
+  } catch (err) {
+    console.log(`ERROR [releaseTouchData (${exclusionOwner}) collection=${arg.collection} id=${arg.id}`);
+    throw err;
+  }
+
+  console.log(`END [releaseTouchData (${exclusionOwner}) collection=${arg.collection} id=${arg.id}`);
 }
 
 const resist: Resister = (driver: Driver, socket: any): void => {

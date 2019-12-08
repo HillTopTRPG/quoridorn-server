@@ -21,49 +21,78 @@ type ResponseType = string;
  * @param arg
  */
 async function roomLogin(driver: Driver, exclusionOwner: string, arg: RequestType): Promise<ResponseType> {
+  console.log(`START [roomLogin (${exclusionOwner})] no=${arg.roomNo}`);
+
   const socketDocSnap: DocumentSnapshot<SocketStore> =
     (await driver.collection<SocketStore>(SYSTEM_COLLECTION.SOCKET_LIST)
       .where("socketId", "==", exclusionOwner)
       .get())
       .docs
       .filter(doc => doc && doc.exists())[0];
-  if (!socketDocSnap) throw new ApplicationError(`No such socket.`);
+
+  if (!socketDocSnap) {
+    console.log(`ERROR [roomLogin (${exclusionOwner})] no=${arg.roomNo}`);
+    throw new ApplicationError(`No such socket.`);
+  }
 
   // タッチ解除
-  await releaseTouchRoom(driver, exclusionOwner, {
-    roomNo: arg.roomNo
-  }, true);
+  try {
+    await releaseTouchRoom(driver, exclusionOwner, {
+      roomNo: arg.roomNo
+    }, true);
+  } catch (err) {
+    console.log(`ERROR [roomLogin (${exclusionOwner})] no=${arg.roomNo}`);
+    throw err;
+  }
 
   // 部屋一覧の更新
-  const docSnap: DocumentSnapshot<StoreObj<RoomStore>> = await getRoomInfo(
-    driver,
-    arg.roomNo,
-    { id: arg.roomId }
-  );
+  let docSnap: DocumentSnapshot<StoreObj<RoomStore>>;
+  try {
+    docSnap = await getRoomInfo(
+      driver,
+      arg.roomNo,
+      { id: arg.roomId }
+    );
+  } catch (err) {
+    console.log(`ERROR [roomLogin (${exclusionOwner})] no=${arg.roomNo}`);
+    throw err;
+  }
 
-  if (!docSnap)
+  if (!docSnap) {
+    console.log(`ERROR [roomLogin (${exclusionOwner})] no=${arg.roomNo}`);
     throw new ApplicationError(`Untouched room error. room-no=${arg.roomNo}`);
+  }
 
-  if (!docSnap.data.data)
+  if (!docSnap.data.data) {
+    console.log(`ERROR [roomLogin (${exclusionOwner})] no=${arg.roomNo}`);
     throw new ApplicationError(`Until created room error. room-no=${arg.roomNo}`);
+  }
 
   // 部屋パスワードチェック
   let verifyResult;
   try {
     verifyResult = await verify(docSnap.data.data.roomPassword, arg.roomPassword, hashAlgorithm);
   } catch (err) {
+    console.log(`ERROR [roomLogin (${exclusionOwner})] no=${arg.roomNo}`);
     throw new SystemError(`Login verify fatal error. room-no=${arg.roomNo}`);
   }
 
   if (!verifyResult) {
     // パスワードチェックで引っかかった
+    console.log(`ERROR [roomLogin (${exclusionOwner})] no=${arg.roomNo}`);
     throw new ApplicationError(`Password mismatch. room-no=${arg.roomNo}`);
   }
 
-  socketDocSnap.ref.update({
-    roomId: arg.roomId
-  });
+  try {
+    await socketDocSnap.ref.update({
+      roomId: arg.roomId
+    });
+  } catch (err) {
+    console.log(`ERROR [roomLogin (${exclusionOwner})] no=${arg.roomNo}`);
+    throw err;
+  }
 
+  console.log(`END [roomLogin (${exclusionOwner})] no=${arg.roomNo}`);
   return docSnap.data.data.roomCollectionPrefix;
 }
 

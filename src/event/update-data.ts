@@ -17,19 +17,41 @@ type ResponseType = void;
  * @param arg
  */
 export async function updateData(driver: Driver, exclusionOwner: string, arg: RequestType): Promise<ResponseType> {
-  console.log("updateData");
+  console.log(`START [updateData (${exclusionOwner})] collection=${arg.collection}, id=${arg.id}`);
+
   // タッチ解除
-  await releaseTouchData(driver, exclusionOwner, arg, true);
+  try {
+    await releaseTouchData(driver, exclusionOwner, arg, true);
+  } catch (err) {
+    console.log(`ERROR [updateData (${exclusionOwner})] collection=${arg.collection}, id=${arg.id}`);
+    throw err;
+  }
 
-  const docSnap = await getData(driver, arg.collection, arg.id);
+  let docSnap;
+  try {
+    docSnap = await getData(driver, arg.collection, arg.id);
+  } catch (err) {
+    console.log(`ERROR [updateData (${exclusionOwner})] collection=${arg.collection}, id=${arg.id}`);
+    throw err;
+  }
 
-  if (!docSnap || !docSnap.exists() || !docSnap.data.data)
-    throw new ApplicationError(`No such data. id=${arg.id}`);
+  if (!docSnap || !docSnap.exists() || !docSnap.data.data) {
+    console.log(`ERROR [updateData (${exclusionOwner})] collection=${arg.collection}, id=${arg.id}`);
+    throw new ApplicationError(`[updateData] No such data. collection=${arg.collection} id=${arg.id}`);
+  }
 
-  await docSnap.ref.update({
-    data: arg.data,
-    updateTime: new Date()
-  });
+  try {
+    await docSnap.ref.update({
+      data: arg.data,
+      status: "modified",
+      updateTime: new Date()
+    });
+  } catch (err) {
+    console.log(`ERROR [updateData (${exclusionOwner})] collection=${arg.collection}, id=${arg.id}`);
+    throw err;
+  }
+
+  console.log(`END [updateData (${exclusionOwner})] collection=${arg.collection}, id=${arg.id}`);
 }
 
 const resist: Resister = (driver: Driver, socket: any): void => {

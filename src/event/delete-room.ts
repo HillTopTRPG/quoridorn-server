@@ -21,36 +21,61 @@ type ResponseType = boolean;
  * @param arg
  */
 async function deleteRoom(driver: Driver, exclusionOwner: string, arg: RequestType): Promise<ResponseType> {
-  console.log("deleteRoom");
+  console.log(`START [deleteRoom (${exclusionOwner})] no=${arg.roomNo}, id=${arg.roomId}`);
+
   // タッチ解除
-  await releaseTouchRoom(driver, exclusionOwner, {
-    roomNo: arg.roomNo
-  }, true);
+  try {
+    await releaseTouchRoom(driver, exclusionOwner, {
+      roomNo: arg.roomNo
+    }, true);
+  } catch (err) {
+    console.log(`ERROR [deleteRoom (${exclusionOwner})] no=${arg.roomNo}, id=${arg.roomId}`);
+    throw err;
+  }
 
   // 部屋一覧の更新
-  const docSnap: DocumentSnapshot<StoreObj<RoomStore>> = await getRoomInfo(
-    driver,
-    arg.roomNo,
-    { id: arg.roomId }
-  );
+  let docSnap: DocumentSnapshot<StoreObj<RoomStore>>;
+  try {
+    docSnap = await getRoomInfo(
+      driver,
+      arg.roomNo,
+      { id: arg.roomId }
+    );
+  } catch (err) {
+    console.log(`ERROR [deleteRoom (${exclusionOwner})] no=${arg.roomNo}, id=${arg.roomId}`);
+    throw err;
+  }
 
-  if (!docSnap || !docSnap.exists()) throw new ApplicationError(`Untouched room error. room-no=${arg.roomNo}`);
+  if (!docSnap || !docSnap.exists()) {
+    console.log(`ERROR [deleteRoom (${exclusionOwner})] no=${arg.roomNo}, id=${arg.roomId}`);
+    throw new ApplicationError(`Untouched room error. room-no=${arg.roomNo}`);
+  }
 
   const data = docSnap.data.data;
-  if (!data) throw new ApplicationError(`Already deleted room error. room-no=${arg.roomNo}`);
+  if (!data) {
+    console.log(`ERROR [deleteRoom (${exclusionOwner})] no=${arg.roomNo}, id=${arg.roomId}`);
+    throw new ApplicationError(`Already deleted room error. room-no=${arg.roomNo}`);
+  }
 
   // 部屋パスワードチェック
   try {
     if (!await verify(docSnap.data.data.roomPassword, arg.roomPassword, hashAlgorithm)) {
       // パスワードチェックで引っかかった
+      console.log(`END (PASSWORD ERROR) [deleteRoom (${exclusionOwner})] no=${arg.roomNo}, id=${arg.roomId}`);
       return false;
     }
   } catch (err) {
+    console.log(`ERROR [deleteRoom (${exclusionOwner})] no=${arg.roomNo}, id=${arg.roomId}`);
     throw new SystemError(`Login verify fatal error. room-no=${arg.roomNo}`);
   }
 
   const roomId = docSnap.ref.id;
-  docSnap.ref.delete();
+  try {
+    await docSnap.ref.delete();
+  } catch (err) {
+    console.log(`ERROR [deleteRoom (${exclusionOwner})] no=${arg.roomNo}, id=${arg.roomId}`);
+    throw err;
+  }
 
   // 部屋に紐づくユーザの削除
   const roomUserCollectionName = `${data.roomCollectionPrefix}-DATA-user-list`;
@@ -58,10 +83,17 @@ async function deleteRoom(driver: Driver, exclusionOwner: string, arg: RequestTy
   const docs = (await userCollection.where("data.roomId", "==", roomId).get()).docs;
   docs.forEach(async doc => {
     if (!doc || !doc.exists()) return;
-    await doc.ref.delete();
+    try {
+      await doc.ref.delete();
+    } catch (err) {
+      console.log(`ERROR [deleteRoom (${exclusionOwner})] no=${arg.roomNo}, id=${arg.roomId}`);
+      throw err;
+    }
   });
 
   // TODO 各部屋情報コレクションの削除
+
+  console.log(`END [deleteRoom (${exclusionOwner})] no=${arg.roomNo}, id=${arg.roomId}`);
   return true;
 }
 

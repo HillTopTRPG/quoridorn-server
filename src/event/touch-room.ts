@@ -17,21 +17,49 @@ type ResponseType = void;
  * @param arg 部屋番号
  */
 async function touchRoom(driver: Driver, exclusionOwner: string, arg: RequestType): Promise<ResponseType> {
-  console.log("touchRoom");
+  console.log(`START [touchRoom (${exclusionOwner})] no=${arg.roomNo}`);
   const c = await driver.collection<StoreObj<RoomStore>>(SYSTEM_COLLECTION.ROOM_LIST);
-  const docSnap = await getRoomInfo(driver, arg.roomNo, { collectionReference: c });
 
-  if (!await checkViewer(driver, exclusionOwner, false))
+  let docSnap;
+  try {
+    docSnap = await getRoomInfo(driver, arg.roomNo, { collectionReference: c });
+  } catch (err) {
+    console.log(`ERROR [touchRoom (${exclusionOwner})] no=${arg.roomNo}`);
+    throw err;
+  }
+
+  if (!await checkViewer(driver, exclusionOwner, false)) {
+    console.log(`ERROR [touchRoom (${exclusionOwner})] no=${arg.roomNo}`);
     throw new ApplicationError(`Unsupported user.`);
+  }
 
-  if (docSnap) throw new ApplicationError(`Already touched or created room. room-no=${arg.roomNo}`);
-  const docRef = await c.add({
-    order: arg.roomNo,
-    exclusionOwner,
-    createTime: new Date(),
-    updateTime: null
-  });
-  await addTouchier(driver, exclusionOwner, SYSTEM_COLLECTION.ROOM_LIST, docRef.id);
+  if (docSnap) {
+    console.log(`ERROR [touchRoom (${exclusionOwner})] no=${arg.roomNo}`);
+    throw new ApplicationError(`Already touched or created room. room-no=${arg.roomNo}`);
+  }
+
+  let docRef;
+  try {
+    docRef = await c.add({
+      order: arg.roomNo,
+      exclusionOwner,
+      status: "initial-touched",
+      createTime: new Date(),
+      updateTime: null
+    });
+  } catch (err) {
+    console.log(`ERROR [touchRoom (${exclusionOwner})] no=${arg.roomNo}`);
+    throw err;
+  }
+
+  try {
+    await addTouchier(driver, exclusionOwner, SYSTEM_COLLECTION.ROOM_LIST, docRef.id);
+  } catch (err) {
+    console.log(`ERROR [touchRoom (${exclusionOwner})] no=${arg.roomNo}`);
+    throw err;
+  }
+
+  console.log(`END [touchRoom (${exclusionOwner})] no=${arg.roomNo}`);
 }
 
 const resist: Resister = (driver: Driver, socket: any): void => {

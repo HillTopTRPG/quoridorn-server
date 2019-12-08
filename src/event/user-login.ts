@@ -12,7 +12,7 @@ import DocumentChange from "nekostore/lib/DocumentChange";
 // インタフェース
 const eventName = "user-login";
 type RequestType = UserLoginRequest;
-type ResponseType = void;
+type ResponseType = string;
 
 /**
  * ログイン処理
@@ -21,7 +21,7 @@ type ResponseType = void;
  * @param arg
  */
 async function userLogin(driver: Driver, exclusionOwner: string, arg: RequestType): Promise<ResponseType> {
-  console.log("userLogin");
+  console.log(`START [userLogin (${exclusionOwner})] name=${arg.userName} type=${arg.userType}`);
   // 部屋一覧の更新
   const socketDocSnap: DocumentSnapshot<SocketStore> =
     (await driver.collection<SocketStore>(SYSTEM_COLLECTION.SOCKET_LIST)
@@ -29,16 +29,24 @@ async function userLogin(driver: Driver, exclusionOwner: string, arg: RequestTyp
       .get())
       .docs
       .filter(doc => doc && doc.exists())[0];
-  if (!socketDocSnap) throw new ApplicationError(`No such socket.`);
+  if (!socketDocSnap) {
+    console.log(`ERROR [userLogin (${exclusionOwner})] name=${arg.userName} type=${arg.userType}`);
+    throw new ApplicationError(`No such socket.`);
+  }
 
   const roomId = socketDocSnap.data.roomId;
-  if (!roomId) throw new ApplicationError(`Until login to room socket.`);
+  if (!roomId) {
+    console.log(`ERROR [userLogin (${exclusionOwner})] name=${arg.userName} type=${arg.userType}`);
+    throw new ApplicationError(`Until login to room socket.`);
+  }
 
   const roomDocSnap: DocumentSnapshot<StoreObj<RoomStore>> =
     await driver.collection<StoreObj<RoomStore>>(SYSTEM_COLLECTION.ROOM_LIST).doc(roomId).get();
 
-  if (!roomDocSnap || !roomDocSnap.exists() || !roomDocSnap.data.data)
+  if (!roomDocSnap || !roomDocSnap.exists() || !roomDocSnap.data.data) {
+    console.log(`ERROR [userLogin (${exclusionOwner})] name=${arg.userName} type=${arg.userType}`);
     throw new ApplicationError(`No such room. room-id=${roomId}`);
+  }
 
   // ユーザコレクションの取得とユーザ情報更新
   const roomUserCollectionName = `${roomDocSnap.data.data.roomCollectionPrefix}-DATA-user-list`;
@@ -56,20 +64,30 @@ async function userLogin(driver: Driver, exclusionOwner: string, arg: RequestTyp
     arg.userType = "VISITOR";
   }
 
+  let userId: string;
+
   if (!userDocSnap || !userDocSnap.exists()) {
     // ユーザが存在しない場合
-    await addUser(userCollection, socketDocSnap, arg.userName, arg.userPassword, arg.userType);
+    try {
+      userId = await addUser(userCollection, socketDocSnap, arg.userName, arg.userPassword, arg.userType);
+    } catch (err) {
+      console.log(`ERROR [userLogin (${exclusionOwner})] name=${arg.userName} type=${arg.userType}`);
+      throw err;
+    }
   } else {
     // ユーザが存在した場合
+    userId = userDocSnap.ref.id;
     const userData = userDocSnap.data.data;
     let verifyResult;
     try {
       verifyResult = await verify(userData.userPassword, arg.userPassword, hashAlgorithm);
     } catch (err) {
+      console.log(`ERROR [userLogin (${exclusionOwner})] name=${arg.userName} type=${arg.userType}`);
       throw new SystemError(`Login verify fatal error. user-name=${arg.userName}`);
     }
     if (!verifyResult) {
       // パスワードチェックで引っかかった
+      console.log(`ERROR [userLogin (${exclusionOwner})] name=${arg.userName} type=${arg.userType}`);
       throw new ApplicationError(`Password mismatch. user-name=${arg.userName}`);
     }
 
@@ -84,7 +102,7 @@ async function userLogin(driver: Driver, exclusionOwner: string, arg: RequestTyp
       data: userData
     });
 
-    socketDocSnap.ref.update({
+    await socketDocSnap.ref.update({
       userId: userDocSnap.ref.id
     });
   }
@@ -98,6 +116,9 @@ async function userLogin(driver: Driver, exclusionOwner: string, arg: RequestTyp
       data: roomData
     });
   }
+
+  console.log(`END [userLogin (${exclusionOwner})] name=${arg.userName} type=${arg.userType}`);
+  return userId;
 }
 
 const resist: Resister = (driver: Driver, socket: any): void => {

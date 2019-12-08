@@ -3,6 +3,7 @@ import {Resister} from "../server";
 import {addTouchier, setEvent} from "./common";
 import Driver from "nekostore/lib/Driver";
 import {TouchRequest} from "../@types/data";
+import {ApplicationError} from "../error/ApplicationError";
 
 // インタフェース
 const eventName = "touch-data";
@@ -16,7 +17,8 @@ type ResponseType = string;
  * @param arg 部屋番号
  */
 async function touchData(driver: Driver, exclusionOwner: string, arg: RequestType): Promise<ResponseType> {
-  console.log("touchData");
+  console.log(`START [touchData (${exclusionOwner})] collection=${arg.collection}, id=${arg.id}`);
+
   const c = await driver.collection<StoreObj<any>>(arg.collection);
   let maxOrder: number;
   const docs = (await c
@@ -30,13 +32,45 @@ async function touchData(driver: Driver, exclusionOwner: string, arg: RequestTyp
     maxOrder = docs[0].data!.order;
   }
   const order = maxOrder + 1;
-  const docRef = await c.add({
-    order,
-    exclusionOwner,
-    createTime: new Date(),
-    updateTime: null
-  });
-  await addTouchier(driver, exclusionOwner, arg.collection, docRef.id);
+
+  let docRef;
+  if (!arg.id) {
+    docRef = await c.add({
+      order,
+      exclusionOwner,
+      status: "initial-touched",
+      createTime: new Date(),
+      updateTime: null
+    });
+  } else {
+    docRef = c.doc(arg.id);
+    if ((await docRef.get()).exists()) {
+      console.log(`ERROR [touchData (${exclusionOwner})] collection=${arg.collection}, id=${arg.id}`);
+      throw new ApplicationError(`Data exists at touch-data by id. id=${arg.id}`);
+    }
+
+    try {
+      await docRef.set({
+        order,
+        exclusionOwner,
+        status: "initial-touched",
+        createTime: new Date(),
+        updateTime: null
+      });
+    } catch (err) {
+      console.log(`ERROR [touchData (${exclusionOwner})] collection=${arg.collection}, id=${arg.id}`);
+      throw err;
+    }
+  }
+
+  try {
+    await addTouchier(driver, exclusionOwner, arg.collection, docRef.id);
+  } catch (err) {
+    console.log(`ERROR [touchData (${exclusionOwner})] collection=${arg.collection}, id=${arg.id}`);
+    throw err;
+  }
+
+  console.log(`END [touchData (${exclusionOwner})] collection=${arg.collection}, id=${arg.id}`);
   return docRef.id;
 }
 

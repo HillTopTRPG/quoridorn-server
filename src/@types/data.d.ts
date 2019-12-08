@@ -1,8 +1,6 @@
 export type TouchRequest = {
   collection: string;
-};
-export type TouchResponse = {
-  docId: string;
+  id?: string;
 };
 export type TouchModifyRequest = TouchRequest & {
   id: string;

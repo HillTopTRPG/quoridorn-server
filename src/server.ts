@@ -16,6 +16,7 @@ import resistDeleteRoomEvent from "./event/delete-room";
 import resistTouchDataEvent from "./event/touch-data";
 import resistTouchDataModifyEvent from "./event/touch-data-modify";
 import resistReleaseTouchDataEvent from "./event/release-touch-data";
+import resistUpdateDataEvent from "./event/update-data";
 import resistCreateDataEvent from "./event/create-data";
 import resistDeleteDataEvent from "./event/delete-data";
 import Driver from "nekostore/lib/Driver";
@@ -120,7 +121,7 @@ async function logout(driver: Driver, socketId: string): Promise<void> {
           });
         }
       }
-      doc.ref.delete();
+      await doc.ref.delete();
     });
 }
 
@@ -144,7 +145,7 @@ async function main(): Promise<void> {
       console.log("Connected", socket.id);
 
       // 接続情報に追加
-      addSocketList(driver, socket.id);
+      await addSocketList(driver, socket.id);
 
       // nekostore起動！
       new SocketDriverServer(driver, socket);
@@ -193,6 +194,8 @@ async function main(): Promise<void> {
         resistReleaseTouchDataEvent,
         // データ作成リクエスト
         resistCreateDataEvent,
+        // データ更新リクエスト
+        resistUpdateDataEvent,
         // データ削除リクエスト
         resistDeleteDataEvent
       ].forEach((r: Resister) => r(driver, socket));

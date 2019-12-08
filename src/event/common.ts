@@ -100,15 +100,19 @@ export async function getData(
   const collectionReference = option.collectionReference || driver.collection<StoreObj<any>>(collection);
   const docSnap = (await collectionReference.doc(id).get());
 
-  if (!docSnap || !docSnap.exists()) return null;
+  if (!docSnap || !docSnap.exists()) {
+    console.log(`[getData] Not exists collection=${collection}, id=${id}, option.exclusionOwner=${option.exclusionOwner}`);
+    return null;
+  }
 
   // 排他チェック
   if (option.exclusionOwner !== undefined) {
     const data = docSnap.data;
-    if (!data.exclusionOwner) throw new ApplicationError(`Illegal operation. collection=${collection} id=${id}`);
-    if (data.exclusionOwner !== option.exclusionOwner) throw new ApplicationError(`Other player touched. collection=${collection} id=${id}`);
+    if (!data.exclusionOwner) throw new ApplicationError(`[getData] Illegal operation. collection=${collection} id=${id}`);
+    if (data.exclusionOwner !== option.exclusionOwner) throw new ApplicationError(`[getData] Other player touched. collection=${collection} id=${id}`);
   }
 
+  console.log(`[getData] result. collection=${collection}, id=${id}`);
   return docSnap;
 }
 
@@ -129,25 +133,30 @@ export async function addUser(
   userName: string,
   userPassword: string,
   userType: UserType
-): Promise<void> {
+): Promise<string> {
   userPassword = await hash(userPassword, hashAlgorithm);
 
   const userDocRef = await userCollection.add({
     order: -1,
     exclusionOwner: null,
+    status: "added",
     createTime: new Date(),
     updateTime: null,
     data: {
       userName,
-      userPassword, // TODO パスワードの実データはコレクションを分ける
+      userPassword,
       userType,
       login: 1
     }
   });
 
-  socketDocSnap.ref.update({
-    userId: userDocRef.id
+  const userId = userDocRef.id;
+
+  await socketDocSnap.ref.update({
+    userId
   });
+
+  return userId;
 }
 
 export async function addTouchier(
