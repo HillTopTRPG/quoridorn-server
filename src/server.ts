@@ -34,7 +34,7 @@ import {SystemError} from "./error/SystemError";
 import {readProperty} from "./utility/propertyFile";
 import {Property} from "./@types/property";
 
-export type Resister = (d: Driver, socket: any) => void;
+export type Resister = (d: Driver, socket: any, db?: Db) => void;
 export const serverSetting: ServerSetting = YAML.parse(fs.readFileSync(path.resolve(__dirname, "../config/server.yaml"), "utf8"));
 
 const envProperty: Property = readProperty(path.resolve(__dirname, "./.env"));
@@ -110,13 +110,13 @@ async function logout(driver: Driver, socketId: string): Promise<void> {
           throw new ApplicationError(`No such user. user-id=${socketData.userId}`);
         const userData = userDocSnap.data.data;
         userData.login--;
-        userDocSnap.ref.update({
+        await userDocSnap.ref.update({
           data: userData
         });
 
         if (userData.login === 0) {
           roomData.memberNum--;
-          roomDocSnap.ref.update({
+          await roomDocSnap.ref.update({
             data: roomData
           });
         }
@@ -198,7 +198,7 @@ async function main(): Promise<void> {
         resistUpdateDataEvent,
         // データ削除リクエスト
         resistDeleteDataEvent
-      ].forEach((r: Resister) => r(driver, socket));
+      ].forEach((r: Resister) => r(driver, socket, db));
     });
 
     // setInterval(() => {
@@ -229,16 +229,16 @@ async function initDataBase(driver: Driver): Promise<void> {
       const roomData = roomDoc.data.data;
       roomData.memberNum = 0;
       const roomCollectionPrefix = roomData.roomCollectionPrefix;
-      roomDoc.ref.update({
+      await roomDoc.ref.update({
         data: roomData
       });
 
       const roomUserCollectionName = `${roomCollectionPrefix}-DATA-user-list`;
-      (await driver.collection<StoreObj<UserStore>>(roomUserCollectionName).get()).docs.forEach(userDoc => {
+      (await driver.collection<StoreObj<UserStore>>(roomUserCollectionName).get()).docs.forEach(async userDoc => {
         if (userDoc.exists()) {
           const userData = userDoc.data.data;
           userData.login = 0;
-          userDoc.ref.update({
+          await userDoc.ref.update({
             data: userData
           });
         }
@@ -261,18 +261,18 @@ async function initDataBase(driver: Driver): Promise<void> {
     })));
 
   // タッチ情報を全削除
-  (await driver.collection<TouchierStore>(SYSTEM_COLLECTION.TOUCH_LIST).get()).docs.forEach(doc => {
+  (await driver.collection<TouchierStore>(SYSTEM_COLLECTION.TOUCH_LIST).get()).docs.forEach(async doc => {
     if (doc.exists()) {
-      doc.ref.delete();
+      await doc.ref.delete();
     }
   });
 
   // Socket接続情報を全削除
-  (await driver.collection<StoreObj<SocketStore>>(SYSTEM_COLLECTION.SOCKET_LIST).get()).docs.forEach(doc => {
+  (await driver.collection<StoreObj<SocketStore>>(SYSTEM_COLLECTION.SOCKET_LIST).get()).docs.forEach(async doc => {
     if (doc.exists()) {
-      doc.ref.delete();
+      await doc.ref.delete();
     }
   });
 }
 
-main();
+main().then();
