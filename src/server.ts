@@ -37,7 +37,7 @@ import {Property} from "./@types/property";
 export type Resister = (d: Driver, socket: any, db?: Db) => void;
 export const serverSetting: ServerSetting = YAML.parse(fs.readFileSync(path.resolve(__dirname, "../config/server.yaml"), "utf8"));
 
-const envProperty: Property = readProperty(path.resolve(__dirname, "./.env"));
+const envProperty: Property = readProperty(path.resolve(__dirname, "../.env"));
 export const version: string = `Quoridorn ${envProperty["VERSION"]}`;
 const hashAlgorithmStr: string = envProperty["HASH_ALGORITHM"];
 if (hashAlgorithmStr !== "argon2" && hashAlgorithmStr !== "bcrypt") {
