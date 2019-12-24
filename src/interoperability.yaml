@@ -1,3 +1,5 @@
+- server: 1.0.0a24
+  client: 2.0.0a32
 - server: 1.0.0a19
   client: 2.0.0a19
 - server: 1.0.0a17
