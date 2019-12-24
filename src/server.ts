@@ -37,9 +37,10 @@ import {Property} from "./@types/property";
 export type Resister = (d: Driver, socket: any, db?: Db) => void;
 export const serverSetting: ServerSetting = YAML.parse(fs.readFileSync(path.resolve(__dirname, "../config/server.yaml"), "utf8"));
 
-const envProperty: Property = readProperty(path.resolve(__dirname, "../.env"));
-export const version: string = `Quoridorn ${envProperty["VERSION"]}`;
-const hashAlgorithmStr: string = envProperty["HASH_ALGORITHM"];
+require('dotenv').config();
+export const version: string = `Quoridorn ${process.env.VERSION}`;
+const hashAlgorithmStr: string = process.env.HASH_ALGORITHM;
+console.log(version, hashAlgorithmStr);
 if (hashAlgorithmStr !== "argon2" && hashAlgorithmStr !== "bcrypt") {
   throw new SystemError(`Unsupported hash algorithm. hashAlgorithm: ${hashAlgorithmStr}`);
 }

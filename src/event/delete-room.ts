@@ -17,6 +17,8 @@ type ResponseType = boolean;
 
 const suffixList = [
   "map-list",
+  "map-layer-list",
+  "map-and-layer-list",
   "room-data",
   "image-list",
   "image-tag-list",
