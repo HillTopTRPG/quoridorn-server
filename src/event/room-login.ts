@@ -46,7 +46,7 @@ async function roomLogin(driver: Driver, exclusionOwner: string, arg: RequestTyp
   }
 
   // 部屋一覧の更新
-  let docSnap: DocumentSnapshot<StoreObj<RoomStore>>;
+  let docSnap: DocumentSnapshot<StoreObj<RoomStore>> | null;
   try {
     docSnap = await getRoomInfo(
       driver,
@@ -58,7 +58,7 @@ async function roomLogin(driver: Driver, exclusionOwner: string, arg: RequestTyp
     throw err;
   }
 
-  if (!docSnap) {
+  if (!docSnap || !docSnap.exists()) {
     console.log(`ERROR [roomLogin (${exclusionOwner})] no=${arg.roomNo}`);
     throw new ApplicationError(`Untouched room error. room-no=${arg.roomNo}`);
   }

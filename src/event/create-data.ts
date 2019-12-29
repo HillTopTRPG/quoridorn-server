@@ -30,7 +30,7 @@ async function createData(driver: Driver, exclusionOwner: string, arg: RequestTy
   }
 
   // データの更新
-  const docSnap: DocumentSnapshot<StoreObj<any>> = await getData(
+  const docSnap: DocumentSnapshot<StoreObj<any>> | null = await getData(
     driver,
     arg.collection,
     arg.id

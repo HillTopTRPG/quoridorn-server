@@ -25,12 +25,12 @@ export async function touchRoomModify(driver: Driver, exclusionOwner: string, ar
     throw err;
   }
 
-  if (!await checkViewer(driver, exclusionOwner, false)) {
+  if (!await checkViewer(driver, exclusionOwner)) {
     console.log(`ERROR [touchRoomModify (${exclusionOwner})] no=${arg.roomNo}`);
     throw new ApplicationError(`Unsupported user.`);
   }
 
-  if (!docSnap) {
+  if (!docSnap || !docSnap.exists()) {
     console.log(`ERROR [touchRoomModify (${exclusionOwner})] no=${arg.roomNo}`);
     throw new ApplicationError(`No such room. room-no=${arg.roomNo}`);
   }

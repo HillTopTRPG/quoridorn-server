@@ -6,7 +6,7 @@ import {SystemError} from "../error/SystemError";
 import {
   RoomStore,
   SocketStore,
-  TouchierStore,
+  TouchierStore, UserLoginResponse,
   UserStore,
   UserType
 } from "../@types/socket";
@@ -15,6 +15,7 @@ import CollectionReference from "nekostore/src/CollectionReference";
 import DocumentChange from "nekostore/lib/DocumentChange";
 import Query from "nekostore/lib/Query";
 import {hash} from "../utility/password";
+import uuid = require("uuid");
 
 export function setEvent<T, U>(driver: Driver, socket: any, event: string, func: (driver: Driver, arg: T) => Promise<U>) {
   const resultEvent = `result-${event}`;
@@ -71,7 +72,7 @@ export async function getRoomInfo(
 
   // 排他チェック
   if (option.exclusionOwner !== undefined) {
-    const data = roomDocList[0].data;
+    const data = roomDocList[0].data!;
     if (!data.exclusionOwner) throw new ApplicationError(`Illegal operation. room-no=${roomNo}`);
     if (data.exclusionOwner !== option.exclusionOwner) throw new ApplicationError(`Other player touched. room-no=${roomNo}`);
   }
@@ -116,7 +117,7 @@ export async function getData(
   return docSnap;
 }
 
-export async function checkViewer(driver: Driver, exclusionOwner: string, isAdd: boolean): Promise<boolean> {
+export async function checkViewer(driver: Driver, exclusionOwner: string): Promise<boolean> {
   const c = driver.collection<SocketStore>(SYSTEM_COLLECTION.SOCKET_LIST);
   const viewerInfo: SocketStore | null = (await c
     .where("socketId", "==", exclusionOwner)
@@ -133,8 +134,10 @@ export async function addUser(
   userName: string,
   userPassword: string,
   userType: UserType
-): Promise<string> {
+): Promise<UserLoginResponse> {
   userPassword = await hash(userPassword, hashAlgorithm);
+
+  const token = uuid.v4();
 
   const userDocRef = await userCollection.add({
     order: -1,
@@ -145,6 +148,7 @@ export async function addUser(
     data: {
       userName,
       userPassword,
+      token,
       userType,
       login: 1
     }
@@ -156,7 +160,10 @@ export async function addUser(
     userId
   });
 
-  return userId;
+  return {
+    userId,
+    token
+  };
 }
 
 export async function addTouchier(

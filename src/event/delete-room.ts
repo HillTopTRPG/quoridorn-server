@@ -59,7 +59,7 @@ async function deleteRoom(driver: Driver, exclusionOwner: string, arg: RequestTy
   }
 
   // 部屋一覧の更新
-  let docSnap: DocumentSnapshot<StoreObj<RoomStore>>;
+  let docSnap: DocumentSnapshot<StoreObj<RoomStore>> | null;
   try {
     docSnap = await getRoomInfo(
       driver,
@@ -84,7 +84,7 @@ async function deleteRoom(driver: Driver, exclusionOwner: string, arg: RequestTy
 
   // 部屋パスワードチェック
   try {
-    if (!await verify(docSnap.data.data.roomPassword, arg.roomPassword, hashAlgorithm)) {
+    if (!await verify(docSnap.data.data!.roomPassword, arg.roomPassword, hashAlgorithm)) {
       // パスワードチェックで引っかかった
       console.log(`END (PASSWORD ERROR) [deleteRoom (${exclusionOwner})] no=${arg.roomNo}, id=${arg.roomId}`);
       return false;
@@ -94,7 +94,6 @@ async function deleteRoom(driver: Driver, exclusionOwner: string, arg: RequestTy
     throw new SystemError(`Login verify fatal error. room-no=${arg.roomNo}`);
   }
 
-  const roomId = docSnap.ref.id;
   try {
     await docSnap.ref.delete();
   } catch (err) {
@@ -102,23 +101,10 @@ async function deleteRoom(driver: Driver, exclusionOwner: string, arg: RequestTy
     throw err;
   }
 
-  // // 部屋に紐づくユーザの削除
-  // const roomUserCollectionName = `${data.roomCollectionPrefix}-DATA-user-list`;
-  // const userCollection = driver.collection<StoreObj<UserStore>>(roomUserCollectionName);
-  // const docs = (await userCollection.where("data.roomId", "==", roomId).get()).docs;
-  // docs.forEach(async doc => {
-  //   if (!doc || !doc.exists()) return;
-  //   try {
-  //     await doc.ref.delete();
-  //   } catch (err) {
-  //     console.log(`ERROR [deleteRoom (${exclusionOwner})] no=${arg.roomNo}, id=${arg.roomId}`);
-  //     throw err;
-  //   }
-  // });
-
   if (db) {
     const deleteCollection = (suffix: string) => {
-      db.collection(`${data.roomCollectionPrefix}-DATA-${suffix}`).drop((err, delOK) => {
+      db.collection(`${data.roomCollectionPrefix}-DATA-${suffix}`).drop(() => {
+        // args: err, delOK
         // nothing.
       });
     };
@@ -143,7 +129,7 @@ async function deleteRoom(driver: Driver, exclusionOwner: string, arg: RequestTy
   return true;
 }
 
-const resist: Resister = (driver: Driver, socket: any, db: Db): void => {
+const resist: Resister = (driver: Driver, socket: any, db?: Db): void => {
   setEvent<RequestType, ResponseType>(driver, socket, eventName, (driver: Driver, arg: RequestType) => deleteRoom(driver, socket.id, arg, db));
 };
 export default resist;

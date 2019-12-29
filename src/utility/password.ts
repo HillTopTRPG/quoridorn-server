@@ -35,13 +35,11 @@ export async function hash(
  * @param hash
  * @param planeText
  * @param type
- * @param args
  */
 export async function verify(
   hash: string,
   planeText: string,
-  type: HashAlgorithmType = "argon2",
-  ...args: any
+  type: HashAlgorithmType = "argon2"
 ): Promise<boolean> {
   if (type === "bcrypt") {
     return new Promise((resolve, reject) => {
@@ -52,10 +50,13 @@ export async function verify(
   throw new ApplicationError(`Unsupported algorithm type. ${type}`);
 }
 
-const generateDefaultPromiseCallback = (resolve, reject) => (err, result) => {
-  if (err) {
-    reject(err);
-    return;
-  }
-  resolve(result);
-};
+const generateDefaultPromiseCallback =
+  (resolve: (result: any) =>
+    void, reject: (err: any) => void) =>
+      (err: any, result: any) => {
+        if (err) {
+          reject(err);
+          return;
+        }
+        resolve(result);
+      };

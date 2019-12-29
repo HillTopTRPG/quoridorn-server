@@ -4,7 +4,7 @@ import {verify} from "../utility/password";
 import {addUser, setEvent} from "./common";
 import Driver from "nekostore/lib/Driver";
 import DocumentSnapshot from "nekostore/lib/DocumentSnapshot";
-import {RoomStore, SocketStore, UserLoginRequest, UserStore} from "../@types/socket";
+import {RoomStore, SocketStore, UserLoginRequest, UserLoginResponse, UserStore} from "../@types/socket";
 import {StoreObj} from "../@types/store";
 import {ApplicationError} from "../error/ApplicationError";
 import DocumentChange from "nekostore/lib/DocumentChange";
@@ -12,7 +12,7 @@ import DocumentChange from "nekostore/lib/DocumentChange";
 // インタフェース
 const eventName = "user-login";
 type RequestType = UserLoginRequest;
-type ResponseType = string;
+type ResponseType = UserLoginResponse;
 
 /**
  * ログイン処理
@@ -34,7 +34,7 @@ async function userLogin(driver: Driver, exclusionOwner: string, arg: RequestTyp
     throw new ApplicationError(`No such socket.`);
   }
 
-  const roomId = socketDocSnap.data.roomId;
+  const roomId = socketDocSnap.data!.roomId;
   if (!roomId) {
     console.log(`ERROR [userLogin (${exclusionOwner})] name=${arg.userName} type=${arg.userType}`);
     throw new ApplicationError(`Until login to room socket.`);
@@ -64,20 +64,23 @@ async function userLogin(driver: Driver, exclusionOwner: string, arg: RequestTyp
     arg.userType = "VISITOR";
   }
 
-  let userId: string;
+  let userLoginResponse: UserLoginResponse;
 
   if (!userDocSnap || !userDocSnap.exists()) {
     // ユーザが存在しない場合
     try {
-      userId = await addUser(userCollection, socketDocSnap, arg.userName, arg.userPassword, arg.userType);
+      userLoginResponse = await addUser(userCollection, socketDocSnap, arg.userName, arg.userPassword, arg.userType);
     } catch (err) {
       console.log(`ERROR [userLogin (${exclusionOwner})] name=${arg.userName} type=${arg.userType}`);
       throw err;
     }
   } else {
     // ユーザが存在した場合
-    userId = userDocSnap.ref.id;
-    const userData = userDocSnap.data.data;
+    const userData = userDocSnap.data.data!;
+    userLoginResponse = {
+      userId: userDocSnap.ref.id,
+      token: userData.token
+    };
     let verifyResult;
     try {
       verifyResult = await verify(userData.userPassword, arg.userPassword, hashAlgorithm);
@@ -118,7 +121,7 @@ async function userLogin(driver: Driver, exclusionOwner: string, arg: RequestTyp
   }
 
   console.log(`END [userLogin (${exclusionOwner})] name=${arg.userName} type=${arg.userType}`);
-  return userId;
+  return userLoginResponse;
 }
 
 const resist: Resister = (driver: Driver, socket: any): void => {

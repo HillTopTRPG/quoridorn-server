@@ -44,7 +44,7 @@ async function createRoom(driver: Driver, exclusionOwner: string, arg: RequestTy
   }
 
   // 部屋一覧の更新
-  let docSnap: DocumentSnapshot<StoreObj<RoomStore>>;
+  let docSnap: DocumentSnapshot<StoreObj<RoomStore>> | null;
 
   try {
     docSnap = await getRoomInfo(

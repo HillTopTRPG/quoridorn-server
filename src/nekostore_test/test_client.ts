@@ -23,7 +23,7 @@ async function test_client(): Promise<void> {
     console.log("connect_timeout");
   });
 
-  socket.on("connect_error", (err) => {
+  socket.on("connect_error", (err: any) => {
     console.log("connect_error", err);
   });
 

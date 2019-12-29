@@ -30,7 +30,7 @@ async function deleteData(driver: Driver, exclusionOwner: string, arg: RequestTy
   }
 
   // 部屋一覧の更新
-  let docSnap: DocumentSnapshot<StoreObj<any>>;
+  let docSnap: DocumentSnapshot<StoreObj<any>> | null;
 
   try {
     docSnap = await getData(

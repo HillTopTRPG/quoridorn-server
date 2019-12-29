@@ -28,7 +28,7 @@ async function touchRoom(driver: Driver, exclusionOwner: string, arg: RequestTyp
     throw err;
   }
 
-  if (!await checkViewer(driver, exclusionOwner, false)) {
+  if (!await checkViewer(driver, exclusionOwner)) {
     console.log(`ERROR [touchRoom (${exclusionOwner})] no=${arg.roomNo}`);
     throw new ApplicationError(`Unsupported user.`);
   }

@@ -3,7 +3,7 @@ export type StoreObj<T> = {
   exclusionOwner: string | null; // 排他制御のオーナー
   data?: T;
   status: "initial-touched" | "added" | "modify-touched" | "touched-released" | "modified" | null;
-  createTime: Date;
+  createTime: Date | null;
   updateTime: Date | null;
 };
 
