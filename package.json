@@ -4,7 +4,7 @@
   "description": "Application server of the Quoridorn.",
   "main": "index.js",
   "scripts": {
-    "build": "tsc -t ES5",
+    "build": "tsc -t ES5 && cpx -C src/interoperability.yaml dist",
     "node-server": "node dist/server.js",
     "server": "npx ts-node src/server.ts",
     "test-server": "npx ts-node src/nekostore_test/test_server.ts",
@@ -40,5 +40,8 @@
     "typescript": "^3.6.4",
     "uuid": "^3.3.3",
     "yaml": "^1.7.1"
+  },
+  "devDependencies": {
+    "cpx": "^1.5.0"
   }
 }
