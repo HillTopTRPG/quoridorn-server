@@ -12,7 +12,7 @@ type RequestType = UpdateDataRequest;
 type ResponseType = void;
 
 /**
- * データ（編集・削除）着手リクエスト
+ * データ編集処理
  * @param driver
  * @param exclusionOwner
  * @param arg
