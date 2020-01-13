@@ -19,15 +19,8 @@ type ResponseType = string;
  * @param arg
  */
 async function createData(driver: Driver, exclusionOwner: string, arg: RequestType): Promise<ResponseType> {
-  console.log(`START [createData (${exclusionOwner})] collection=${arg.collection}, id=${arg.id}`);
-
   // タッチ解除
-  try {
-    await releaseTouchData(driver, exclusionOwner, arg, true);
-  } catch (err) {
-    console.log(`ERROR [createData (${exclusionOwner})] collection=${arg.collection}, id=${arg.id}`);
-    throw err;
-  }
+  await releaseTouchData(driver, exclusionOwner, arg, true);
 
   // データの更新
   const docSnap: DocumentSnapshot<StoreObj<any>> | null = await getData(
@@ -36,15 +29,11 @@ async function createData(driver: Driver, exclusionOwner: string, arg: RequestTy
     arg.id
   );
 
-  if (!docSnap || !docSnap.exists()) {
-    console.log(`ERROR [createData (${exclusionOwner})] collection=${arg.collection}, id=${arg.id}`);
-    throw new ApplicationError(`Untouched data error. id=${arg.id}`);
-  }
+  // Untouched check.
+  if (!docSnap || !docSnap.exists()) throw new ApplicationError(`Untouched data.`, arg);
 
-  if (docSnap.data.data) {
-    console.log(`ERROR [createData (${exclusionOwner})] collection=${arg.collection}, id=${arg.id}`);
-    throw new ApplicationError(`Already created data error. id=${arg.id}`);
-  }
+  // Already check.
+  if (docSnap.data.data) throw new ApplicationError(`Already created.`, arg);
 
   try {
     await docSnap.ref.update({
@@ -53,11 +42,9 @@ async function createData(driver: Driver, exclusionOwner: string, arg: RequestTy
       updateTime: new Date()
     });
   } catch (err) {
-    console.log(`ERROR [createData (${exclusionOwner})] collection=${arg.collection}, id=${arg.id}`);
-    throw err;
+    throw new ApplicationError(`Failure update doc.`, arg);
   }
 
-  console.log(`END [createData (${exclusionOwner})] collection=${arg.collection}, id=${arg.id}`);
   return docSnap.ref.id;
 }
 

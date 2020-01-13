@@ -4,6 +4,7 @@ import {getData, setEvent} from "./common";
 import Driver from "nekostore/lib/Driver";
 import {UpdateDataRequest} from "../@types/data";
 import {releaseTouchData} from "./release-touch-data";
+import {StoreObj} from "../@types/store";
 
 // インタフェース
 const eventName = "update-data";
@@ -17,41 +18,24 @@ type ResponseType = void;
  * @param arg
  */
 export async function updateData(driver: Driver, exclusionOwner: string, arg: RequestType): Promise<ResponseType> {
-  console.log(`START [updateData (${exclusionOwner})] collection=${arg.collection}, id=${arg.id}`);
-
   // タッチ解除
+  await releaseTouchData(driver, exclusionOwner, arg, true);
+
+  const docSnap = await getData(driver, arg.collection, arg.id);
+
+  // No such check.
+  if (!docSnap || !docSnap.exists() || !docSnap.data.data) throw new ApplicationError(`No such data.`, arg);
+
+  const updateInfo: Partial<StoreObj<any>> = {
+    data: arg.data,
+    status: "modified",
+    updateTime: new Date()
+  };
   try {
-    await releaseTouchData(driver, exclusionOwner, arg, true);
+    await docSnap.ref.update(updateInfo);
   } catch (err) {
-    console.log(`ERROR [updateData (${exclusionOwner})] collection=${arg.collection}, id=${arg.id}`);
-    throw err;
+    throw new ApplicationError(`Failure update doc.`, updateInfo);
   }
-
-  let docSnap;
-  try {
-    docSnap = await getData(driver, arg.collection, arg.id);
-  } catch (err) {
-    console.log(`ERROR [updateData (${exclusionOwner})] collection=${arg.collection}, id=${arg.id}`);
-    throw err;
-  }
-
-  if (!docSnap || !docSnap.exists() || !docSnap.data.data) {
-    console.log(`ERROR [updateData (${exclusionOwner})] collection=${arg.collection}, id=${arg.id}`);
-    throw new ApplicationError(`[updateData] No such data. collection=${arg.collection} id=${arg.id}`);
-  }
-
-  try {
-    await docSnap.ref.update({
-      data: arg.data,
-      status: "modified",
-      updateTime: new Date()
-    });
-  } catch (err) {
-    console.log(`ERROR [updateData (${exclusionOwner})] collection=${arg.collection}, id=${arg.id}`);
-    throw err;
-  }
-
-  console.log(`END [updateData (${exclusionOwner})] collection=${arg.collection}, id=${arg.id}`);
 }
 
 const resist: Resister = (driver: Driver, socket: any): void => {

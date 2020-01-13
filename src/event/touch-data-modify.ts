@@ -3,6 +3,7 @@ import {ApplicationError} from "../error/ApplicationError";
 import {addTouchier, getData, setEvent} from "./common";
 import Driver from "nekostore/lib/Driver";
 import {TouchModifyRequest} from "../@types/data";
+import {StoreObj} from "../@types/store";
 
 // インタフェース
 const eventName = "touch-data-modify";
@@ -16,42 +17,27 @@ type ResponseType = string;
  * @param arg
  */
 export async function touchDataModify(driver: Driver, exclusionOwner: string, arg: RequestType): Promise<ResponseType> {
-  console.log(`START [touchDataModify (${exclusionOwner})] collection=${arg.collection}, id=${arg.id}`);
+  const docSnap = await getData(driver, arg.collection, arg.id);
 
-  let docSnap;
+  // No such check.
+  if (!docSnap || !docSnap.exists()) throw new ApplicationError(`No such.`, arg);
+
+  // Already check.
+  if (docSnap.data.exclusionOwner) throw new ApplicationError(`Already touched.`, arg);
+
+  const updateInfo: Partial<StoreObj<any>> = {
+    exclusionOwner,
+    status: "modify-touched",
+    updateTime: new Date()
+  };
   try {
-    docSnap = await getData(driver, arg.collection, arg.id);
+    await docSnap.ref.update(updateInfo);
   } catch (err) {
-    console.log(`ERROR [touchDataModify (${exclusionOwner})] collection=${arg.collection}, id=${arg.id}`);
-    throw err;
+    throw new ApplicationError(`Failure update doc.`, updateInfo);
   }
 
-  if (!docSnap || !docSnap.exists()) {
-    console.log(`ERROR [touchDataModify (${exclusionOwner})] collection=${arg.collection}, id=${arg.id}`);
-    throw new ApplicationError(`[touchDataModify] No such data. collection=${arg.collection} id=${arg.id}`);
-  }
-  if (docSnap.data.exclusionOwner) {
-    console.log(`ERROR [touchDataModify (${exclusionOwner})] collection=${arg.collection}, id=${arg.id}`);
-    throw new ApplicationError(`Other player touched. id=${arg.id}`);
-  }
+  await addTouchier(driver, exclusionOwner, arg.collection, docSnap.ref.id);
 
-  try {
-    await docSnap.ref.update({
-      exclusionOwner,
-      status: "modify-touched",
-      updateTime: new Date()
-    });
-  } catch (err) {
-    console.log(`ERROR [touchDataModify (${exclusionOwner})] collection=${arg.collection}, id=${arg.id}`);
-  }
-
-  try {
-    await addTouchier(driver, exclusionOwner, arg.collection, docSnap.ref.id);
-  } catch (err) {
-    console.log(`ERROR [touchDataModify (${exclusionOwner})] collection=${arg.collection}, id=${arg.id}`);
-  }
-
-  console.log(`END [touchDataModify (${exclusionOwner})] collection=${arg.collection}, id=${arg.id}`);
   return docSnap.ref.id;
 }
 

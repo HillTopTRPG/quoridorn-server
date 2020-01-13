@@ -16,14 +16,31 @@ import DocumentChange from "nekostore/lib/DocumentChange";
 import Query from "nekostore/lib/Query";
 import {hash} from "../utility/password";
 import uuid = require("uuid");
+import {accessLog, errorLog} from "../utility/logger";
 
-export function setEvent<T, U>(driver: Driver, socket: any, event: string, func: (driver: Driver, arg: T) => Promise<U>) {
-  const resultEvent = `result-${event}`;
-  socket.on(event, async (arg: T) => {
+/**
+ * リクエスト処理を登録するための関数。
+ * @param driver
+ * @param socket
+ * @param eventName
+ * @param func
+ */
+export function setEvent<T, U>(driver: Driver, socket: any, eventName: string, func: (driver: Driver, arg: T) => Promise<U>) {
+  const resultEvent = `result-${eventName}`;
+  socket.on(eventName, async (arg: T) => {
+    accessLog(socket.id, eventName, "START", arg);
     try {
-      socket.emit(resultEvent, null, await func(driver, arg));
-    } catch(err) {
-      console.error(err);
+      const result = await func(driver, arg);
+      accessLog(socket.id, eventName, "END  ", result);
+      socket.emit(resultEvent, null, result);
+    } catch (err) {
+      // アクセスログは必ず閉じる
+      accessLog(socket.id, eventName, "ERROR");
+
+      // エラーの内容はエラーログを見て欲しい（アクセスログはシンプルにしたい）
+      const errorMessage = "message" in err ? err.message : err;
+      errorLog(socket.id, eventName, errorMessage);
+
       socket.emit(resultEvent, err, null);
     }
   });
@@ -73,13 +90,24 @@ export async function getRoomInfo(
   // 排他チェック
   if (option.exclusionOwner !== undefined) {
     const data = roomDocList[0].data!;
-    if (!data.exclusionOwner) throw new ApplicationError(`Illegal operation. room-no=${roomNo}`);
-    if (data.exclusionOwner !== option.exclusionOwner) throw new ApplicationError(`Other player touched. room-no=${roomNo}`);
+    if (!data.exclusionOwner)
+      throw new ApplicationError(
+        `Failure getRoomInfo. (Target roomInfo document has not exclusionOwner.)`,
+        { roomNo }
+      );
+    if (data.exclusionOwner !== option.exclusionOwner)
+      throw new ApplicationError(
+        `Failure getRoomInfo. (Already touched.)`,
+        { roomNo }
+      );
   }
 
   // idチェック
-  if (option.id !== undefined) {
-    if (roomDocList[0].ref.id !== option.id) throw new ApplicationError(`Already recreated room. room-no=${roomNo} storeId=${roomDocList[0].ref.id}, room-id=${option.id}`);
+  if (option.id !== undefined && option.id !== roomDocList[0].ref.id) {
+    throw new ApplicationError(
+      `Failure getRoomInfo. (Request id is not match stored id.)`,
+      { roomNo, "storeId": roomDocList[0].ref.id, requestId: option.id }
+    );
   }
 
   return roomDocList[0];
@@ -101,19 +129,22 @@ export async function getData(
   const collectionReference = option.collectionReference || driver.collection<StoreObj<any>>(collection);
   const docSnap = (await collectionReference.doc(id).get());
 
-  if (!docSnap || !docSnap.exists()) {
-    console.log(`[getData] Not exists collection=${collection}, id=${id}, option.exclusionOwner=${option.exclusionOwner}`);
-    return null;
-  }
+  if (!docSnap || !docSnap.exists()) return null;
 
   // 排他チェック
   if (option.exclusionOwner !== undefined) {
     const data = docSnap.data;
-    if (!data.exclusionOwner) throw new ApplicationError(`[getData] Illegal operation. collection=${collection} id=${id}`);
-    if (data.exclusionOwner !== option.exclusionOwner) throw new ApplicationError(`[getData] Other player touched. collection=${collection} id=${id}`);
+    if (!data.exclusionOwner)
+      throw new ApplicationError(
+        `Failure getRoomInfo. (Target roomInfo document has not exclusionOwner.)`,
+        { collection, id }
+      );
+    if (data.exclusionOwner !== option.exclusionOwner)
+      throw new ApplicationError(
+        `Failure getRoomInfo. (Already touched.)`,
+        { collection, id }
+      );
   }
-
-  console.log(`[getData] result. collection=${collection}, id=${id}`);
   return docSnap;
 }
 

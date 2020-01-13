@@ -21,8 +21,6 @@ type ResponseType = string;
  * @param arg
  */
 async function roomLogin(driver: Driver, exclusionOwner: string, arg: RequestType): Promise<ResponseType> {
-  console.log(`START [roomLogin (${exclusionOwner})] no=${arg.roomNo}`);
-
   const socketDocSnap: DocumentSnapshot<SocketStore> =
     (await driver.collection<SocketStore>(SYSTEM_COLLECTION.SOCKET_LIST)
       .where("socketId", "==", exclusionOwner)
@@ -30,70 +28,50 @@ async function roomLogin(driver: Driver, exclusionOwner: string, arg: RequestTyp
       .docs
       .filter(doc => doc && doc.exists())[0];
 
-  if (!socketDocSnap) {
-    console.log(`ERROR [roomLogin (${exclusionOwner})] no=${arg.roomNo}`);
-    throw new ApplicationError(`No such socket.`);
-  }
+  // No such socket check.
+  if (!socketDocSnap) throw new ApplicationError(`No such socket.`, { socketId: exclusionOwner });
 
   // タッチ解除
-  try {
-    await releaseTouchRoom(driver, exclusionOwner, {
-      roomNo: arg.roomNo
-    }, true);
-  } catch (err) {
-    console.log(`ERROR [roomLogin (${exclusionOwner})] no=${arg.roomNo}`);
-    throw err;
-  }
+  await releaseTouchRoom(driver, exclusionOwner, {
+    roomNo: arg.roomNo
+  }, true);
 
   // 部屋一覧の更新
-  let docSnap: DocumentSnapshot<StoreObj<RoomStore>> | null;
-  try {
-    docSnap = await getRoomInfo(
-      driver,
-      arg.roomNo,
-      { id: arg.roomId }
-    );
-  } catch (err) {
-    console.log(`ERROR [roomLogin (${exclusionOwner})] no=${arg.roomNo}`);
-    throw err;
-  }
+  const docSnap: DocumentSnapshot<StoreObj<RoomStore>> | null = await getRoomInfo(
+    driver,
+    arg.roomNo,
+    { id: arg.roomId }
+  );
 
-  if (!docSnap || !docSnap.exists()) {
-    console.log(`ERROR [roomLogin (${exclusionOwner})] no=${arg.roomNo}`);
-    throw new ApplicationError(`Untouched room error. room-no=${arg.roomNo}`);
-  }
+  // No such check.
+  if (!docSnap || !docSnap.exists()) throw new ApplicationError(`No such room.`, arg);
 
-  if (!docSnap.data.data) {
-    console.log(`ERROR [roomLogin (${exclusionOwner})] no=${arg.roomNo}`);
-    throw new ApplicationError(`Until created room error. room-no=${arg.roomNo}`);
-  }
+  // Not yet check.
+  if (!docSnap.data.data) throw new ApplicationError(`Not yet created`, arg);
+
+  const data = docSnap.data.data;
 
   // 部屋パスワードチェック
   let verifyResult;
   try {
-    verifyResult = await verify(docSnap.data.data.roomPassword, arg.roomPassword, hashAlgorithm);
+    verifyResult = await verify(data.roomPassword, arg.roomPassword, hashAlgorithm);
   } catch (err) {
-    console.log(`ERROR [roomLogin (${exclusionOwner})] no=${arg.roomNo}`);
     throw new SystemError(`Login verify fatal error. room-no=${arg.roomNo}`);
   }
 
-  if (!verifyResult) {
-    // パスワードチェックで引っかかった
-    console.log(`ERROR [roomLogin (${exclusionOwner})] no=${arg.roomNo}`);
-    throw new ApplicationError(`Password mismatch. room-no=${arg.roomNo}`);
-  }
+  // パスワードチェックで引っかかった
+  if (!verifyResult) throw new ApplicationError(`Password mismatch.`, arg);
 
+  const updateInfo = {
+    roomId: arg.roomId
+  };
   try {
-    await socketDocSnap.ref.update({
-      roomId: arg.roomId
-    });
+    await socketDocSnap.ref.update(updateInfo);
   } catch (err) {
-    console.log(`ERROR [roomLogin (${exclusionOwner})] no=${arg.roomNo}`);
-    throw err;
+    throw new ApplicationError(`Failure update doc.`, updateInfo);
   }
 
-  console.log(`END [roomLogin (${exclusionOwner})] no=${arg.roomNo}`);
-  return docSnap.data.data.roomCollectionPrefix;
+  return data.roomCollectionPrefix;
 }
 
 const resist: Resister = (driver: Driver, socket: any): void => {

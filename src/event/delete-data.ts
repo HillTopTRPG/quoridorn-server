@@ -19,49 +19,28 @@ type ResponseType = void;
  * @param arg
  */
 async function deleteData(driver: Driver, exclusionOwner: string, arg: RequestType): Promise<ResponseType> {
-  console.log(`START [deleteData (${exclusionOwner})] collection=${arg.collection}, id=${arg.id}`);
-
   // タッチ解除
-  try {
-    await releaseTouchData(driver, exclusionOwner, arg, true);
-  } catch (err) {
-    console.log(`ERROR [deleteData (${exclusionOwner})] collection=${arg.collection}, id=${arg.id}`);
-    throw err;
-  }
+  await releaseTouchData(driver, exclusionOwner, arg, true);
 
   // 部屋一覧の更新
-  let docSnap: DocumentSnapshot<StoreObj<any>> | null;
+  const docSnap: DocumentSnapshot<StoreObj<any>> | null = await getData(
+    driver,
+    arg.collection,
+    arg.id
+  );
 
-  try {
-    docSnap = await getData(
-      driver,
-      arg.collection,
-      arg.id
-    );
-  } catch (err) {
-    console.log(`ERROR [deleteData (${exclusionOwner})] collection=${arg.collection}, id=${arg.id}`);
-    throw err;
-  }
+  // Untouched check.
+  if (!docSnap || !docSnap.exists()) throw new ApplicationError(`Untouched data.`, arg);
 
-  if (!docSnap || !docSnap.exists()) {
-    console.log(`ERROR [deleteData (${exclusionOwner})] collection=${arg.collection}, id=${arg.id}`);
-    throw new ApplicationError(`Untouched data error. id=${arg.id}`);
-  }
-
+  // Already check.
   const data = docSnap.data;
-  if (!data || !data.data) {
-    console.log(`ERROR [deleteData (${exclusionOwner})] collection=${arg.collection}, id=${arg.id}`);
-    throw new ApplicationError(`Already deleted data error. id=${arg.id}`);
-  }
+  if (!data || !data.data) throw new ApplicationError(`Already deleted.`, arg);
 
   try {
     await docSnap.ref.delete();
   } catch (err) {
-    console.log(`ERROR [deleteData (${exclusionOwner})] collection=${arg.collection}, id=${arg.id}`);
-    throw err;
+    throw new ApplicationError(`Failure delete doc.`, arg);
   }
-
-  console.log(`END [deleteData (${exclusionOwner})] collection=${arg.collection}, id=${arg.id}`);
 }
 
 const resist: Resister = (driver: Driver, socket: any): void => {

@@ -17,60 +17,44 @@ type ResponseType = string;
  * @param arg 部屋番号
  */
 async function touchData(driver: Driver, exclusionOwner: string, arg: RequestType): Promise<ResponseType> {
-  console.log(`START [touchData (${exclusionOwner})] collection=${arg.collection}, id=${arg.id}`);
-
   const c = await driver.collection<StoreObj<any>>(arg.collection);
-  let maxOrder: number;
+
   const docs = (await c
     .orderBy("order", "desc")
     .get())
     .docs
     .filter(doc => doc && doc.exists());
-  if (!docs.length) {
-    maxOrder = -1;
-  } else {
-    maxOrder = docs[0].data!.order;
-  }
-  const order = maxOrder + 1;
+
+  const order = (!docs.length ? -1 : docs[0].data!.order) + 1;
 
   let docRef;
+  const addInfo: StoreObj<any> = {
+    order,
+    exclusionOwner,
+    status: "initial-touched",
+    createTime: new Date(),
+    updateTime: null
+  };
   if (!arg.id) {
-    docRef = await c.add({
-      order,
-      exclusionOwner,
-      status: "initial-touched",
-      createTime: new Date(),
-      updateTime: null
-    });
+    try {
+      docRef = await c.add(addInfo);
+    } catch (err) {
+      throw new ApplicationError(`Failure add doc.`, addInfo);
+    }
   } else {
     docRef = c.doc(arg.id);
-    if ((await docRef.get()).exists()) {
-      console.log(`ERROR [touchData (${exclusionOwner})] collection=${arg.collection}, id=${arg.id}`);
-      throw new ApplicationError(`Data exists at touch-data by id. id=${arg.id}`);
-    }
+
+    if ((await docRef.get()).exists()) throw new ApplicationError(`Already exists.`, arg);
 
     try {
-      await docRef.set({
-        order,
-        exclusionOwner,
-        status: "initial-touched",
-        createTime: new Date(),
-        updateTime: null
-      });
+      await docRef.set(addInfo);
     } catch (err) {
-      console.log(`ERROR [touchData (${exclusionOwner})] collection=${arg.collection}, id=${arg.id}`);
-      throw err;
+      throw new ApplicationError(`Failure set doc.`, addInfo);
     }
   }
 
-  try {
-    await addTouchier(driver, exclusionOwner, arg.collection, docRef.id);
-  } catch (err) {
-    console.log(`ERROR [touchData (${exclusionOwner})] collection=${arg.collection}, id=${arg.id}`);
-    throw err;
-  }
+  await addTouchier(driver, exclusionOwner, arg.collection, docRef.id);
 
-  console.log(`END [touchData (${exclusionOwner})] collection=${arg.collection}, id=${arg.id}`);
   return docRef.id;
 }
 

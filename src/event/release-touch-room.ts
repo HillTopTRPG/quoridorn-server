@@ -2,7 +2,8 @@ import {Resister, SYSTEM_COLLECTION} from "../server";
 import {ApplicationError} from "../error/ApplicationError";
 import {deleteTouchier, getRoomInfo, setEvent} from "./common";
 import Driver from "nekostore/lib/Driver";
-import {ReleaseTouchRequest} from "../@types/socket";
+import {ReleaseTouchRequest, RoomStore} from "../@types/socket";
+import {StoreObj} from "../@types/store";
 
 // インタフェース
 const eventName = "release-touch-room";
@@ -17,46 +18,34 @@ type ResponseType = void;
  * @param updateForce
  */
 export async function releaseTouchRoom(driver: Driver, exclusionOwner: string, arg: RequestType, updateForce?: boolean): Promise<ResponseType> {
-  console.log(`START [releaseTouchRoom (${exclusionOwner}) no=${arg.roomNo}`);
+  const docSnap = await getRoomInfo(driver, arg.roomNo, {
+    exclusionOwner,
+  });
 
-  let docSnap;
-  try {
-    docSnap = await getRoomInfo(driver, arg.roomNo, {
-      exclusionOwner,
-    });
-  } catch (err) {
-    console.log(`ERROR [releaseTouchRoom (${exclusionOwner}) no=${arg.roomNo}`);
-    throw err;
-  }
+  const createThrowDetail = (detail: string) => updateForce ? `Failure releaseTouchRoom. (${detail})` : detail;
 
-  if (!docSnap) {
-    console.log(`ERROR [releaseTouchRoom (${exclusionOwner}) no=${arg.roomNo}`);
-    throw new ApplicationError(`Already released touch or created room. room-no=${arg.roomNo}`);
-  }
+  if (!docSnap) throw new ApplicationError(createThrowDetail(`Already released touch or created.`), arg);
 
-  try {
-    await deleteTouchier(driver, exclusionOwner, SYSTEM_COLLECTION.ROOM_LIST, docSnap.ref.id);
-  } catch (err) {
-    console.log(`ERROR [releaseTouchRoom (${exclusionOwner}) no=${arg.roomNo}`);
-    throw err;
-  }
+  await deleteTouchier(driver, exclusionOwner, SYSTEM_COLLECTION.ROOM_LIST, docSnap.ref.id);
 
-  try {
-    if (updateForce || docSnap.data!.data) {
-      await docSnap.ref.update({
-        exclusionOwner: null,
-        status: "touched-released",
-        updateTime: new Date()
-      });
-    } else {
-      await docSnap.ref.delete();
+  if (updateForce || docSnap.data!.data) {
+    const updateInfo: Partial<StoreObj<RoomStore>> = {
+      exclusionOwner: null,
+      status: "touched-released",
+      updateTime: new Date()
+    };
+    try {
+      await docSnap.ref.update(updateInfo);
+    } catch (err) {
+      throw new ApplicationError(createThrowDetail("Failure update doc."), updateInfo);
     }
-  } catch (err) {
-    console.log(`ERROR [releaseTouchRoom (${exclusionOwner}) no=${arg.roomNo}`);
-    throw err;
+  } else {
+    try {
+      await docSnap.ref.delete();
+    } catch (err) {
+      throw new ApplicationError(createThrowDetail("Failure delete doc."), arg);
+    }
   }
-
-  console.log(`END [releaseTouchRoom (${exclusionOwner}) no=${arg.roomNo}`);
 }
 
 const resist: Resister = (driver: Driver, socket: any): void => {

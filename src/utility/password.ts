@@ -27,7 +27,7 @@ export async function hash(
     });
   }
   // if (type === "argon2") return await argon2.hash(planeText);
-  throw new ApplicationError(`Unsupported algorithm type. ${type}`);
+  throw new ApplicationError(`Unsupported algorithm.`, { type });
 }
 
 /**

@@ -32,6 +32,7 @@ import {Message, RoomStore, SocketStore, TouchierStore, UserStore} from "./@type
 import {ApplicationError} from "./error/ApplicationError";
 import {SystemError} from "./error/SystemError";
 import {compareVersion, getFileRow, TargetVersion} from "./utility/GitHub";
+import {accessLog} from "./utility/logger";
 
 export type Resister = (d: Driver, socket: any, db?: Db) => void;
 export const serverSetting: ServerSetting = YAML.parse(fs.readFileSync(path.resolve(__dirname, "../config/server.yaml"), "utf8"));
@@ -47,10 +48,6 @@ export function getMessage(): Message {
   message.termsOfUse = termsOfUse.trim().replace(/(\r\n)/g, "\n");
   return message;
 }
-
-const express = require('express');
-const app = express();
-app.use("/", express.static("./public/static"));
 
 require('dotenv').config();
 export const version: string = `Quoridorn ${process.env.VERSION}`;
@@ -175,7 +172,7 @@ async function main(): Promise<void> {
     return;
   }
 
-  console.log(targetClient);
+  console.log("targetClient:", targetClient);
 
   try {
     const { store, db } = await getStore(serverSetting);
@@ -190,11 +187,11 @@ async function main(): Promise<void> {
     io.set("heartbeat interval", 5000);
     io.set("heartbeat timeout", 15000);
 
-    console.log(`Quoridorn Server is Ready. (${process.env.VERSION})`);
+    console.log(`Quoridorn Server is Ready. (version: ${process.env.VERSION})`);
 
     io.on("connection", async (socket: any) => {
-      console.log("Connected", socket.id);
-
+      accessLog(socket.id, "CONNECTED");
+      
       // 接続情報に追加
       await addSocketList(driver, socket.id);
 
@@ -202,7 +199,7 @@ async function main(): Promise<void> {
       new SocketDriverServer(driver, socket);
 
       socket.on("disconnect", async () => {
-        console.log("disconnected", socket.id);
+        accessLog(socket.id, "DISCONNECTED");
         try {
           // 切断したらその人が行なっていたすべてのタッチを解除
           await releaseTouch(driver, socket.id);

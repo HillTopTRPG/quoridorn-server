@@ -2,7 +2,8 @@ import {Resister, SYSTEM_COLLECTION} from "../server";
 import {ApplicationError} from "../error/ApplicationError";
 import {addTouchier, checkViewer, getRoomInfo, setEvent} from "./common";
 import Driver from "nekostore/lib/Driver";
-import {TouchRequest} from "../@types/socket";
+import {RoomStore, TouchRequest} from "../@types/socket";
+import {StoreObj} from "../@types/store";
 
 // インタフェース
 const eventName = "touch-room-modify";
@@ -16,49 +17,29 @@ type ResponseType = void;
  * @param arg 部屋番号
  */
 export async function touchRoomModify(driver: Driver, exclusionOwner: string, arg: RequestType): Promise<ResponseType> {
-  console.log(`START [touchRoomModify (${exclusionOwner})] no=${arg.roomNo}`);
-  let docSnap;
+  const docSnap = await getRoomInfo(driver, arg.roomNo);
+
+  if (!await checkViewer(driver, exclusionOwner))
+    throw new ApplicationError(`Unsupported user.`, { socketId: exclusionOwner });
+
+  // No such check.
+  if (!docSnap || !docSnap.exists()) throw new ApplicationError(`No such.`, arg);
+
+  // Already check.
+  if (docSnap.data.exclusionOwner) throw new ApplicationError(`Already touched.`, arg);
+
+  const updateInfo: Partial<StoreObj<RoomStore>> = {
+    exclusionOwner,
+    status: "modify-touched",
+    updateTime: new Date()
+  };
   try {
-    docSnap = await getRoomInfo(driver, arg.roomNo);
+    await docSnap.ref.update(updateInfo);
   } catch (err) {
-    console.log(`ERROR [touchRoomModify (${exclusionOwner})] no=${arg.roomNo}`);
-    throw err;
+    throw new ApplicationError(`Failure update doc.`, updateInfo);
   }
 
-  if (!await checkViewer(driver, exclusionOwner)) {
-    console.log(`ERROR [touchRoomModify (${exclusionOwner})] no=${arg.roomNo}`);
-    throw new ApplicationError(`Unsupported user.`);
-  }
-
-  if (!docSnap || !docSnap.exists()) {
-    console.log(`ERROR [touchRoomModify (${exclusionOwner})] no=${arg.roomNo}`);
-    throw new ApplicationError(`No such room. room-no=${arg.roomNo}`);
-  }
-
-  if (docSnap.data.exclusionOwner) {
-    console.log(`ERROR [touchRoomModify (${exclusionOwner})] no=${arg.roomNo}`);
-    throw new ApplicationError(`Other player touched. room-no=${arg.roomNo}`);
-  }
-
-  try {
-    await docSnap.ref.update({
-      exclusionOwner,
-      status: "modify-touched",
-      updateTime: new Date()
-    });
-  } catch (err) {
-    console.log(`ERROR [touchRoomModify (${exclusionOwner})] no=${arg.roomNo}`);
-    throw err;
-  }
-
-  try {
-    await addTouchier(driver, exclusionOwner, SYSTEM_COLLECTION.ROOM_LIST, docSnap.ref.id);
-  } catch (err) {
-    console.log(`ERROR [touchRoomModify (${exclusionOwner})] no=${arg.roomNo}`);
-    throw err;
-  }
-
-  console.log(`END [touchRoomModify (${exclusionOwner})] no=${arg.roomNo}`);
+  await addTouchier(driver, exclusionOwner, SYSTEM_COLLECTION.ROOM_LIST, docSnap.ref.id);
 }
 
 const resist: Resister = (driver: Driver, socket: any): void => {

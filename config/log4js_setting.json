@@ -1,0 +1,73 @@
+{
+  "appenders": {
+    "access": {
+      "type": "file",
+      "filename": "./logs/access.log",
+      "layout": {
+        "type": "pattern",
+        "pattern": "[%d{yyyy-MM-dd hh:mm:ss.SSS}] [%p] %m"
+      },
+      "maxLogSize": 20971520,
+      "backups": 5,
+      "compress": true
+    },
+    "error": {
+      "type": "file",
+      "filename": "./logs/error.log",
+      "layout": {
+        "type": "pattern",
+        "pattern": "[%d{yyyy-MM-dd hh:mm:ss.SSS}] [%p] %m"
+      },
+      "maxLogSize": 5242880,
+      "backups": 5,
+      "compress": true
+    },
+    "system": {
+      "type": "file",
+      "filename": "./logs/system.log",
+      "layout": {
+        "type": "pattern",
+        "pattern": "[%d{yyyy-MM-dd hh:mm:ss.SSS}] [%p] %m"
+      },
+      "maxLogSize": 10485760,
+      "backups": 5,
+      "compress": true
+    },
+    "console": {
+      "type": "console",
+      "layout": {
+        "type": "pattern",
+        "pattern": "%[[%d{yyyy-MM-dd hh:mm:ss.SSS}] [%p] -%] %m"
+      }
+    },
+    "stdout": {
+      "type": "stdout",
+      "layout": {
+        "type": "pattern",
+        "pattern": "%[[%d{yyyy-MM-dd hh:mm:ss.SSS}] [%p] -%] %m"
+      }
+    }
+  },
+  "categories": {
+    "default": {
+      "appenders": [
+        "access",
+        "console",
+        "stdout"
+      ],
+      "level": "INFO"
+    },
+    "access": {
+      "appenders": [ "access", "stdout" ],
+      "level": "INFO"
+    },
+    "error": {
+      "appenders": [ "error", "stdout" ],
+      "level": "WARN"
+    },
+    "system": {
+      "appenders": [ "system" ],
+      "level": "ALL"
+    }
+  }
+}

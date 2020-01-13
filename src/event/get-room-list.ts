@@ -23,8 +23,6 @@ type ResponseType = GetRoomListResponse;
  */
 async function getRoomList(driver: Driver, socket: any, arg: RequestType): Promise<ResponseType> {
   try {
-    console.log("START [getRoomList]");
-
     const clientVersion = arg;
     let usable: boolean = false;
     if (targetClient.from) {
@@ -103,13 +101,11 @@ async function getRoomList(driver: Driver, socket: any, arg: RequestType): Promi
         });
       }
     }
-    console.log("END [getRoomList]");
     return {
       roomList,
       message: getMessage()
     };
-  } catch(err) {
-    console.log("ERROR [getRoomList]");
+  } catch (err) {
     throw err;
   }
 }
