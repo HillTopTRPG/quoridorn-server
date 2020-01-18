@@ -1,13 +1,14 @@
-import {hashAlgorithm, Resister, SYSTEM_COLLECTION} from "../server";
+import {hashAlgorithm, Resister} from "../server";
 import {SystemError} from "../error/SystemError";
 import {verify} from "../utility/password";
-import {setEvent, getRoomInfo} from "./common";
+import {setEvent, getRoomInfo, getSocketDocSnap} from "./common";
 import Driver from "nekostore/lib/Driver";
 import DocumentSnapshot from "nekostore/lib/DocumentSnapshot";
-import {RoomLoginRequest, RoomStore, SocketStore} from "../@types/socket";
+import {RoomLoginRequest} from "../@types/socket";
 import {StoreObj} from "../@types/store";
 import {ApplicationError} from "../error/ApplicationError";
 import {releaseTouchRoom} from "./release-touch-room";
+import {RoomStore} from "../@types/data";
 
 // インタフェース
 const eventName = "room-login";
@@ -21,15 +22,7 @@ type ResponseType = string;
  * @param arg
  */
 async function roomLogin(driver: Driver, exclusionOwner: string, arg: RequestType): Promise<ResponseType> {
-  const socketDocSnap: DocumentSnapshot<SocketStore> =
-    (await driver.collection<SocketStore>(SYSTEM_COLLECTION.SOCKET_LIST)
-      .where("socketId", "==", exclusionOwner)
-      .get())
-      .docs
-      .filter(doc => doc && doc.exists())[0];
-
-  // No such socket check.
-  if (!socketDocSnap) throw new ApplicationError(`No such socket.`, { socketId: exclusionOwner });
+  const socketDocSnap = (await getSocketDocSnap(driver, exclusionOwner))!;
 
   // タッチ解除
   await releaseTouchRoom(driver, exclusionOwner, {

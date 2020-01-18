@@ -2,12 +2,13 @@ import {Resister, SYSTEM_COLLECTION} from "../server";
 import {ApplicationError} from "../error/ApplicationError";
 import {deleteTouchier, getRoomInfo, setEvent} from "./common";
 import Driver from "nekostore/lib/Driver";
-import {ReleaseTouchRequest, RoomStore} from "../@types/socket";
+import {ReleaseTouchRoomRequest} from "../@types/socket";
 import {StoreObj} from "../@types/store";
+import {RoomStore} from "../@types/data";
 
 // インタフェース
 const eventName = "release-touch-room";
-type RequestType = ReleaseTouchRequest;
+type RequestType = ReleaseTouchRoomRequest;
 type ResponseType = void;
 
 /**

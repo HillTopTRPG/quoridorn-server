@@ -1,13 +1,14 @@
 import {hashAlgorithm, Resister, SYSTEM_COLLECTION} from "../server";
 import {SystemError} from "../error/SystemError";
 import {verify} from "../utility/password";
-import {addUser, setEvent} from "./common";
+import {addUser, getSocketDocSnap, setEvent} from "./common";
 import Driver from "nekostore/lib/Driver";
 import DocumentSnapshot from "nekostore/lib/DocumentSnapshot";
-import {RoomStore, SocketStore, UserLoginRequest, UserLoginResponse, UserStore} from "../@types/socket";
+import {UserLoginRequest, UserLoginResponse, UserType} from "../@types/socket";
 import {StoreObj} from "../@types/store";
 import {ApplicationError} from "../error/ApplicationError";
 import DocumentChange from "nekostore/lib/DocumentChange";
+import {ActorGroup, RoomStore, SocketStore, UserStore} from "../@types/data";
 
 // インタフェース
 const eventName = "user-login";
@@ -22,15 +23,7 @@ type ResponseType = UserLoginResponse;
  */
 async function userLogin(driver: Driver, exclusionOwner: string, arg: RequestType): Promise<ResponseType> {
   // 部屋一覧の更新
-  const socketDocSnap: DocumentSnapshot<SocketStore> =
-    (await driver.collection<SocketStore>(SYSTEM_COLLECTION.SOCKET_LIST)
-      .where("socketId", "==", exclusionOwner)
-      .get())
-      .docs
-      .filter(doc => doc && doc.exists())[0];
-
-  // No such socket check.
-  if (!socketDocSnap) throw new ApplicationError(`No such socket.`, { socketId: exclusionOwner });
+  const socketDocSnap = (await getSocketDocSnap(driver, exclusionOwner));
 
   // Not yet check.
   const roomId = socketDocSnap.data!.roomId;
@@ -43,13 +36,14 @@ async function userLogin(driver: Driver, exclusionOwner: string, arg: RequestTyp
     throw new ApplicationError(`No such room.`, { roomId });
 
   // ユーザコレクションの取得とユーザ情報更新
-  const roomUserCollectionName = `${roomDocSnap.data.data.roomCollectionPrefix}-DATA-user-list`;
+  const roomCollectionPrefix = roomDocSnap.data.data.roomCollectionPrefix;
+  const roomUserCollectionName = `${roomCollectionPrefix}-DATA-user-list`;
   const userCollection = driver.collection<StoreObj<UserStore>>(roomUserCollectionName);
   const userDocSnap: DocumentChange<StoreObj<UserStore>> =
     (await userCollection
-    .where("data.userName", "==", arg.userName)
-    .get()).docs
-    .filter(doc => doc.exists())[0];
+      .where("data.userName", "==", arg.userName)
+      .get()).docs
+      .filter(doc => doc.exists())[0];
 
   let addRoomMember: boolean = true;
 
@@ -61,12 +55,21 @@ async function userLogin(driver: Driver, exclusionOwner: string, arg: RequestTyp
 
   if (!userDocSnap || !userDocSnap.exists()) {
     // ユーザが存在しない場合
-    userLoginResponse = await addUser(userCollection, socketDocSnap, arg.userName, arg.userPassword, arg.userType);
+    userLoginResponse = await addUser(
+      driver,
+      exclusionOwner,
+      roomCollectionPrefix,
+      arg.userName,
+      arg.userPassword,
+      arg.userType
+    );
   } else {
     // ユーザが存在した場合
     const userData = userDocSnap.data.data!;
+    const userId = userDocSnap.ref.id;
+
     userLoginResponse = {
-      userId: userDocSnap.ref.id,
+      userId,
       token: userData.token
     };
     let verifyResult;
@@ -80,7 +83,38 @@ async function userLogin(driver: Driver, exclusionOwner: string, arg: RequestTyp
     if (!verifyResult) throw new ApplicationError(`Password mismatch.`, arg);
 
     // ユーザ種別の変更がある場合はそれを反映する
-    if (userData.userType !== arg.userType) userData.userType = arg.userType;
+    if (userData.userType !== arg.userType) {
+      const getGroupName = (userType: UserType) => {
+        if (userType === "PL") return "Players";
+        return userType === "GM" ? "GameMasters" : "Visitors";
+      };
+      const oldGroupName = getGroupName(userData.userType);
+      const newGroupName = getGroupName(arg.userType);
+      userData.userType = arg.userType;
+
+      const actorGroupCollectionName = `${roomCollectionPrefix}-DATA-actor-group-list`;
+      const actorGroupCollection = driver.collection<StoreObj<ActorGroup>>(actorGroupCollectionName);
+
+      // 元のグループから削除
+      const oldGroupDoc = (await actorGroupCollection.where("data.name", "==", oldGroupName).get()).docs[0];
+      const oldGroupData: ActorGroup = oldGroupDoc.data!.data!;
+      const index = oldGroupData.list.findIndex(g => g.id === userId);
+      oldGroupData.list.splice(index, 1);
+      await oldGroupDoc.ref.update({
+        data: oldGroupData
+      });
+
+      // 新しいグループに追加
+      const newGroupDoc = (await actorGroupCollection.where("data.name", "==", newGroupName).get()).docs[0];
+      const newGroupData: ActorGroup = newGroupDoc.data!.data!;
+      newGroupData.list.push({
+        type: "user",
+        id: userId
+      });
+      await newGroupDoc.ref.update({
+        data: newGroupData
+      });
+    }
 
     // 人数更新
     userData.login++;

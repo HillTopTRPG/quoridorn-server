@@ -2,7 +2,6 @@ import {StoreMetaData, StoreObj} from "../@types/store";
 import {
   ClientRoomInfo,
   GetRoomListResponse,
-  RoomStore,
   RoomViewResponse
 } from "../@types/socket";
 import {getMessage, Resister, serverSetting, SYSTEM_COLLECTION, targetClient} from "../server";
@@ -11,6 +10,7 @@ import Driver from "nekostore/lib/Driver";
 import {ChangeType} from "nekostore/lib/DocumentChange";
 import Unsubscribe from "nekostore/src/Unsubscribe";
 import {compareVersion} from "../utility/GitHub";
+import {RoomStore} from "../@types/data";
 
 
 // インタフェース
@@ -94,6 +94,8 @@ async function getRoomList(driver: Driver, socket: any, arg: RequestType): Promi
         roomList.splice(i, 0, {
           order: i,
           exclusionOwner: null,
+          owner: null,
+          permission: null,
           id: null,
           status: null,
           createTime: null,

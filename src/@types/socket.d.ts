@@ -1,5 +1,5 @@
 import {ChangeType} from "nekostore/lib/DocumentChange";
-import {StoreMetaData, StoreObj} from "./store";
+import {Permission, StoreMetaData, StoreObj} from "./store";
 import {TargetVersion} from "../utility/GitHub";
 
 type MapShape = "square" | "horizontal-hex" | "vertical-hex";
@@ -48,10 +48,10 @@ export type UserLoginResponse = {
   token: string;
 }
 
-export type TouchRequest = {
+export type TouchRoomRequest = {
   roomNo: number;
 };
-export type ReleaseTouchRequest = TouchRequest
+export type ReleaseTouchRoomRequest = TouchRoomRequest
 
 export type CreateRoomRequest = RoomLoginInfo & BaseRoomInfo;
 export type DeleteRoomRequest = RoomLoginInfo;
@@ -80,34 +80,32 @@ export type LoginResponse = ClientRoomInfo & {
   roomCollectionPrefix: string;
 };
 
-export type RoomStore = LoginResponse & {
-  roomPassword: string;
-};
-
-export type UserStore = {
-  userName: string;
-  userPassword: string;
-  token: string;
-  userType: UserType;
-  login: number;
-};
-
 export type GetVersionResponse = {
   version: string;
   title: string;
   targetClient: TargetVersion;
 };
 
-export type TouchierStore = {
+export type TouchDataRequest = {
   collection: string;
-  docId: string;
-  socketId: string;
-  time: Date;
+  id?: string;
+};
+export type TouchModifyDataRequest = TouchDataRequest & {
+  id: string;
+};
+export type ReleaseTouchDataRequest = TouchModifyDataRequest & {
+  continuous?: boolean;
 };
 
-export type SocketStore = {
-  socketId: string;
-  roomId: string | null;
-  userId: string | null;
-  connectTime: Date;
-}
+export type CreateDataRequest = TouchModifyDataRequest & {
+  order?: number;
+  data: any;
+  permission: Permission;
+};
+export type DeleteDataRequest = TouchModifyDataRequest;
+export type UpdateDataRequest = TouchModifyDataRequest & {
+  order?: number;
+  data: any;
+  permission?: Permission;
+  continuous?: boolean;
+};

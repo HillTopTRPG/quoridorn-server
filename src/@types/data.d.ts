@@ -1,19 +1,37 @@
-export type TouchRequest = {
-  collection: string;
-  id?: string;
-};
-export type TouchModifyRequest = TouchRequest & {
-  id: string;
-};
-export type ReleaseTouchRequest = TouchModifyRequest & {
-  continuous?: boolean;
+import {LoginResponse, UserType} from "./socket";
+
+export type RoomStore = LoginResponse & {
+  roomPassword: string;
 };
 
-export type CreateDataRequest = TouchModifyRequest & {
-  order?: number;
-  data: any;
+export type UserStore = {
+  userName: string;
+  userPassword: string;
+  token: string;
+  userType: UserType;
+  login: number;
 };
-export type DeleteDataRequest = TouchModifyRequest;
-export type UpdateDataRequest = CreateDataRequest & {
-  continuous?: boolean;
+
+export type TouchierStore = {
+  collection: string;
+  docId: string;
+  socketId: string;
+  time: Date;
+};
+
+export type SocketStore = {
+  socketId: string;
+  roomId: string | null;
+  userId: string | null;
+  connectTime: Date;
+}
+
+export type ActorGroup = {
+  name: string;
+  isSystem: boolean;
+  isChatGroup: boolean;
+  list: {
+    type: "user" | "character";
+    id: string;
+  }[];
 };

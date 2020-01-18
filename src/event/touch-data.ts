@@ -2,12 +2,12 @@ import {StoreObj} from "../@types/store";
 import {Resister} from "../server";
 import {addTouchier, setEvent} from "./common";
 import Driver from "nekostore/lib/Driver";
-import {TouchRequest} from "../@types/data";
+import {TouchDataRequest} from "../@types/socket";
 import {ApplicationError} from "../error/ApplicationError";
 
 // インタフェース
 const eventName = "touch-data";
-type RequestType = TouchRequest;
+type RequestType = TouchDataRequest;
 type ResponseType = string;
 
 /**
@@ -31,9 +31,24 @@ async function touchData(driver: Driver, exclusionOwner: string, arg: RequestTyp
   const addInfo: StoreObj<any> = {
     order,
     exclusionOwner,
+    owner: null,
     status: "initial-touched",
     createTime: new Date(),
-    updateTime: null
+    updateTime: null,
+    permission: {
+      view: {
+        type: "none",
+        list: []
+      },
+      edit: {
+        type: "none",
+        list: []
+      },
+      chmod: {
+        type: "none",
+        list: []
+      }
+    }
   };
   if (!arg.id) {
     try {

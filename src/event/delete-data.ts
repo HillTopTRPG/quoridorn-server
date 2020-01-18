@@ -4,7 +4,7 @@ import {getData, setEvent} from "./common";
 import Driver from "nekostore/lib/Driver";
 import DocumentSnapshot from "nekostore/lib/DocumentSnapshot";
 import {ApplicationError} from "../error/ApplicationError";
-import {DeleteDataRequest} from "../@types/data";
+import {DeleteDataRequest} from "../@types/socket";
 import {releaseTouchData} from "./release-touch-data";
 
 // インタフェース

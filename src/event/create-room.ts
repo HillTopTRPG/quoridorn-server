@@ -1,13 +1,14 @@
 import {StoreObj} from "../@types/store";
-import {CreateRoomRequest, RoomStore, SocketStore} from "../@types/socket";
-import {hashAlgorithm, Resister, SYSTEM_COLLECTION} from "../server";
+import {CreateRoomRequest} from "../@types/socket";
+import {hashAlgorithm, Resister} from "../server";
 import {hash} from "../utility/password";
 import uuid from "uuid";
-import {getRoomInfo, setEvent} from "./common";
+import {getRoomInfo, getSocketDocSnap, setEvent} from "./common";
 import Driver from "nekostore/lib/Driver";
 import DocumentSnapshot from "nekostore/lib/DocumentSnapshot";
 import {ApplicationError} from "../error/ApplicationError";
 import {releaseTouchRoom} from "./release-touch-room";
+import {ActorGroup, RoomStore, SocketStore} from "../@types/data";
 
 // インタフェース
 const eventName = "create-room";
@@ -21,15 +22,7 @@ type ResponseType = string;
  * @param arg
  */
 async function createRoom(driver: Driver, exclusionOwner: string, arg: RequestType): Promise<ResponseType> {
-  const socketDocSnap: DocumentSnapshot<SocketStore> =
-    (await driver.collection<SocketStore>(SYSTEM_COLLECTION.SOCKET_LIST)
-      .where("socketId", "==", exclusionOwner)
-      .get())
-      .docs
-      .filter(doc => doc && doc.exists())[0];
-
-  // No such socket check.
-  if (!socketDocSnap) throw new ApplicationError(`No such socket.`, { socketId: exclusionOwner });
+  const socketDocSnap = (await getSocketDocSnap(driver, exclusionOwner));
 
   // タッチ解除
   await releaseTouchRoom(driver, exclusionOwner, {
@@ -57,6 +50,7 @@ async function createRoom(driver: Driver, exclusionOwner: string, arg: RequestTy
   }
   delete arg.roomNo;
 
+  // 部屋情報の更新
   const storeData: RoomStore = {
     ...arg,
     memberNum: 0,
@@ -75,6 +69,7 @@ async function createRoom(driver: Driver, exclusionOwner: string, arg: RequestTy
     throw new ApplicationError(`Failure update roomInfo doc.`, updateRoomInfo);
   }
 
+  // Socket情報の更新
   const updateSocketInfo: Partial<SocketStore> = { roomId: arg.roomId };
   try {
     await socketDocSnap.ref.update(updateSocketInfo);
@@ -82,7 +77,50 @@ async function createRoom(driver: Driver, exclusionOwner: string, arg: RequestTy
     throw new ApplicationError(`Failure update socketInfo doc.`, updateSocketInfo);
   }
 
-  return storeData.roomCollectionPrefix;
+  const roomCollectionPrefix = storeData.roomCollectionPrefix;
+
+  // 部屋に付随する情報の生成
+  const actorGroupCCName = `${roomCollectionPrefix}-DATA-actor-group-list`;
+  const actorGroupCC = driver.collection<StoreObj<ActorGroup>>(actorGroupCCName);
+
+  const addGroup = async (name: string, order: number, isChatGroup: boolean) => {
+    await actorGroupCC.add({
+      order,
+      exclusionOwner: null,
+      owner: null,
+      permission: {
+        view: {
+          type: "none",
+          list: []
+        },
+        edit: {
+          type: "none",
+          list: []
+        },
+        chmod: {
+          type: "none",
+          list: []
+        }
+      },
+      status: "added",
+      createTime: new Date(),
+      updateTime: null,
+      data: {
+        name,
+        isSystem: true,
+        isChatGroup,
+        list: []
+      }
+    });
+  };
+  await addGroup("All", 0, true);
+  await addGroup("Users", 1, false);
+  await addGroup("GameMasters", 2, false);
+  await addGroup("Players", 3, false);
+  await addGroup("Visitors", 4, false);
+
+  // 接尾句を返却
+  return roomCollectionPrefix;
 }
 
 const resist: Resister = (driver: Driver, socket: any): void => {

@@ -3,11 +3,12 @@ import {Resister, SYSTEM_COLLECTION} from "../server";
 import {ApplicationError} from "../error/ApplicationError";
 import {addTouchier, checkViewer, getRoomInfo, setEvent} from "./common";
 import Driver from "nekostore/lib/Driver";
-import {RoomStore, TouchRequest} from "../@types/socket";
+import {TouchRoomRequest} from "../@types/socket";
+import {RoomStore} from "../@types/data";
 
 // インタフェース
 const eventName = "touch-room";
-type RequestType = TouchRequest;
+type RequestType = TouchRoomRequest;
 type ResponseType = void;
 
 /**
@@ -30,9 +31,24 @@ async function touchRoom(driver: Driver, exclusionOwner: string, arg: RequestTyp
   const addInfo: StoreObj<RoomStore> = {
     order: arg.roomNo,
     exclusionOwner,
+    owner: null,
     status: "initial-touched",
     createTime: new Date(),
-    updateTime: null
+    updateTime: null,
+    permission: {
+      view: {
+        type: "none",
+        list: []
+      },
+      edit: {
+        type: "none",
+        list: []
+      },
+      chmod: {
+        type: "none",
+        list: []
+      }
+    }
   };
   try {
     docRef = await c.add(addInfo);

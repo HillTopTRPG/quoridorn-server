@@ -1,5 +1,5 @@
 import {StoreObj} from "../@types/store";
-import {DeleteRoomRequest, RoomStore, UserStore} from "../@types/socket";
+import {DeleteRoomRequest} from "../@types/socket";
 import {hashAlgorithm, Resister} from "../server";
 import {verify} from "../utility/password";
 import {getRoomInfo, setEvent} from "./common";
@@ -9,6 +9,7 @@ import {ApplicationError} from "../error/ApplicationError";
 import {SystemError} from "../error/SystemError";
 import {releaseTouchRoom} from "./release-touch-room";
 import { Db } from "mongodb";
+import {RoomStore, UserStore} from "../@types/data";
 
 // インタフェース
 const eventName = "delete-room";
@@ -16,7 +17,7 @@ type RequestType = DeleteRoomRequest;
 type ResponseType = boolean;
 
 const suffixList = [
-  "map-list",
+  "screen-list",
   "map-layer-list",
   "map-and-layer-list",
   "room-data",
@@ -35,7 +36,8 @@ const suffixList = [
   "floor-tile-list",
   "chit-list",
   "map-mask-list",
-  "tag-note-list"
+  "tag-note-list",
+  "actor-group-list"
 ];
 
 /**

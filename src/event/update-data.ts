@@ -2,7 +2,7 @@ import {Resister} from "../server";
 import {ApplicationError} from "../error/ApplicationError";
 import {getData, setEvent} from "./common";
 import Driver from "nekostore/lib/Driver";
-import {UpdateDataRequest} from "../@types/data";
+import {UpdateDataRequest} from "../@types/socket";
 import {releaseTouchData} from "./release-touch-data";
 import {StoreObj} from "../@types/store";
 
@@ -31,6 +31,7 @@ export async function updateData(driver: Driver, exclusionOwner: string, arg: Re
     status: "modified",
     updateTime: new Date()
   };
+  if (arg.permission) updateInfo.permission = arg.permission;
   try {
     await docSnap.ref.update(updateInfo);
   } catch (err) {

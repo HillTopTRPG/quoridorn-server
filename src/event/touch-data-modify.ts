@@ -2,12 +2,12 @@ import {Resister} from "../server";
 import {ApplicationError} from "../error/ApplicationError";
 import {addTouchier, getData, setEvent} from "./common";
 import Driver from "nekostore/lib/Driver";
-import {TouchModifyRequest} from "../@types/data";
 import {StoreObj} from "../@types/store";
+import {TouchModifyDataRequest} from "../@types/socket";
 
 // インタフェース
 const eventName = "touch-data-modify";
-type RequestType = TouchModifyRequest;
+type RequestType = TouchModifyDataRequest;
 type ResponseType = string;
 
 /**

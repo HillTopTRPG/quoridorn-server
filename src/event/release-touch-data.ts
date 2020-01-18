@@ -2,11 +2,11 @@ import {Resister} from "../server";
 import {ApplicationError} from "../error/ApplicationError";
 import {deleteTouchier, getData, setEvent} from "./common";
 import Driver from "nekostore/lib/Driver";
-import {ReleaseTouchRequest} from "../@types/data";
+import {ReleaseTouchDataRequest} from "../@types/socket";
 
 // インタフェース
 const eventName = "release-touch-data";
-type RequestType = ReleaseTouchRequest;
+type RequestType = ReleaseTouchDataRequest;
 type ResponseType = void;
 
 /**

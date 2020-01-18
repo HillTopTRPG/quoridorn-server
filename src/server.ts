@@ -23,16 +23,17 @@ import Driver from "nekostore/lib/Driver";
 import Store from "nekostore/src/store/Store";
 import MongoStore from "nekostore/lib/store/MongoStore";
 import MemoryStore from "nekostore/lib/store/MemoryStore";
-import {releaseTouch} from "./event/common";
+import {getSocketDocSnap, releaseTouch} from "./event/common";
 import {HashAlgorithmType} from "./utility/password";
 const co = require("co");
 import { Db } from "mongodb";
 import {StoreObj} from "./@types/store";
-import {Message, RoomStore, SocketStore, TouchierStore, UserStore} from "./@types/socket";
+import {Message} from "./@types/socket";
 import {ApplicationError} from "./error/ApplicationError";
 import {SystemError} from "./error/SystemError";
 import {compareVersion, getFileRow, TargetVersion} from "./utility/GitHub";
 import {accessLog} from "./utility/logger";
+import {RoomStore, SocketStore, TouchierStore, UserStore} from "./@types/data";
 
 export type Resister = (d: Driver, socket: any, db?: Db) => void;
 export const serverSetting: ServerSetting = YAML.parse(fs.readFileSync(path.resolve(__dirname, "../config/server.yaml"), "utf8"));
@@ -100,42 +101,38 @@ async function addSocketList(driver: Driver, socketId: string): Promise<void> {
 }
 
 async function logout(driver: Driver, socketId: string): Promise<void> {
-  (await driver.collection<SocketStore>(SYSTEM_COLLECTION.SOCKET_LIST)
-    .where("socketId", "==", socketId)
-    .get()).docs
-    .filter(doc => doc && doc.exists())
-    .forEach(async doc => {
-      const socketData: SocketStore = doc.data!;
-      if (socketData.roomId && socketData.userId) {
-        const roomDocSnap = await driver.collection<StoreObj<RoomStore>>(SYSTEM_COLLECTION.ROOM_LIST)
-        .doc(socketData.roomId)
-        .get();
-        if (!roomDocSnap || !roomDocSnap.exists())
-          throw new ApplicationError(`No such room. room-id=${socketData.roomId}`);
-        const roomData = roomDocSnap.data.data!;
+  const snap = (await getSocketDocSnap(driver, socketId));
 
-        // ログアウト処理
-        const roomUserCollectionName = `${roomData.roomCollectionPrefix}-DATA-user-list`;
-        const userDocSnap = await driver.collection<StoreObj<UserStore>>(roomUserCollectionName)
-          .doc(socketData.userId)
-          .get();
-        if (!userDocSnap || !userDocSnap.exists())
-          throw new ApplicationError(`No such user. user-id=${socketData.userId}`);
-        const userData = userDocSnap.data.data!;
-        userData.login--;
-        await userDocSnap.ref.update({
-          data: userData
-        });
+  const socketData: SocketStore = snap.data!;
+  if (socketData.roomId && socketData.userId) {
+    const roomDocSnap = await driver.collection<StoreObj<RoomStore>>(SYSTEM_COLLECTION.ROOM_LIST)
+      .doc(socketData.roomId)
+      .get();
+    if (!roomDocSnap || !roomDocSnap.exists())
+      throw new ApplicationError(`No such room. room-id=${socketData.roomId}`);
+    const roomData = roomDocSnap.data.data!;
 
-        if (userData.login === 0) {
-          roomData.memberNum--;
-          await roomDocSnap.ref.update({
-            data: roomData
-          });
-        }
-      }
-      await doc.ref.delete();
+    // ログアウト処理
+    const roomUserCollectionName = `${roomData.roomCollectionPrefix}-DATA-user-list`;
+    const userDocSnap = await driver.collection<StoreObj<UserStore>>(roomUserCollectionName)
+      .doc(socketData.userId)
+      .get();
+    if (!userDocSnap || !userDocSnap.exists())
+      throw new ApplicationError(`No such user. user-id=${socketData.userId}`);
+    const userData = userDocSnap.data.data!;
+    userData.login--;
+    await userDocSnap.ref.update({
+      data: userData
     });
+
+    if (userData.login === 0) {
+      roomData.memberNum--;
+      await roomDocSnap.ref.update({
+        data: roomData
+      });
+    }
+  }
+  await snap.ref.delete();
 }
 
 async function getInteroperabilityInfo(): Promise<void> {
