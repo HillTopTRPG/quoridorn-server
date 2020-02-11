@@ -18,8 +18,10 @@ type ResponseType = boolean;
 
 const suffixList = [
   "screen-list",
-  "map-layer-list",
-  "map-and-layer-list",
+  "screen-layer-list",
+  "screen-object-list",
+  "screen-and-layer-list",
+  "screen-and-object-list",
   "room-data",
   "image-list",
   "image-tag-list",
@@ -30,12 +32,7 @@ const suffixList = [
   "property-list",
   "property-selection-list",
   "property-face-list",
-  "character-list",
   "extra-list",
-  "dice-symbol-list",
-  "floor-tile-list",
-  "chit-list",
-  "map-mask-list",
   "tag-note-list",
   "actor-group-list"
 ];

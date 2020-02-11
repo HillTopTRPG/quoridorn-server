@@ -2,7 +2,7 @@
 port: 8000
 
 # データ保持の手段（memory or mongodb）
-#storeType: memory
+# storeType: memory
 storeType: mongodb
 
 # 【注意】
