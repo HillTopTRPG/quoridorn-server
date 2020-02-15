@@ -26,6 +26,11 @@ export type SocketStore = {
   connectTime: Date;
 }
 
+export type SocketUserStore = {
+  socketId: string;
+  userId: string;
+}
+
 export type ActorGroup = {
   name: string;
   isSystem: boolean;

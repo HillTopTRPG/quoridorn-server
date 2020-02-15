@@ -30,6 +30,7 @@ const suffixList = [
   "$userId-play-list",
   "play-list",
   "user-list",
+  "socket-user-list",
   "property-list",
   "property-selection-list",
   "property-face-list",

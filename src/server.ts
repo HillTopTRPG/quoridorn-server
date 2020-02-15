@@ -33,7 +33,7 @@ import {ApplicationError} from "./error/ApplicationError";
 import {SystemError} from "./error/SystemError";
 import {compareVersion, getFileRow, TargetVersion} from "./utility/GitHub";
 import {accessLog} from "./utility/logger";
-import {RoomStore, SocketStore, TouchierStore, UserStore} from "./@types/data";
+import {RoomStore, SocketStore, SocketUserStore, TouchierStore, UserStore} from "./@types/data";
 
 export type Resister = (d: Driver, socket: any, db?: Db) => void;
 export const serverSetting: ServerSetting = YAML.parse(fs.readFileSync(path.resolve(__dirname, "../config/server.yaml"), "utf8"));
@@ -131,6 +131,18 @@ async function logout(driver: Driver, socketId: string): Promise<void> {
         data: roomData
       });
     }
+
+    const roomSocketUserCollectionName = `${roomData.roomCollectionPrefix}-DATA-socket-user-list`;
+    const socketUserDocSnap = (await driver.collection<StoreObj<SocketUserStore>>(roomSocketUserCollectionName)
+      .where("data.socketId", "==", socketId)
+      .get())
+      .docs
+      .filter(doc => doc && doc.exists())[0];
+
+    if (!socketUserDocSnap)
+      throw new ApplicationError(`No such user. user-id=${socketData.userId}`);
+
+    await socketUserDocSnap.ref.delete();
   }
   await snap.ref.delete();
 }
@@ -201,7 +213,7 @@ async function main(): Promise<void> {
           // 切断したらその人が行なっていたすべてのタッチを解除
           await releaseTouch(driver, socket.id);
 
-          // 接続情報にから削除
+          // 接続情報から削除
           await logout(driver, socket.id);
         } catch (err) {
           console.error(err);

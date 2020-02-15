@@ -8,7 +8,7 @@ import {UserLoginRequest, UserLoginResponse, UserType} from "../@types/socket";
 import {StoreObj} from "../@types/store";
 import {ApplicationError} from "../error/ApplicationError";
 import DocumentChange from "nekostore/lib/DocumentChange";
-import {ActorGroup, RoomStore, SocketStore, UserStore} from "../@types/data";
+import {ActorGroup, RoomStore, SocketStore, SocketUserStore, UserStore} from "../@types/data";
 
 // インタフェース
 const eventName = "user-login";
@@ -153,6 +153,37 @@ async function userLogin(driver: Driver, exclusionOwner: string, arg: RequestTyp
       throw new ApplicationError(`Failure update room doc.`, updateRoomInfo);
     }
   }
+
+  const userId = userLoginResponse.userId;
+  // 部屋データとして追加
+  const roomSocketUserCollectionName = `${roomCollectionPrefix}-DATA-socket-user-list`;
+  const socketUserCollection = driver.collection<StoreObj<SocketUserStore>>(roomSocketUserCollectionName);
+  await socketUserCollection.add({
+    order: 0,
+    exclusionOwner: null,
+    owner: null,
+    status: "modified",
+    createTime: new Date(),
+    updateTime: null,
+    permission: {
+      view: {
+        type: "none",
+        list: []
+      },
+      edit: {
+        type: "none",
+        list: []
+      },
+      chmod: {
+        type: "none",
+        list: []
+      }
+    },
+    data: {
+      socketId: exclusionOwner,
+      userId
+    }
+  });
 
   return userLoginResponse;
 }
