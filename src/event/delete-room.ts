@@ -17,11 +17,12 @@ type RequestType = DeleteRoomRequest;
 type ResponseType = boolean;
 
 const suffixList = [
-  "screen-list",
-  "screen-layer-list",
-  "screen-object-list",
-  "screen-and-layer-list",
-  "screen-and-object-list",
+  "scene-list",
+  "scene-layer-list",
+  "scene-object-list",
+  "scene-and-layer-list",
+  "scene-and-object-list",
+  "status-list",
   "room-data",
   "image-list",
   "image-tag-list",

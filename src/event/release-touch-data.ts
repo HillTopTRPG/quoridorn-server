@@ -24,7 +24,7 @@ export async function releaseTouchData(driver: Driver, exclusionOwner: string, a
   if (!docSnap) throw new ApplicationError(createThrowDetail("Already released touch or created."), arg);
 
   // 続けて更新する場合は排他制御情報をリセットしない
-  if (arg.continuous) return;
+  if (arg.option && arg.option.continuous) return;
 
   await deleteTouchier(driver, exclusionOwner, arg.collection, docSnap.ref.id);
 

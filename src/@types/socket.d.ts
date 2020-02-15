@@ -94,7 +94,7 @@ export type TouchModifyDataRequest = TouchDataRequest & {
   id: string;
 };
 export type ReleaseTouchDataRequest = TouchModifyDataRequest & {
-  continuous?: boolean;
+  option?: { continuous?: boolean };
 };
 
 export type CreateDataRequest = TouchModifyDataRequest & {
@@ -106,6 +106,5 @@ export type DeleteDataRequest = TouchModifyDataRequest;
 export type UpdateDataRequest = TouchModifyDataRequest & {
   order?: number;
   data: any;
-  permission?: Permission;
-  continuous?: boolean;
+  option?: Partial<StoreObj<unknown>> & { continuous?: boolean };
 };

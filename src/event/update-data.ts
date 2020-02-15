@@ -31,7 +31,11 @@ export async function updateData(driver: Driver, exclusionOwner: string, arg: Re
     status: "modified",
     updateTime: new Date()
   };
-  if (arg.permission) updateInfo.permission = arg.permission;
+  if (arg.option) {
+    if (arg.option.permission) updateInfo.permission = arg.option.permission;
+    if (arg.option.order) updateInfo.order = arg.option.order;
+    if (arg.option.owner) updateInfo.owner = arg.option.owner;
+  }
   try {
     await docSnap.ref.update(updateInfo);
   } catch (err) {
