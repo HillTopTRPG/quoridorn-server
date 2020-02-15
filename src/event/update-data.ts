@@ -33,7 +33,7 @@ export async function updateData(driver: Driver, exclusionOwner: string, arg: Re
   };
   if (arg.option) {
     if (arg.option.permission) updateInfo.permission = arg.option.permission;
-    if (arg.option.order) updateInfo.order = arg.option.order;
+    if (arg.option.order !== undefined) updateInfo.order = arg.option.order || 0;
     if (arg.option.owner) updateInfo.owner = arg.option.owner;
   }
   try {
