@@ -108,3 +108,8 @@ export type UpdateDataRequest = TouchModifyDataRequest & {
   data: any;
   option?: Partial<StoreObj<unknown>> & { continuous?: boolean };
 };
+
+export type SendDataRequest = {
+  targetList: string[],
+  data: any;
+};

@@ -69,15 +69,15 @@ async function createRoom(driver: Driver, exclusionOwner: string, arg: RequestTy
     throw new ApplicationError(`Failure update roomInfo doc.`, updateRoomInfo);
   }
 
+  const roomCollectionPrefix = storeData.roomCollectionPrefix;
+
   // Socket情報の更新
-  const updateSocketInfo: Partial<SocketStore> = { roomId: arg.roomId };
+  const updateSocketInfo: Partial<SocketStore> = { roomId: arg.roomId, roomCollectionPrefix };
   try {
     await socketDocSnap.ref.update(updateSocketInfo);
   } catch (err) {
     throw new ApplicationError(`Failure update socketInfo doc.`, updateSocketInfo);
   }
-
-  const roomCollectionPrefix = storeData.roomCollectionPrefix;
 
   // 部屋に付随する情報の生成
   const actorGroupCCName = `${roomCollectionPrefix}-DATA-actor-group-list`;

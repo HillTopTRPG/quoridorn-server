@@ -22,6 +22,7 @@ export type TouchierStore = {
 export type SocketStore = {
   socketId: string;
   roomId: string | null;
+  roomCollectionPrefix: string | null;
   userId: string | null;
   connectTime: Date;
 }

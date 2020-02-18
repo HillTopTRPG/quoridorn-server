@@ -19,6 +19,7 @@ import resistReleaseTouchDataEvent from "./event/release-touch-data";
 import resistUpdateDataEvent from "./event/update-data";
 import resistCreateDataEvent from "./event/create-data";
 import resistDeleteDataEvent from "./event/delete-data";
+import resistSendDataEvent from "./event/send-data";
 import Driver from "nekostore/lib/Driver";
 import Store from "nekostore/src/store/Store";
 import MongoStore from "nekostore/lib/store/MongoStore";
@@ -35,7 +36,7 @@ import {compareVersion, getFileRow, TargetVersion} from "./utility/GitHub";
 import {accessLog} from "./utility/logger";
 import {RoomStore, SocketStore, SocketUserStore, TouchierStore, UserStore} from "./@types/data";
 
-export type Resister = (d: Driver, socket: any, db?: Db) => void;
+export type Resister = (d: Driver, socket: any, io: any, db?: Db) => void;
 export const serverSetting: ServerSetting = YAML.parse(fs.readFileSync(path.resolve(__dirname, "../config/server.yaml"), "utf8"));
 export const interoperability: Interoperability[] = YAML.parse(fs.readFileSync(path.resolve(__dirname, "./interoperability.yaml"), "utf8"));
 export const targetClient: TargetVersion = {
@@ -95,6 +96,7 @@ async function addSocketList(driver: Driver, socketId: string): Promise<void> {
   await driver.collection<SocketStore>(SYSTEM_COLLECTION.SOCKET_LIST).add({
     socketId,
     roomId: null,
+    roomCollectionPrefix: null,
     userId: null,
     connectTime: new Date()
   });
@@ -254,8 +256,10 @@ async function main(): Promise<void> {
         // データ更新リクエスト
         resistUpdateDataEvent,
         // データ削除リクエスト
-        resistDeleteDataEvent
-      ].forEach((r: Resister) => r(driver, socket, db));
+        resistDeleteDataEvent,
+        // データ送信リクエスト
+        resistSendDataEvent
+      ].forEach((r: Resister) => r(driver, socket, io, db));
     });
 
     // setInterval(() => {

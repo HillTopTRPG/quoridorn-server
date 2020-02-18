@@ -109,7 +109,7 @@ async function deleteRoom(driver: Driver, exclusionOwner: string, arg: RequestTy
   return true;
 }
 
-const resist: Resister = (driver: Driver, socket: any, db?: Db): void => {
+const resist: Resister = (driver: Driver, socket: any, _io: any, db?: Db): void => {
   setEvent<RequestType, ResponseType>(driver, socket, eventName, (driver: Driver, arg: RequestType) => deleteRoom(driver, socket.id, arg, db));
 };
 export default resist;
