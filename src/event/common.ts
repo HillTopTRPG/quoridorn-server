@@ -320,3 +320,30 @@ export async function getSocketDocSnap(driver: Driver, socketId: string): Promis
 
   return socketDocSnap;
 }
+
+export async function getMaxOrder(driver: Driver, collectionName: string): Promise<{ c: CollectionReference<any>, maxOrder: number }> {
+  const c = driver.collection<StoreObj<any>>(collectionName);
+
+  const docs = (await c
+    .orderBy("order", "desc")
+    .get())
+    .docs
+    .filter(doc => doc && doc.exists());
+
+  const maxOrder = !docs.length ? -1 : docs[0].data!.order;
+
+  return {
+    c, maxOrder
+  }
+}
+
+export async function getOwner(driver: Driver, socketId: string, owner: string | undefined): Promise<string> {
+  if (owner) return owner;
+  const socketDocSnap = (await getSocketDocSnap(driver, socketId));
+  const userId = socketDocSnap.data!.userId;
+
+  // No such user check.
+  if (!userId) throw new ApplicationError(`No such user.`, { socketId });
+
+  return userId;
+}

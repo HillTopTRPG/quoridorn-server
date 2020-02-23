@@ -27,8 +27,6 @@ const suffixList = [
   "image-list",
   "image-tag-list",
   "cut-in-list",
-  "$userId-play-list",
-  "play-list",
   "user-list",
   "socket-user-list",
   "property-list",

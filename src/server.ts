@@ -20,6 +20,7 @@ import resistUpdateDataEvent from "./event/update-data";
 import resistCreateDataEvent from "./event/create-data";
 import resistDeleteDataEvent from "./event/delete-data";
 import resistSendDataEvent from "./event/send-data";
+import resistAddDirectEvent from "./event/add-direct";
 import Driver from "nekostore/lib/Driver";
 import Store from "nekostore/src/store/Store";
 import MongoStore from "nekostore/lib/store/MongoStore";
@@ -28,13 +29,28 @@ import {getSocketDocSnap, releaseTouch} from "./event/common";
 import {HashAlgorithmType} from "./utility/password";
 const co = require("co");
 import { Db } from "mongodb";
-import {StoreObj} from "./@types/store";
+import {Permission, StoreObj} from "./@types/store";
 import {Message} from "./@types/socket";
 import {ApplicationError} from "./error/ApplicationError";
 import {SystemError} from "./error/SystemError";
 import {compareVersion, getFileRow, TargetVersion} from "./utility/GitHub";
 import {accessLog} from "./utility/logger";
 import {RoomStore, SocketStore, SocketUserStore, TouchierStore, UserStore} from "./@types/data";
+
+export const DEFAULT_PERMISSION: Permission = {
+  view: {
+    type: "none",
+    list: []
+  },
+  edit: {
+    type: "none",
+    list: []
+  },
+  chmod: {
+    type: "none",
+    list: []
+  }
+};
 
 export type Resister = (d: Driver, socket: any, io: any, db?: Db) => void;
 export const serverSetting: ServerSetting = YAML.parse(fs.readFileSync(path.resolve(__dirname, "../config/server.yaml"), "utf8"));
@@ -258,7 +274,9 @@ async function main(): Promise<void> {
         // データ削除リクエスト
         resistDeleteDataEvent,
         // データ送信リクエスト
-        resistSendDataEvent
+        resistSendDataEvent,
+        // データ一括追加リクエスト
+        resistAddDirectEvent
       ].forEach((r: Resister) => r(driver, socket, io, db));
     });
 

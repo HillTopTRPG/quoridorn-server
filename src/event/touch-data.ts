@@ -1,6 +1,6 @@
 import {StoreObj} from "../@types/store";
-import {Resister} from "../server";
-import {addTouchier, setEvent} from "./common";
+import {DEFAULT_PERMISSION, Resister} from "../server";
+import {addTouchier, getMaxOrder, getOwner, setEvent} from "./common";
 import Driver from "nekostore/lib/Driver";
 import {TouchDataRequest} from "../@types/socket";
 import {ApplicationError} from "../error/ApplicationError";
@@ -17,39 +17,22 @@ type ResponseType = string;
  * @param arg 部屋番号
  */
 async function touchData(driver: Driver, exclusionOwner: string, arg: RequestType): Promise<ResponseType> {
-  const c = await driver.collection<StoreObj<any>>(arg.collection);
+  const { c, maxOrder } = await getMaxOrder(driver, arg.collection);
+  const order = maxOrder + 1;
 
-  const docs = (await c
-    .orderBy("order", "desc")
-    .get())
-    .docs
-    .filter(doc => doc && doc.exists());
+  const owner = await getOwner(driver, exclusionOwner, arg.owner);
 
-  const order = (!docs.length ? -1 : docs[0].data!.order) + 1;
-
-  let docRef;
   const addInfo: StoreObj<any> = {
     order,
     exclusionOwner,
-    owner: null,
+    owner,
     status: "initial-touched",
     createTime: new Date(),
     updateTime: null,
-    permission: {
-      view: {
-        type: "none",
-        list: []
-      },
-      edit: {
-        type: "none",
-        list: []
-      },
-      chmod: {
-        type: "none",
-        list: []
-      }
-    }
+    permission: arg.permission || DEFAULT_PERMISSION
   };
+
+  let docRef;
   if (!arg.id) {
     try {
       docRef = await c.add(addInfo);

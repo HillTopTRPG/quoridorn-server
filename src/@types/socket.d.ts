@@ -89,6 +89,8 @@ export type GetVersionResponse = {
 export type TouchDataRequest = {
   collection: string;
   id?: string;
+  owner?: string;
+  permission?: Permission;
 };
 export type TouchModifyDataRequest = TouchDataRequest & {
   id: string;
@@ -97,6 +99,12 @@ export type ReleaseTouchDataRequest = TouchModifyDataRequest & {
   option?: { continuous?: boolean };
 };
 
+export type AddDirectRequest = {
+  collection: string;
+  dataList: any[];
+  permission?: Permission;
+  owner?: string;
+};
 export type CreateDataRequest = TouchModifyDataRequest & {
   order?: number;
   data: any;
