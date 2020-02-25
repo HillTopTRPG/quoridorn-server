@@ -26,7 +26,7 @@ storeType: mongodb
 secretCollectionSuffix: c8c4b7f3-ce60-41ba-a0d3-e90876d09c1a
 
 # MongoDBの接続文字列
-mongodbConnectionStrings: mongodb://127.0.0.1:27017/
+mongodbConnectionStrings: mongodb://localhost:27017/
 
 # 設置できる部屋の数
 roomNum: 100
