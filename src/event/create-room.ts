@@ -87,6 +87,7 @@ async function createRoom(driver: Driver, exclusionOwner: string, arg: RequestTy
     await actorGroupCC.add({
       order,
       exclusionOwner: null,
+      lastExclusionOwner: null,
       owner: null,
       permission: {
         view: {

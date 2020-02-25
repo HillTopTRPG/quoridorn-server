@@ -29,6 +29,7 @@ async function addDirect(driver: Driver, exclusionOwner: string, arg: RequestTyp
     const addInfo: StoreObj<any> = {
       order: order++,
       exclusionOwner: null,
+      lastExclusionOwner: null,
       owner,
       status: "modified",
       createTime: new Date(),

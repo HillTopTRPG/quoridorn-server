@@ -27,6 +27,7 @@ export async function touchDataModify(driver: Driver, exclusionOwner: string, ar
 
   const updateInfo: Partial<StoreObj<any>> = {
     exclusionOwner,
+    lastExclusionOwner: exclusionOwner,
     status: "modify-touched",
     updateTime: new Date()
   };

@@ -161,6 +161,7 @@ async function userLogin(driver: Driver, exclusionOwner: string, arg: RequestTyp
   await socketUserCollection.add({
     order: 0,
     exclusionOwner: null,
+    lastExclusionOwner: null,
     owner: null,
     status: "modified",
     createTime: new Date(),

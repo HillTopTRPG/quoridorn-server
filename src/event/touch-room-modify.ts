@@ -31,6 +31,7 @@ export async function touchRoomModify(driver: Driver, exclusionOwner: string, ar
 
   const updateInfo: Partial<StoreObj<RoomStore>> = {
     exclusionOwner,
+    lastExclusionOwner: exclusionOwner,
     status: "modify-touched",
     updateTime: new Date()
   };

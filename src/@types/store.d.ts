@@ -1,6 +1,7 @@
 export type StoreObj<T> = {
   order: number;
   exclusionOwner: string | null; // 排他制御のオーナー
+  lastExclusionOwner: string | null; // 排他制御のオーナー
   owner: string | null;
   permission: Permission | null; // 通常はnullではない
   status: "initial-touched" | "added" | "modify-touched" | "touched-released" | "modified" | null;

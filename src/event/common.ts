@@ -172,6 +172,7 @@ export async function addUser(
   const userDocRef = await userCollection.add({
     order: -1,
     exclusionOwner: null,
+    lastExclusionOwner: null,
     owner: null,
     status: "added",
     createTime: new Date(),

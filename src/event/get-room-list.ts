@@ -94,6 +94,7 @@ async function getRoomList(driver: Driver, socket: any, arg: RequestType): Promi
         roomList.splice(i, 0, {
           order: i,
           exclusionOwner: null,
+          lastExclusionOwner: null,
           owner: null,
           permission: null,
           id: null,

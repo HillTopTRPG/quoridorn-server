@@ -25,6 +25,7 @@ async function touchData(driver: Driver, exclusionOwner: string, arg: RequestTyp
   const addInfo: StoreObj<any> = {
     order,
     exclusionOwner,
+    lastExclusionOwner: exclusionOwner,
     owner,
     status: "initial-touched",
     createTime: new Date(),
