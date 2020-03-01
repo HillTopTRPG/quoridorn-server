@@ -1,6 +1,6 @@
 import {StoreObj} from "../@types/store";
 import {DEFAULT_PERMISSION, Resister} from "../server";
-import {addTouchier, getMaxOrder, getOwner, setEvent} from "./common";
+import {addTouchier, getDbMaxOrder, getDbOrder, setEvent} from "./common";
 import Driver from "nekostore/lib/Driver";
 import {TouchDataRequest} from "../@types/socket";
 import {ApplicationError} from "../error/ApplicationError";
@@ -17,10 +17,10 @@ type ResponseType = string;
  * @param arg 部屋番号
  */
 async function touchData(driver: Driver, exclusionOwner: string, arg: RequestType): Promise<ResponseType> {
-  const { c, maxOrder } = await getMaxOrder(driver, arg.collection);
+  const { c, maxOrder } = await getDbMaxOrder(driver, arg.collection);
   const order = maxOrder + 1;
 
-  const owner = await getOwner(driver, exclusionOwner, arg.owner);
+  const owner = await getDbOrder(driver, exclusionOwner, arg.owner);
 
   const addInfo: StoreObj<any> = {
     order,

@@ -1,6 +1,6 @@
 import {StoreObj} from "../@types/store";
 import {DEFAULT_PERMISSION, Resister} from "../server";
-import {getMaxOrder, getOwner, setEvent} from "./common";
+import {getDbMaxOrder, getDbOrder, setEvent} from "./common";
 import Driver from "nekostore/lib/Driver";
 import {ApplicationError} from "../error/ApplicationError";
 import {AddDirectRequest} from "../@types/socket";
@@ -18,10 +18,10 @@ type ResponseType = string[];
  * @param arg
  */
 async function addDirect(driver: Driver, exclusionOwner: string, arg: RequestType): Promise<ResponseType> {
-  const { c, maxOrder } = await getMaxOrder(driver, arg.collection);
+  const { c, maxOrder } = await getDbMaxOrder(driver, arg.collection);
   let order = maxOrder + 1;
 
-  const owner = await getOwner(driver, exclusionOwner, arg.owner);
+  const owner = await getDbOrder(driver, exclusionOwner, arg.owner);
 
   const docIdList: string[] = [];
 

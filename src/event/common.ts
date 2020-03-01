@@ -322,7 +322,7 @@ export async function getSocketDocSnap(driver: Driver, socketId: string): Promis
   return socketDocSnap;
 }
 
-export async function getMaxOrder(driver: Driver, collectionName: string): Promise<{ c: CollectionReference<any>, maxOrder: number }> {
+export async function getDbMaxOrder(driver: Driver, collectionName: string): Promise<{ c: CollectionReference<any>, maxOrder: number }> {
   const c = driver.collection<StoreObj<any>>(collectionName);
 
   const docs = (await c
@@ -338,7 +338,7 @@ export async function getMaxOrder(driver: Driver, collectionName: string): Promi
   }
 }
 
-export async function getOwner(driver: Driver, socketId: string, owner: string | undefined): Promise<string> {
+export async function getDbOrder(driver: Driver, socketId: string, owner: string | undefined): Promise<string> {
   if (owner) return owner;
   const socketDocSnap = (await getSocketDocSnap(driver, socketId));
   const userId = socketDocSnap.data!.userId;
