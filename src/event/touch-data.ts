@@ -17,10 +17,10 @@ type ResponseType = string;
  * @param arg 部屋番号
  */
 async function touchData(driver: Driver, exclusionOwner: string, arg: RequestType): Promise<ResponseType> {
-  const { c, maxOrder } = await getMaxOrder(driver, arg.collection);
+  const { c, maxOrder } = await getMaxOrder<any>(driver, arg.collection);
   const order = maxOrder + 1;
 
-  const owner = await getOwner(driver, exclusionOwner, arg.owner);
+  const owner = await getOwner(driver, exclusionOwner, arg.option ? arg.option.owner || undefined : undefined);
 
   const addInfo: StoreObj<any> = {
     order,
@@ -30,7 +30,7 @@ async function touchData(driver: Driver, exclusionOwner: string, arg: RequestTyp
     status: "initial-touched",
     createTime: new Date(),
     updateTime: null,
-    permission: arg.permission || DEFAULT_PERMISSION
+    permission: arg.option && arg.option.permission || DEFAULT_PERMISSION
   };
 
   let docRef;

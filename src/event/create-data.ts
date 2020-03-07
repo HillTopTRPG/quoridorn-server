@@ -1,12 +1,12 @@
 import {StoreObj} from "../@types/store";
 import {Resister} from "../server";
-import {getData, getSocketDocSnap, setEvent} from "./common";
+import {addActorGroup, additionalStatus, getData, getSocketDocSnap, setEvent} from "./common";
 import Driver from "nekostore/lib/Driver";
 import DocumentSnapshot from "nekostore/lib/DocumentSnapshot";
 import {ApplicationError} from "../error/ApplicationError";
 import {releaseTouchData} from "./release-touch-data";
 import {CreateDataRequest} from "../@types/socket";
-import {ActorGroup} from "../@types/data";
+import {ActorStore} from "../@types/data";
 
 // インタフェース
 const eventName = "create-data";
@@ -20,6 +20,8 @@ type ResponseType = string;
  * @param arg
  */
 async function createData(driver: Driver, exclusionOwner: string, arg: RequestType): Promise<ResponseType> {
+  const roomCollectionPrefix = arg.collection.replace("DATA-actor-list", "");
+
   // タッチ解除
   await releaseTouchData(driver, exclusionOwner, arg, true);
 
@@ -38,34 +40,26 @@ async function createData(driver: Driver, exclusionOwner: string, arg: RequestTy
 
   const socketSnap = await getSocketDocSnap(driver, exclusionOwner);
 
+  if (arg.collection.endsWith("DATA-actor-list")) {
+    const data = arg.data as ActorStore;
+
+    // アクターにはデフォルトステータスを登録する
+    data.statusId = await additionalStatus(driver, roomCollectionPrefix, arg.id);
+
+    // アクターグループ「All」に追加
+    await addActorGroup(driver, roomCollectionPrefix, arg.id, "other", null, "All");
+  }
+
   try {
     await docSnap.ref.update({
       data: arg.data,
       status: "added",
-      owner: socketSnap.data!.userId!,
-      permission: arg.permission,
+      owner: arg.option && arg.option.owner || socketSnap.data!.userId!,
+      permission: arg.option && arg.option.permission || undefined,
       updateTime: new Date()
     });
   } catch (err) {
     throw new ApplicationError(`Failure update doc.`, arg);
-  }
-
-  if (arg.collection.endsWith("DATA-character-list")) {
-    // アクターグループ「All」に追加
-
-    const actorGroupCollectionName = arg.collection.replace("DATA-character-list", "DATA-actor-group-list");
-    const actorGroupCollection = driver.collection<StoreObj<ActorGroup>>(actorGroupCollectionName);
-
-    // 新しいグループに追加
-    const newGroupDoc = (await actorGroupCollection.where("name", "==", "All").get()).docs[0];
-    const newGroupData: ActorGroup = newGroupDoc.data!.data!;
-    newGroupData.list.push({
-      type: "user",
-      id: arg.id
-    });
-    await newGroupDoc.ref.update({
-      data: newGroupData
-    });
   }
 
   return docSnap.ref.id;

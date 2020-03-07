@@ -83,7 +83,7 @@ async function createRoom(driver: Driver, exclusionOwner: string, arg: RequestTy
   const actorGroupCCName = `${roomCollectionPrefix}-DATA-actor-group-list`;
   const actorGroupCC = driver.collection<StoreObj<ActorGroup>>(actorGroupCCName);
 
-  const addGroup = async (name: string, order: number, isChatGroup: boolean) => {
+  const addGroup = async (name: string, order: number) => {
     await actorGroupCC.add({
       order,
       exclusionOwner: null,
@@ -109,16 +109,15 @@ async function createRoom(driver: Driver, exclusionOwner: string, arg: RequestTy
       data: {
         name,
         isSystem: true,
-        isChatGroup,
         list: []
       }
     });
   };
-  await addGroup("All", 0, true);
-  await addGroup("Users", 1, false);
-  await addGroup("GameMasters", 2, false);
-  await addGroup("Players", 3, false);
-  await addGroup("Visitors", 4, false);
+  await addGroup("All", 0);
+  await addGroup("Users", 1);
+  await addGroup("GameMasters", 2);
+  await addGroup("Players", 3);
+  await addGroup("Visitors", 4);
 
   // 接尾句を返却
   return roomCollectionPrefix;

@@ -18,10 +18,11 @@ type ResponseType = string[];
  * @param arg
  */
 async function addDirect(driver: Driver, exclusionOwner: string, arg: RequestType): Promise<ResponseType> {
-  const { c, maxOrder } = await getMaxOrder(driver, arg.collection);
+  const { c, maxOrder } = await getMaxOrder<any>(driver, arg.collection);
   let order = maxOrder + 1;
 
-  const owner = await getOwner(driver, exclusionOwner, arg.owner);
+  const owner = await getOwner(driver, exclusionOwner, arg.option && arg.option.owner || undefined);
+  const permission = arg.option && arg.option.permission || DEFAULT_PERMISSION;
 
   const docIdList: string[] = [];
 
@@ -34,7 +35,7 @@ async function addDirect(driver: Driver, exclusionOwner: string, arg: RequestTyp
       status: "modified",
       createTime: new Date(),
       updateTime: new Date(),
-      permission: arg.permission || DEFAULT_PERMISSION,
+      permission,
       data
     };
     try {
