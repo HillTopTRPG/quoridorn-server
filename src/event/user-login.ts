@@ -98,7 +98,7 @@ async function userLogin(driver: Driver, exclusionOwner: string, arg: RequestTyp
       // 元のグループから削除
       const oldGroupDoc = (await actorGroupCollection.where("data.name", "==", oldGroupName).get()).docs[0];
       const oldGroupData: ActorGroup = oldGroupDoc.data!.data!;
-      const index = oldGroupData.list.findIndex(g => g.id === userId);
+      const index = oldGroupData.list.findIndex(g => g.userId === userId);
       const actorId = oldGroupData.list[index].id;
         oldGroupData.list.splice(index, 1);
       await oldGroupDoc.ref.update({
