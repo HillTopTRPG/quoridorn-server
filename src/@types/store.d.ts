@@ -15,7 +15,7 @@ export type StoreMetaData = {
 };
 
 export type PermissionNode = {
-  type: "group" | "user" | "character" | "owner";
+  type: "group" | "actor" | "owner";
   id?: string;
 };
 

@@ -25,6 +25,8 @@ export async function touchDataModify(driver: Driver, exclusionOwner: string, ar
   // Already check.
   if (docSnap.data.exclusionOwner) throw new ApplicationError(`Already touched.`, arg);
 
+  const updateTime = docSnap.data.updateTime;
+
   const updateInfo: Partial<StoreObj<any>> = {
     exclusionOwner,
     lastExclusionOwner: exclusionOwner,
@@ -37,7 +39,7 @@ export async function touchDataModify(driver: Driver, exclusionOwner: string, ar
     throw new ApplicationError(`Failure update doc.`, updateInfo);
   }
 
-  await addTouchier(driver, exclusionOwner, arg.collection, docSnap.ref.id);
+  await addTouchier(driver, exclusionOwner, arg.collection, docSnap.ref.id, updateTime);
 
   return docSnap.ref.id;
 }

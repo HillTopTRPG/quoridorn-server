@@ -29,6 +29,8 @@ export async function touchRoomModify(driver: Driver, exclusionOwner: string, ar
   // Already check.
   if (docSnap.data.exclusionOwner) throw new ApplicationError(`Already touched.`, arg);
 
+  const updateTime = docSnap.data.updateTime;
+
   const updateInfo: Partial<StoreObj<RoomStore>> = {
     exclusionOwner,
     lastExclusionOwner: exclusionOwner,
@@ -41,7 +43,7 @@ export async function touchRoomModify(driver: Driver, exclusionOwner: string, ar
     throw new ApplicationError(`Failure update doc.`, updateInfo);
   }
 
-  await addTouchier(driver, exclusionOwner, SYSTEM_COLLECTION.ROOM_LIST, docSnap.ref.id);
+  await addTouchier(driver, exclusionOwner, SYSTEM_COLLECTION.ROOM_LIST, docSnap.ref.id, updateTime);
 }
 
 const resist: Resister = (driver: Driver, socket: any): void => {

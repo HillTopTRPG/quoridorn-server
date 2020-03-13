@@ -1,5 +1,5 @@
 import {StoreObj} from "../@types/store";
-import {Resister, SYSTEM_COLLECTION} from "../server";
+import {DEFAULT_PERMISSION, Resister, SYSTEM_COLLECTION} from "../server";
 import {ApplicationError} from "../error/ApplicationError";
 import {addTouchier, checkViewer, getRoomInfo, setEvent} from "./common";
 import Driver from "nekostore/lib/Driver";
@@ -36,20 +36,7 @@ async function touchRoom(driver: Driver, exclusionOwner: string, arg: RequestTyp
     status: "initial-touched",
     createTime: new Date(),
     updateTime: null,
-    permission: {
-      view: {
-        type: "none",
-        list: []
-      },
-      edit: {
-        type: "none",
-        list: []
-      },
-      chmod: {
-        type: "none",
-        list: []
-      }
-    }
+    permission: DEFAULT_PERMISSION
   };
   try {
     docRef = await c.add(addInfo);
@@ -57,7 +44,7 @@ async function touchRoom(driver: Driver, exclusionOwner: string, arg: RequestTyp
     throw new ApplicationError(`Failure add doc.`, addInfo);
   }
 
-  await addTouchier(driver, exclusionOwner, SYSTEM_COLLECTION.ROOM_LIST, docRef.id);
+  await addTouchier(driver, exclusionOwner, SYSTEM_COLLECTION.ROOM_LIST, docRef.id, null);
 }
 
 const resist: Resister = (driver: Driver, socket: any): void => {

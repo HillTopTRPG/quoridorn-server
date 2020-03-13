@@ -340,7 +340,8 @@ export async function addTouchier(
   driver: Driver,
   socketId: string,
   collection: string,
-  id: string
+  id: string,
+  updateTime: Date | null
 ): Promise<void> {
   const c = driver.collection<TouchierStore>(SYSTEM_COLLECTION.TOUCH_LIST);
   const doc: DocumentChange<TouchierStore> = (await c
@@ -353,7 +354,11 @@ export async function addTouchier(
     throw new SystemError(`Touchier is Exist. collection: ${collection}, id: ${id}, socketId: ${socketId}`);
   }
   await c.add({
-    socketId, collection, docId: id, time: new Date()
+    socketId,
+    collection,
+    docId: id,
+    time: new Date(),
+    backupUpdateTime: updateTime
   });
 }
 
@@ -362,7 +367,7 @@ export async function deleteTouchier(
   socketId: string,
   collection?: string,
   id?: string
-): Promise<void> {
+): Promise<Date | null> {
   const c = driver.collection<TouchierStore>(SYSTEM_COLLECTION.TOUCH_LIST);
   let q: Query<TouchierStore> = c.where("socketId", "==", socketId);
   if (collection !== undefined)
@@ -372,8 +377,10 @@ export async function deleteTouchier(
   const docList: DocumentChange<TouchierStore>[] = (await q.get()).docs;
   if (!docList || !docList.length) {
     console.warn(`deleteTouchier失敗 socket: ${socketId}, collection: ${collection}, id: ${id}`);
-    return;
+    return null;
   }
+
+  const backupUpdateTime = docList[0].data ? docList[0].data.backupUpdateTime : null;
 
   const deleteList = async (doc: DocumentSnapshot<TouchierStore>): Promise<void> => {
     await doc.ref.delete();
@@ -381,6 +388,8 @@ export async function deleteTouchier(
   await docList
     .map((doc: DocumentSnapshot<TouchierStore>) => () => deleteList(doc))
     .reduce((prev, curr) => prev.then(curr), Promise.resolve());
+
+  return backupUpdateTime;
 }
 
 export async function releaseTouch(
@@ -445,8 +454,8 @@ export async function getMaxOrder<T>(driver: Driver, collectionName: string): Pr
   }
 }
 
-export async function getOwner(driver: Driver, socketId: string, owner: string | undefined): Promise<string> {
-  if (owner) return owner;
+export async function getOwner(driver: Driver, socketId: string, owner: string | null | undefined): Promise<string | null> {
+  if (owner !== undefined) return owner;
   const socketDocSnap = (await getSocketDocSnap(driver, socketId));
   const userId = socketDocSnap.data!.userId;
 

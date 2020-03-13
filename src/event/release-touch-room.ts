@@ -27,13 +27,13 @@ export async function releaseTouchRoom(driver: Driver, exclusionOwner: string, a
 
   if (!docSnap) throw new ApplicationError(createThrowDetail(`Already released touch or created.`), arg);
 
-  await deleteTouchier(driver, exclusionOwner, SYSTEM_COLLECTION.ROOM_LIST, docSnap.ref.id);
+  const backupUpdateTime = await deleteTouchier(driver, exclusionOwner, SYSTEM_COLLECTION.ROOM_LIST, docSnap.ref.id);
 
   if (updateForce || docSnap.data!.data) {
     const updateInfo: Partial<StoreObj<RoomStore>> = {
       exclusionOwner: null,
       status: "touched-released",
-      updateTime: new Date()
+      updateTime: backupUpdateTime
     };
     try {
       await docSnap.ref.update(updateInfo);

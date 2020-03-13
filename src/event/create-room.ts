@@ -1,6 +1,6 @@
 import {StoreObj} from "../@types/store";
 import {CreateRoomRequest} from "../@types/socket";
-import {hashAlgorithm, Resister} from "../server";
+import {DEFAULT_PERMISSION, hashAlgorithm, Resister} from "../server";
 import {hash} from "../utility/password";
 import uuid from "uuid";
 import {getRoomInfo, getSocketDocSnap, setEvent} from "./common";
@@ -89,20 +89,7 @@ async function createRoom(driver: Driver, exclusionOwner: string, arg: RequestTy
       exclusionOwner: null,
       lastExclusionOwner: null,
       owner: null,
-      permission: {
-        view: {
-          type: "none",
-          list: []
-        },
-        edit: {
-          type: "none",
-          list: []
-        },
-        chmod: {
-          type: "none",
-          list: []
-        }
-      },
+      permission: DEFAULT_PERMISSION,
       status: "added",
       createTime: new Date(),
       updateTime: null,

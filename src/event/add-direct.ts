@@ -21,7 +21,7 @@ async function addDirect(driver: Driver, exclusionOwner: string, arg: RequestTyp
   const { c, maxOrder } = await getMaxOrder<any>(driver, arg.collection);
   let order = maxOrder + 1;
 
-  const owner = await getOwner(driver, exclusionOwner, arg.option && arg.option.owner || undefined);
+  const owner = await getOwner(driver, exclusionOwner, arg.option ? arg.option.owner : undefined);
   const permission = arg.option && arg.option.permission || DEFAULT_PERMISSION;
 
   const docIdList: string[] = [];
@@ -32,7 +32,7 @@ async function addDirect(driver: Driver, exclusionOwner: string, arg: RequestTyp
       exclusionOwner: null,
       lastExclusionOwner: null,
       owner,
-      status: "modified",
+      status: "added",
       createTime: new Date(),
       updateTime: new Date(),
       permission,

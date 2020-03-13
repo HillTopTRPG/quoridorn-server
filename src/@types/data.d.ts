@@ -17,6 +17,7 @@ export type TouchierStore = {
   docId: string;
   socketId: string;
   time: Date;
+  backupUpdateTime: Date | null;
 };
 
 export type SocketStore = {

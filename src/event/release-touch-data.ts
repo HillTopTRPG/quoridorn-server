@@ -26,12 +26,12 @@ export async function releaseTouchData(driver: Driver, exclusionOwner: string, a
   // 続けて更新する場合は排他制御情報をリセットしない
   if (arg.option && arg.option.continuous) return;
 
-  await deleteTouchier(driver, exclusionOwner, arg.collection, docSnap.ref.id);
+  const backupUpdateTime = await deleteTouchier(driver, exclusionOwner, arg.collection, docSnap.ref.id);
 
   if (updateForce || docSnap.data!.data) {
     const updateInfo = {
       exclusionOwner: null,
-      updateTime: new Date()
+      updateTime: backupUpdateTime
     };
     try {
       await docSnap.ref.update(updateInfo);
