@@ -46,6 +46,7 @@ export type ActorGroup = {
 export type ActorStore = {
   name: string; // 名前
   type: "user" | "character";
+  tag: string;
   pieceIdList: string[]; // コマのID一覧
   chatFontColorType: "owner" | "original"; // チャット文字色はオーナー（ユーザ）の色か独自の色か
   chatFontColor: string; // 独自のチャット文字色

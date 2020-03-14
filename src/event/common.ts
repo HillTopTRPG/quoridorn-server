@@ -198,6 +198,7 @@ export async function addActor(
   const actorInfo: ActorStore = {
     name: "",
     type: "user",
+    tag: "",
     pieceIdList: [],
     chatFontColorType: "original",
     chatFontColor: "#000000",
