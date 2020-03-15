@@ -37,7 +37,7 @@ import {compareVersion, getFileRow, TargetVersion} from "./utility/GitHub";
 import {accessLog} from "./utility/logger";
 import {RoomStore, SocketStore, SocketUserStore, TouchierStore, UserStore} from "./@types/data";
 
-export const DEFAULT_PERMISSION: Permission = {
+export const PERMISSION_DEFAULT: Permission = {
   view: {
     type: "none",
     list: []
@@ -49,6 +49,29 @@ export const DEFAULT_PERMISSION: Permission = {
   chmod: {
     type: "none",
     list: []
+  }
+};
+
+export const PERMISSION_OWNER_CHANGE: Permission = {
+  view: {
+    type: "none",
+    list: []
+  },
+  edit: {
+    type: "allow",
+    list: [
+      {
+        type: "owner"
+      }
+    ]
+  },
+  chmod: {
+    type: "allow",
+    list: [
+      {
+        type: "owner"
+      }
+    ]
   }
 };
 

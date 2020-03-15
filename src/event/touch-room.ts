@@ -1,5 +1,5 @@
 import {StoreObj} from "../@types/store";
-import {DEFAULT_PERMISSION, Resister, SYSTEM_COLLECTION} from "../server";
+import {PERMISSION_DEFAULT, Resister, SYSTEM_COLLECTION} from "../server";
 import {ApplicationError} from "../error/ApplicationError";
 import {addTouchier, checkViewer, getRoomInfo, setEvent} from "./common";
 import Driver from "nekostore/lib/Driver";
@@ -36,7 +36,7 @@ async function touchRoom(driver: Driver, exclusionOwner: string, arg: RequestTyp
     status: "initial-touched",
     createTime: new Date(),
     updateTime: null,
-    permission: DEFAULT_PERMISSION
+    permission: PERMISSION_DEFAULT
   };
   try {
     docRef = await c.add(addInfo);

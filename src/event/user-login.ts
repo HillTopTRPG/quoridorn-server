@@ -1,4 +1,4 @@
-import {DEFAULT_PERMISSION, hashAlgorithm, Resister, SYSTEM_COLLECTION} from "../server";
+import {PERMISSION_DEFAULT, hashAlgorithm, Resister, SYSTEM_COLLECTION} from "../server";
 import {SystemError} from "../error/SystemError";
 import {verify} from "../utility/password";
 import {addUser, getSocketDocSnap, setEvent} from "./common";
@@ -168,7 +168,7 @@ async function userLogin(driver: Driver, exclusionOwner: string, arg: RequestTyp
     status: "modified",
     createTime: new Date(),
     updateTime: null,
-    permission: DEFAULT_PERMISSION,
+    permission: PERMISSION_DEFAULT,
     data: {
       socketId: exclusionOwner,
       userId

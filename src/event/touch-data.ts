@@ -1,5 +1,5 @@
 import {StoreObj} from "../@types/store";
-import {DEFAULT_PERMISSION, Resister} from "../server";
+import {PERMISSION_DEFAULT, Resister} from "../server";
 import {addTouchier, getMaxOrder, getOwner, setEvent} from "./common";
 import Driver from "nekostore/lib/Driver";
 import {TouchDataRequest} from "../@types/socket";
@@ -21,7 +21,7 @@ async function touchData(driver: Driver, exclusionOwner: string, arg: RequestTyp
   const order = maxOrder + 1;
 
   const owner = await getOwner(driver, exclusionOwner, arg.option ? arg.option.owner : undefined);
-  const permission = arg.option && arg.option.permission || DEFAULT_PERMISSION;
+  const permission = arg.option && arg.option.permission || PERMISSION_DEFAULT;
 
   const addInfo: StoreObj<any> = {
     order,

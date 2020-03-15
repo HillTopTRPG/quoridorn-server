@@ -1,7 +1,7 @@
 import Driver from "nekostore/lib/Driver";
 import DocumentSnapshot from "nekostore/lib/DocumentSnapshot";
 import {Permission, StoreMetaData, StoreObj} from "../@types/store";
-import {DEFAULT_PERMISSION, hashAlgorithm, SYSTEM_COLLECTION} from "../server";
+import {PERMISSION_DEFAULT, hashAlgorithm, SYSTEM_COLLECTION, PERMISSION_OWNER_CHANGE} from "../server";
 import {SystemError} from "../error/SystemError";
 import {UserLoginResponse, UserType} from "../@types/socket";
 import {ApplicationError} from "../error/ApplicationError";
@@ -179,7 +179,7 @@ export async function additionalStatus(
       standImageInfoId: null,
       chatPaletteInfoId: null
     },
-    permission: DEFAULT_PERMISSION
+    permission: PERMISSION_DEFAULT
   });
 
   return statusDocRef.id;
@@ -216,7 +216,7 @@ export async function addActor(
     createTime: new Date(),
     updateTime: null,
     data: actorInfo,
-    permission: DEFAULT_PERMISSION
+    permission: PERMISSION_OWNER_CHANGE
   });
 
   const actorId = actorDocRef.id;
@@ -299,7 +299,7 @@ export async function addUser(
       type,
       login: 1
     },
-    permission: DEFAULT_PERMISSION
+    permission: PERMISSION_DEFAULT
   });
 
   const userId = userDocRef.id;

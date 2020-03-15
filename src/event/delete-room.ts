@@ -37,7 +37,11 @@ const suffixList = [
   "property-selection-list",
   "property-face-list",
   "actor-list",
-  "actor-group-list"
+  "actor-group-list",
+  "card-meta-list",
+  "card-object-list",
+  "card-deck-big-list",
+  "card-deck-small-list"
 ];
 
 /**

@@ -1,5 +1,5 @@
 import {StoreObj} from "../@types/store";
-import {DEFAULT_PERMISSION, Resister} from "../server";
+import {PERMISSION_DEFAULT, Resister} from "../server";
 import {getMaxOrder, getOwner, setEvent} from "./common";
 import Driver from "nekostore/lib/Driver";
 import {ApplicationError} from "../error/ApplicationError";
@@ -22,7 +22,7 @@ async function addDirect(driver: Driver, exclusionOwner: string, arg: RequestTyp
   let order = maxOrder + 1;
 
   const owner = await getOwner(driver, exclusionOwner, arg.option ? arg.option.owner : undefined);
-  const permission = arg.option && arg.option.permission || DEFAULT_PERMISSION;
+  const permission = arg.option && arg.option.permission || PERMISSION_DEFAULT;
 
   const docIdList: string[] = [];
 
