@@ -9,7 +9,6 @@ export type ServerSetting = {
 
 export type StorageSetting = {
   bucket: string;
-  region: string;
   accessUrl: string;
   endPoint: string;
   port: number;

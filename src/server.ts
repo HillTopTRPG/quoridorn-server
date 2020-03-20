@@ -2,7 +2,7 @@ import BasicDriver from "nekostore/lib/driver/basic";
 import SocketDriverServer from "nekostore/lib/driver/socket/SocketDriverServer";
 import fs from "fs";
 import YAML from "yaml";
-import {Interoperability, ServerSetting} from "./@types/server";
+import {Interoperability, ServerSetting, StorageSetting} from "./@types/server";
 import * as path from "path";
 import resistGetVersionEvent from "./event/get-version";
 import resistGetRoomListEvent from "./event/get-room-list";
@@ -37,6 +37,7 @@ import {SystemError} from "./error/SystemError";
 import {compareVersion, getFileRow, TargetVersion} from "./utility/GitHub";
 import {accessLog} from "./utility/logger";
 import {RoomStore, SocketStore, SocketUserStore, TouchierStore, UserStore} from "./@types/data";
+import * as Minio from "minio";
 
 export const PERMISSION_DEFAULT: Permission = {
   view: {
@@ -98,6 +99,30 @@ if (hashAlgorithmStr !== "argon2" && hashAlgorithmStr !== "bcrypt") {
   throw new SystemError(`Unsupported hash algorithm. hashAlgorithm: ${hashAlgorithmStr}`);
 }
 export const hashAlgorithm: HashAlgorithmType = hashAlgorithmStr;
+
+const storageSetting: StorageSetting = YAML.parse(fs.readFileSync(path.resolve(__dirname, "../config/storage.yaml"), "utf8"));
+const clientOption = {
+  endPoint: storageSetting.endPoint,
+  port: storageSetting.port,
+  useSSL: storageSetting.useSSL,
+  accessKey: storageSetting.accessKey,
+  secretKey: storageSetting.secretKey
+};
+export const bucket = storageSetting.bucket;
+export const accessUrl = storageSetting.accessUrl;
+
+let _s3Client: Minio.Client | null = null;
+try {
+  _s3Client = new Minio.Client(clientOption);
+  console.log(`S3 Storage connect success. (bucket: ${bucket})`);
+} catch (err) {
+  console.error("S3 Storage connect failure. ");
+  console.error("Please review your settings. (src: config/storage.yaml)");
+  console.error(JSON.stringify(clientOption, null, "  "));
+  console.error(err);
+  throw err;
+}
+export const s3Client = _s3Client;
 
 /**
  * データストアにおいてサーバプログラムが直接参照するコレクションテーブルの名前

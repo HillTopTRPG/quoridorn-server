@@ -1,63 +1,14 @@
-import {Resister} from "../server";
+import {accessUrl, bucket, Resister, s3Client} from "../server";
 import {getSocketDocSnap, setEvent} from "./common";
 import Driver from "nekostore/lib/Driver";
 import {UploadFileInfo, UploadFileRequest} from "../@types/socket";
-import {StorageSetting} from "../@types/server";
-import YAML from "yaml";
-import fs from "fs";
 import * as path from "path";
-import Minio from "minio";
 import {SocketStore} from "../@types/data";
-
-export const storageSetting: StorageSetting = YAML.parse(fs.readFileSync(path.resolve(__dirname, "../../config/storage.yaml"), "utf8"));
-console.log(JSON.stringify(storageSetting, null, "  "));
-
-let s3Client: Minio.Client | null = null;
-try {
-  s3Client = new Minio.Client({
-    endPoint: storageSetting.endPoint,
-    port: storageSetting.port,
-    useSSL: storageSetting.useSSL,
-    accessKey: storageSetting.accessKey,
-    secretKey: storageSetting.secretKey
-  });
-} catch (err) {
-  console.error("## S3ストレージへの接続ができませんでした。");
-  console.error("## config/storage.yamlの内容を見直してください。");
-  console.error("## 以下は minioエラーメッセージ");
-  console.error(err);
-}
-
-// Bucket作成
-function createBucket() {
-  s3Client!.makeBucket(storageSetting.bucket, storageSetting.region, (err: any) => {
-    if(err) {
-      console.log(err);
-      return;
-    }
-
-    console.log('Bucket created successfully in ', storageSetting.region);
-    console.log('Created bucket name  => ', storageSetting.bucket);
-  });
-}
-createBucket();
-
-async function upload(src: string, fileType: {[key: string]: any}, filePath: string): Promise<string> {
-  return new Promise<string>((resolve, reject) => {
-    s3Client!.fPutObject(storageSetting.bucket, src, filePath, fileType, function(err: any) {
-      if(err) {
-        reject(err);
-        return;
-      }
-      resolve(path.join(storageSetting.accessUrl, filePath));
-    });
-  });
-}
 
 // インタフェース
 const eventName = "upload-file";
 type RequestType = UploadFileRequest;
-type ResponseType = string[];
+type ResponseType = string[]; // download url
 
 /**
  * メディアファイルアップロード処理
@@ -80,7 +31,8 @@ async function uploadFile(driver: Driver, socket: any, arg: RequestType): Promis
 
     // アップロード
     const filePath = path.join(storageId, info.name);
-    urlList.push(await upload(info.src, {}, filePath));
+    await s3Client!.putObject(bucket, filePath, info.src);
+    urlList.push(path.join(accessUrl, filePath));
   };
 
   // 直列の非同期で全部実行する

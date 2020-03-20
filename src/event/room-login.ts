@@ -8,7 +8,7 @@ import {RoomLoginRequest} from "../@types/socket";
 import {StoreObj} from "../@types/store";
 import {ApplicationError} from "../error/ApplicationError";
 import {releaseTouchRoom} from "./release-touch-room";
-import {RoomStore} from "../@types/data";
+import {RoomStore, SocketStore} from "../@types/data";
 
 // インタフェース
 const eventName = "room-login";
@@ -55,8 +55,10 @@ async function roomLogin(driver: Driver, exclusionOwner: string, arg: RequestTyp
   // パスワードチェックで引っかかった
   if (!verifyResult) throw new ApplicationError(`Password mismatch.`, arg);
 
-  const updateInfo = {
-    roomId: arg.roomId
+  const updateInfo: Partial<SocketStore> = {
+    roomId: arg.roomId,
+    roomCollectionPrefix: data.roomCollectionPrefix,
+    storageId: data.storageId
   };
   try {
     await socketDocSnap.ref.update(updateInfo);

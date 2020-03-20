@@ -1,8 +1,5 @@
 # s3系ストレージ上のバケット
-bucket: quoridorn-001
-
-# s3系ストレージ上のリージョン
-region: quoridorn
+bucket: quoridorn
 
 # ブラウザからストレージを参照するためのURLのベース
 accessUrl: ''
@@ -11,7 +8,7 @@ accessUrl: ''
 endPoint: localhost
 
 # アプリケーションサーバからs3系ストレージにアクセスするために使う、s3プロトコルの「PORT」の値
-port: 9001
+port: 9000
 
 # アプリケーションサーバからs3系ストレージにアクセスするために使う、s3プロトコルの「ACCESS_KEY」の値
 accessKey: ''
