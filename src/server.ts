@@ -21,6 +21,7 @@ import resistCreateDataEvent from "./event/create-data";
 import resistDeleteDataEvent from "./event/delete-data";
 import resistSendDataEvent from "./event/send-data";
 import resistAddDirectEvent from "./event/add-direct";
+import resistUploadFileEvent from "./event/upload-file";
 import Driver from "nekostore/lib/Driver";
 import Store from "nekostore/src/store/Store";
 import MongoStore from "nekostore/lib/store/MongoStore";
@@ -136,6 +137,7 @@ async function addSocketList(driver: Driver, socketId: string): Promise<void> {
     socketId,
     roomId: null,
     roomCollectionPrefix: null,
+    storageId: null,
     userId: null,
     connectTime: new Date()
   });
@@ -299,7 +301,9 @@ async function main(): Promise<void> {
         // データ送信リクエスト
         resistSendDataEvent,
         // データ一括追加リクエスト
-        resistAddDirectEvent
+        resistAddDirectEvent,
+        // ファイルアップロードリクエスト
+        resistUploadFileEvent
       ].forEach((r: Resister) => r(driver, socket, io, db));
     });
 

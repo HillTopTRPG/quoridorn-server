@@ -50,12 +50,16 @@ async function createRoom(driver: Driver, exclusionOwner: string, arg: RequestTy
   }
   delete arg.roomNo;
 
+  const roomCollectionPrefix = uuid.v4();
+  const storageId = uuid.v4();
+
   // 部屋情報の更新
   const storeData: RoomStore = {
     ...arg,
     memberNum: 0,
     hasPassword: !!arg.roomPassword,
-    roomCollectionPrefix: uuid.v4()
+    roomCollectionPrefix,
+    storageId
   };
 
   const updateRoomInfo: Partial<StoreObj<RoomStore>> = {
@@ -69,10 +73,8 @@ async function createRoom(driver: Driver, exclusionOwner: string, arg: RequestTy
     throw new ApplicationError(`Failure update roomInfo doc.`, updateRoomInfo);
   }
 
-  const roomCollectionPrefix = storeData.roomCollectionPrefix;
-
   // Socket情報の更新
-  const updateSocketInfo: Partial<SocketStore> = { roomId: arg.roomId, roomCollectionPrefix };
+  const updateSocketInfo: Partial<SocketStore> = { roomId: arg.roomId, roomCollectionPrefix, storageId };
   try {
     await socketDocSnap.ref.update(updateSocketInfo);
   } catch (err) {

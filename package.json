@@ -23,6 +23,7 @@
   },
   "homepage": "https://github.com/HillTopTRPG/quoridorn-server#readme",
   "dependencies": {
+    "@types/minio": "^7.0.5",
     "@types/mongodb": "^3.3.14",
     "@types/node-fetch": "^2.5.4",
     "@types/socket.io-client": "^1.4.32",
@@ -33,6 +34,7 @@
     "co": "^4.6.0",
     "dotenv": "^8.2.0",
     "log4js": "^6.1.0",
+    "minio": "^7.0.15",
     "moment": "^2.24.0",
     "mongodb": "^3.3.2",
     "nekostore": "^0.6.0",

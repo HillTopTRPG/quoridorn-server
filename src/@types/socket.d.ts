@@ -75,6 +75,7 @@ export type RoomViewResponse = {
 
 export type LoginResponse = ClientRoomInfo & {
   roomCollectionPrefix: string;
+  storageId: string;
 };
 
 export type GetVersionResponse = {
@@ -113,3 +114,10 @@ export type SendDataRequest = {
   targetList: string[],
   data: any;
 };
+
+export type UploadFileInfo = {
+  name: string;
+  src: string;
+};
+
+export type UploadFileRequest = UploadFileInfo[];

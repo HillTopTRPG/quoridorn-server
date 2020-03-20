@@ -1,4 +1,4 @@
-# サーバのポート
+# Quoridornアプリケーションサーバ（このサーバ）のポート
 port: 8000
 
 # データ保持の手段（memory or mongodb）
@@ -25,9 +25,6 @@ storeType: mongodb
 #       書き換え前にこの設定値を名前の末尾に持つコレクション（これがシークレットコレクションです）を運用によって削除してください。
 secretCollectionSuffix: c8c4b7f3-ce60-41ba-a0d3-e90876d09c1a
 
-# MongoDBの接続文字列
-mongodbConnectionStrings: mongodb://127.0.0.1:27017/
-
 # 設置できる部屋の数
 roomNum: 100
 
@@ -35,3 +32,6 @@ roomNum: 100
 # 無限にする場合は -1 を設定
 # ※ 未実装
 roomAutoRemove: 4320
+
+# MongoDBの接続文字列
+mongodbConnectionStrings: mongodb://127.0.0.1:27017/

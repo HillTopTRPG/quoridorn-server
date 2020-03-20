@@ -1,0 +1,24 @@
+# s3系ストレージ上のバケット
+bucket: quoridorn-001
+
+# s3系ストレージ上のリージョン
+region: quoridorn
+
+# ブラウザからストレージを参照するためのURLのベース
+accessUrl: ''
+
+# アプリケーションサーバからs3系ストレージにアクセスするために使う、s3プロトコルの「END_POINT」の値
+endPoint: localhost
+
+# アプリケーションサーバからs3系ストレージにアクセスするために使う、s3プロトコルの「PORT」の値
+port: 9001
+
+# アプリケーションサーバからs3系ストレージにアクセスするために使う、s3プロトコルの「ACCESS_KEY」の値
+accessKey: ''
+
+# アプリケーションサーバからs3系ストレージにアクセスするために使う、s3プロトコルの「SECRET_KEY」の値
+secretKey: ''
+
+# アプリケーションサーバからs3系ストレージにアクセスするために使う、s3プロトコルの「SECURE」の値
+# (true: HTTPSプロトコル, false: HTTPプロトコル)
+useSSL: false

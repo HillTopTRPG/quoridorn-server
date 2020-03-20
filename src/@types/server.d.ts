@@ -7,6 +7,17 @@ export type ServerSetting = {
   roomAutoRemove: number;
 };
 
+export type StorageSetting = {
+  bucket: string;
+  region: string;
+  accessUrl: string;
+  endPoint: string;
+  port: number;
+  accessKey: string;
+  secretKey: string;
+  useSSL: boolean;
+};
+
 export type Interoperability = {
   server: string;
   client: string;

@@ -24,6 +24,7 @@ export type SocketStore = {
   socketId: string;
   roomId: string | null;
   roomCollectionPrefix: string | null;
+  storageId: string | null;
   userId: string | null;
   connectTime: Date;
 }
