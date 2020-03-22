@@ -40,41 +40,15 @@ import {RoomStore, SocketStore, SocketUserStore, TouchierStore, UserStore} from 
 import * as Minio from "minio";
 
 export const PERMISSION_DEFAULT: Permission = {
-  view: {
-    type: "none",
-    list: []
-  },
-  edit: {
-    type: "none",
-    list: []
-  },
-  chmod: {
-    type: "none",
-    list: []
-  }
+  view: { type: "none", list: [] },
+  edit: { type: "none", list: [] },
+  chmod: { type: "none", list: [] }
 };
 
 export const PERMISSION_OWNER_CHANGE: Permission = {
-  view: {
-    type: "none",
-    list: []
-  },
-  edit: {
-    type: "allow",
-    list: [
-      {
-        type: "owner"
-      }
-    ]
-  },
-  chmod: {
-    type: "allow",
-    list: [
-      {
-        type: "owner"
-      }
-    ]
-  }
+  view: { type: "none", list: [] },
+  edit: { type: "allow", list: [{ type: "owner" }] },
+  chmod: { type: "allow", list: [{ type: "owner" }] }
 };
 
 export type Resister = (d: Driver, socket: any, io: any, db?: Db) => void;

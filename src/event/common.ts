@@ -3,7 +3,7 @@ import DocumentSnapshot from "nekostore/lib/DocumentSnapshot";
 import {Permission, StoreMetaData, StoreObj} from "../@types/store";
 import {PERMISSION_DEFAULT, hashAlgorithm, SYSTEM_COLLECTION, PERMISSION_OWNER_CHANGE} from "../server";
 import {SystemError} from "../error/SystemError";
-import {UserLoginResponse, UserType} from "../@types/socket";
+import {UploadFileInfo, UserLoginResponse, UserType} from "../@types/socket";
 import {ApplicationError} from "../error/ApplicationError";
 import CollectionReference from "nekostore/src/CollectionReference";
 import DocumentChange from "nekostore/lib/DocumentChange";
@@ -31,7 +31,13 @@ import uuid = require("uuid");
 export function setEvent<T, U>(driver: Driver, socket: any, eventName: string, func: (driver: Driver, arg: T, permission?: Permission) => Promise<U>) {
   const resultEvent = `result-${eventName}`;
   socket.on(eventName, async (arg: T) => {
-    accessLog(socket.id, eventName, "START", arg);
+    const logArg = arg ? JSON.parse(JSON.stringify(arg)) : null;
+    if (eventName === "upload-file") {
+      logArg.forEach((info: UploadFileInfo) => {
+        info.src = "[Binary Array]";
+      });
+    }
+    accessLog(socket.id, eventName, "START", logArg);
     try {
       const result = await func(driver, arg);
       accessLog(socket.id, eventName, "END  ", result);
