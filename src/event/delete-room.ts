@@ -95,20 +95,16 @@ async function deleteRoom(driver: Driver, exclusionOwner: string, arg: RequestTy
       });
     };
 
-    const roomUserCollectionName = `${data.roomCollectionPrefix}-DATA-user-list`;
-    const userCollection = driver.collection<StoreObj<UserStore>>(roomUserCollectionName);
-    suffixList.forEach(async s => {
-      if (s.startsWith("$userId-")) {
-        const docs = (await userCollection.get()).docs;
-        docs.forEach(async doc => {
-          if (!doc || !doc.exists()) return;
-          const userId = doc.ref.id;
-          deleteCollection(s.replace("$userId", userId));
-        });
-      } else {
-        deleteCollection(s);
-      }
+    // 部屋のコレクションの削除　
+    const roomCollectionPrefix = data.roomCollectionPrefix;
+    const collectionNameCollectionName = `${roomCollectionPrefix}-DATA-collection-list`;
+    const cnCC = driver.collection<{ name: string }>(collectionNameCollectionName);
+    (await cnCC.get()).docs.map(d => d.data!.name).forEach(name => {
+      deleteCollection(name);
     });
+    deleteCollection(collectionNameCollectionName);
+
+    // TODO Storageも削除する
   }
 
   return true;

@@ -20,7 +20,7 @@ type ResponseType = string;
  * @param arg
  */
 async function createData(driver: Driver, exclusionOwner: string, arg: RequestType): Promise<ResponseType> {
-  const roomCollectionPrefix = arg.collection.replace("DATA-actor-list", "");
+  const roomCollectionPrefix = arg.collection.replace(/DATA-.+$/, "");
 
   // タッチ解除
   await releaseTouchData(driver, exclusionOwner, arg, true);

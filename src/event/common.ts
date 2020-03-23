@@ -75,6 +75,15 @@ type GetRoomInfoOption = {
   collectionReference?: CollectionReference<StoreObj<RoomStore>>;
 };
 
+export async function registCollectionName(driver: Driver, collection: string) {
+  const roomCollectionPrefix = collection.replace(/DATA-.+$/, "");
+  const collectionNameCollectionName = `${roomCollectionPrefix}-DATA-collection-list`;
+  const cnCC = driver.collection<{ name: string }>(collectionNameCollectionName);
+  if (!(await cnCC.where("name", "==", collection).get()).docs.length) {
+    await cnCC.add({ name: collection });
+  }
+}
+
 /**
  * 部屋情報コレクションから特定の部屋の情報を取得する
  * @param driver

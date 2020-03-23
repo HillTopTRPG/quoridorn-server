@@ -1,6 +1,6 @@
 import {StoreObj} from "../@types/store";
 import {PERMISSION_DEFAULT, Resister} from "../server";
-import {getMaxOrder, getOwner, setEvent} from "./common";
+import {getMaxOrder, getOwner, registCollectionName, setEvent} from "./common";
 import Driver from "nekostore/lib/Driver";
 import {ApplicationError} from "../error/ApplicationError";
 import {AddDirectRequest} from "../@types/socket";
@@ -45,6 +45,9 @@ async function addDirect(driver: Driver, exclusionOwner: string, arg: RequestTyp
       throw new ApplicationError(`Failure add doc.`, addInfo);
     }
   };
+
+  // collectionの記録
+  await registCollectionName(driver, arg.collection);
 
   // 直列の非同期で全部実行する
   await arg.dataList

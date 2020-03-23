@@ -1,6 +1,6 @@
 import {StoreObj} from "../@types/store";
 import {PERMISSION_DEFAULT, Resister} from "../server";
-import {addTouchier, getMaxOrder, getOwner, setEvent} from "./common";
+import {addTouchier, getMaxOrder, getOwner, registCollectionName, setEvent} from "./common";
 import Driver from "nekostore/lib/Driver";
 import {TouchDataRequest} from "../@types/socket";
 import {ApplicationError} from "../error/ApplicationError";
@@ -52,6 +52,9 @@ async function touchData(driver: Driver, exclusionOwner: string, arg: RequestTyp
       throw new ApplicationError(`Failure set doc.`, addInfo);
     }
   }
+
+  // collectionの記録
+  await registCollectionName(driver, arg.collection);
 
   await addTouchier(driver, exclusionOwner, arg.collection, docRef.id, null);
 
