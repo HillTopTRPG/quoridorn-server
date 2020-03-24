@@ -95,8 +95,16 @@ async function deleteRoom(driver: Driver, exclusionOwner: string, arg: RequestTy
       });
     };
 
-    // 部屋のコレクションの削除　
     const roomCollectionPrefix = data.roomCollectionPrefix;
+
+    // メディアコレクションからメディアストレージの削除
+    const mediaCCName = `${roomCollectionPrefix}-DATA-media-list`;
+    const mediaCC = driver.collection<StoreObj<{ url: string }>>(mediaCCName);
+    (await mediaCC.get()).docs.map(d => d.data!.data!.url).forEach(url => {
+      deleteCollection(url);
+    });
+
+    // 部屋のコレクションの削除
     const collectionNameCollectionName = `${roomCollectionPrefix}-DATA-collection-list`;
     const cnCC = driver.collection<{ name: string }>(collectionNameCollectionName);
     (await cnCC.get()).docs.map(d => d.data!.name).forEach(name => {
