@@ -104,8 +104,6 @@ export const s3Client = _s3Client;
 export namespace SYSTEM_COLLECTION {
   /** 部屋一覧 */
   export const ROOM_LIST = `rooms-${serverSetting.secretCollectionSuffix}`;
-  /** 部屋一覧情報を受信するsocket.idの一覧 */
-  export const ROOM_VIEWER_LIST = `room-viewer-list-${serverSetting.secretCollectionSuffix}`;
   /** タッチしているsocket.idの一覧 */
   export const TOUCH_LIST = `touch-list-${serverSetting.secretCollectionSuffix}`;
   /** 接続中のsocket.idの一覧 */

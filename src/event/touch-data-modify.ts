@@ -8,7 +8,7 @@ import {TouchModifyDataRequest} from "../@types/socket";
 // インタフェース
 const eventName = "touch-data-modify";
 type RequestType = TouchModifyDataRequest;
-type ResponseType = string;
+type ResponseType = string[];
 
 /**
  * データ（編集・削除）着手リクエスト
@@ -17,13 +17,37 @@ type ResponseType = string;
  * @param arg
  */
 export async function touchDataModify(driver: Driver, exclusionOwner: string, arg: RequestType): Promise<ResponseType> {
-  const docSnap = await getData(driver, arg.collection, arg.id);
+  const resultIdList: string[] = [];
+
+  // 直列の非同期で全部実行する
+  await arg.idList
+    .map((id: string) => () => singleTouchDataModify(
+      driver,
+      exclusionOwner,
+      arg.collection,
+      resultIdList,
+      id
+    ))
+    .reduce((prev, curr) => prev.then(curr), Promise.resolve());
+
+  return resultIdList;
+}
+
+async function singleTouchDataModify(
+  driver: Driver,
+  exclusionOwner: string,
+  collection: string,
+  resultIdList: string[],
+  id: string
+): Promise<void> {
+  const msgArg = { collection, id };
+  const docSnap = await getData(driver, collection, id);
 
   // No such check.
-  if (!docSnap || !docSnap.exists()) throw new ApplicationError(`No such.`, arg);
+  if (!docSnap || !docSnap.exists()) throw new ApplicationError(`No such.`, msgArg);
 
   // Already check.
-  if (docSnap.data.exclusionOwner) throw new ApplicationError(`Already touched.`, arg);
+  if (docSnap.data.exclusionOwner) throw new ApplicationError(`Already touched.`, msgArg);
 
   const updateTime = docSnap.data.updateTime;
 
@@ -39,9 +63,9 @@ export async function touchDataModify(driver: Driver, exclusionOwner: string, ar
     throw new ApplicationError(`Failure update doc.`, updateInfo);
   }
 
-  await addTouchier(driver, exclusionOwner, arg.collection, docSnap.ref.id, updateTime);
+  await addTouchier(driver, exclusionOwner, collection, docSnap.ref.id, updateTime);
 
-  return docSnap.ref.id;
+  resultIdList.push(docSnap.ref.id);
 }
 
 const resist: Resister = (driver: Driver, socket: any): void => {

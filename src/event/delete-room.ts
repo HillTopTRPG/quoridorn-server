@@ -9,40 +9,12 @@ import {ApplicationError} from "../error/ApplicationError";
 import {SystemError} from "../error/SystemError";
 import {releaseTouchRoom} from "./release-touch-room";
 import { Db } from "mongodb";
-import {RoomStore, UserStore} from "../@types/data";
+import {RoomStore} from "../@types/data";
 
 // インタフェース
 const eventName = "delete-room";
 type RequestType = DeleteRoomRequest;
 type ResponseType = boolean;
-
-const suffixList = [
-  "chat-list",
-  "chat-tab-list",
-  "group-chat-tab-list",
-  "scene-list",
-  "scene-layer-list",
-  "scene-object-list",
-  "status-list",
-  "scene-and-layer-list",
-  "scene-and-object-list",
-  "tag-note-list",
-  "room-data",
-  "image-list",
-  "image-tag-list",
-  "cut-in-list",
-  "user-list",
-  "socket-user-list",
-  "property-list",
-  "property-selection-list",
-  "property-face-list",
-  "actor-list",
-  "actor-group-list",
-  "card-meta-list",
-  "card-object-list",
-  "card-deck-big-list",
-  "card-deck-small-list"
-];
 
 /**
  * 部屋削除処理

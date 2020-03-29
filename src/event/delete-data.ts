@@ -22,24 +22,40 @@ async function deleteData(driver: Driver, exclusionOwner: string, arg: RequestTy
   // タッチ解除
   await releaseTouchData(driver, exclusionOwner, arg, true);
 
-  // 部屋一覧の更新
+  // 直列の非同期で全部実行する
+  await arg.idList
+    .map((id: string) => () => singleDeleteData(
+      driver,
+      arg.collection,
+      id
+    ))
+    .reduce((prev, curr) => prev.then(curr), Promise.resolve());
+}
+
+async function singleDeleteData(
+  driver: Driver,
+  collection: string,
+  id: string
+): Promise<void> {
+  const msgArg = { collection, id };
+
   const docSnap: DocumentSnapshot<StoreObj<any>> | null = await getData(
     driver,
-    arg.collection,
-    arg.id
+    collection,
+    id
   );
 
   // Untouched check.
-  if (!docSnap || !docSnap.exists()) throw new ApplicationError(`Untouched data.`, arg);
+  if (!docSnap || !docSnap.exists()) throw new ApplicationError(`Untouched data.`, msgArg);
 
   // Already check.
   const data = docSnap.data;
-  if (!data || !data.data) throw new ApplicationError(`Already deleted.`, arg);
+  if (!data || !data.data) throw new ApplicationError(`Already deleted.`, msgArg);
 
   try {
     await docSnap.ref.delete();
   } catch (err) {
-    throw new ApplicationError(`Failure delete doc.`, arg);
+    throw new ApplicationError(`Failure delete doc.`, msgArg);
   }
 }
 

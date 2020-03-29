@@ -11,7 +11,7 @@ import {ActorStore} from "../@types/data";
 // インタフェース
 const eventName = "create-data";
 type RequestType = CreateDataRequest;
-type ResponseType = string;
+type ResponseType = string[];
 
 /**
  * データ作成処理
@@ -20,49 +20,74 @@ type ResponseType = string;
  * @param arg
  */
 async function createData(driver: Driver, exclusionOwner: string, arg: RequestType): Promise<ResponseType> {
-  const roomCollectionPrefix = arg.collection.replace(/DATA-.+$/, "");
-
   // タッチ解除
   await releaseTouchData(driver, exclusionOwner, arg, true);
+  const resultIdList: string[] = [];
+
+  // 直列の非同期で全部実行する
+  await arg.idList
+    .map((id: string, idx: number) => () => singleReleaseCreateData(
+      driver,
+      exclusionOwner,
+      arg.collection,
+      id,
+      arg.dataList[idx],
+      resultIdList,
+      arg.optionList ? arg.optionList[idx] : undefined
+    ))
+    .reduce((prev, curr) => prev.then(curr), Promise.resolve());
+
+  return resultIdList;
+}
+
+async function singleReleaseCreateData(
+  driver: Driver,
+  exclusionOwner: string,
+  collection: string,
+  id: string,
+  data: any,
+  resultIdList: string[],
+  option?: Partial<StoreObj<unknown>> & { continuous?: boolean }
+): Promise<void> {
+  const msgArg = { collection, id, option };
+  const roomCollectionPrefix = collection.replace(/DATA-.+$/, "");
 
   // データの更新
   const docSnap: DocumentSnapshot<StoreObj<any>> | null = await getData(
     driver,
-    arg.collection,
-    arg.id
+    collection,
+    id
   );
 
   // Untouched check.
-  if (!docSnap || !docSnap.exists()) throw new ApplicationError(`Untouched data.`, arg);
+  if (!docSnap || !docSnap.exists()) throw new ApplicationError(`Untouched data.`, msgArg);
 
   // Already check.
-  if (docSnap.data.data) throw new ApplicationError(`Already created.`, arg);
+  if (docSnap.data.data) throw new ApplicationError(`Already created.`, msgArg);
 
   const socketSnap = await getSocketDocSnap(driver, exclusionOwner);
 
-  if (arg.collection.endsWith("DATA-actor-list")) {
-    const data = arg.data as ActorStore;
-
+  if (collection.endsWith("DATA-actor-list")) {
     // アクターにはデフォルトステータスを登録する
-    data.statusId = await additionalStatus(driver, roomCollectionPrefix, arg.id);
+    (data as ActorStore).statusId = await additionalStatus(driver, roomCollectionPrefix, id);
 
     // アクターグループ「All」に追加
-    await addActorGroup(driver, roomCollectionPrefix, arg.id, "other", null, "All");
+    await addActorGroup(driver, roomCollectionPrefix, id, "other", null, "All");
   }
 
   try {
     await docSnap.ref.update({
-      data: arg.data,
+      data,
       status: "added",
-      owner: arg.option && arg.option.owner || socketSnap.data!.userId!,
-      permission: arg.option && arg.option.permission || undefined,
+      owner: option && option.owner || socketSnap.data!.userId!,
+      permission: option && option.permission || undefined,
       updateTime: new Date()
     });
   } catch (err) {
-    throw new ApplicationError(`Failure update doc.`, arg);
+    throw new ApplicationError(`Failure update doc.`, msgArg);
   }
 
-  return docSnap.ref.id;
+  resultIdList.push(docSnap.ref.id);
 }
 
 const resist: Resister = (driver: Driver, socket: any): void => {

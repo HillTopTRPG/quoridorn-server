@@ -86,14 +86,14 @@ export type GetVersionResponse = {
 
 export type TouchDataRequest = {
   collection: string;
-  id?: string;
-  option?: Partial<StoreObj<unknown>>;
+  idList?: string[];
+  optionList?: Partial<StoreObj<unknown>>[];
 };
 export type TouchModifyDataRequest = TouchDataRequest & {
-  id: string;
+  idList: string[];
 };
 export type ReleaseTouchDataRequest = TouchModifyDataRequest & {
-  option?: { continuous?: boolean };
+  optionList?: (Partial<StoreObj<unknown>> & { continuous?: boolean })[];
 };
 
 export type AddDirectRequest = {
@@ -102,12 +102,12 @@ export type AddDirectRequest = {
   option?: Partial<StoreObj<unknown>>;
 };
 export type CreateDataRequest = TouchModifyDataRequest & {
-  data: any;
+  dataList: any[];
 };
 export type DeleteDataRequest = TouchModifyDataRequest;
 export type UpdateDataRequest = TouchModifyDataRequest & {
-  data: any;
-  option?: Partial<StoreObj<unknown>> & { continuous?: boolean };
+  dataList: any[];
+  optionList?: (Partial<StoreObj<unknown>> & { continuous?: boolean })[];
 };
 
 export type SendDataRequest = {

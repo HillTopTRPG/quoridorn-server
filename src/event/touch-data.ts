@@ -8,7 +8,7 @@ import {ApplicationError} from "../error/ApplicationError";
 // インタフェース
 const eventName = "touch-data";
 type RequestType = TouchDataRequest;
-type ResponseType = string;
+type ResponseType = string[];
 
 /**
  * データ（作成）着手リクエスト
@@ -17,11 +17,47 @@ type ResponseType = string;
  * @param arg 部屋番号
  */
 async function touchData(driver: Driver, exclusionOwner: string, arg: RequestType): Promise<ResponseType> {
-  const { c, maxOrder } = await getMaxOrder<any>(driver, arg.collection);
+  const resultIdList: string[] = [];
+  if (arg.idList) {
+    // 直列の非同期で全部実行する
+    await arg.idList
+      .map((id: string, idx: number) => () => singleTouchData(
+        driver,
+        exclusionOwner,
+        arg.collection,
+        resultIdList,
+        id,
+        arg.optionList ? (arg.optionList[idx] || undefined) : undefined
+      ))
+      .reduce((prev, curr) => prev.then(curr), Promise.resolve());
+  } else {
+    await singleTouchData(
+      driver,
+      exclusionOwner,
+      arg.collection,
+      resultIdList,
+      undefined,
+      arg.optionList ? (arg.optionList[0] || undefined) : undefined
+    )
+  }
+  return resultIdList;
+}
+
+async function singleTouchData(
+  driver: Driver,
+  exclusionOwner: string,
+  collection: string,
+  resultIdList: string[],
+  id?: string,
+  option?: Partial<StoreObj<unknown>> & { continuous?: boolean }
+): Promise<void> {
+  const msgArg = {collection, id, option};
+
+  const { c, maxOrder } = await getMaxOrder<any>(driver, collection);
   const order = maxOrder + 1;
 
-  const owner = await getOwner(driver, exclusionOwner, arg.option ? arg.option.owner : undefined);
-  const permission = arg.option && arg.option.permission || PERMISSION_DEFAULT;
+  const owner = await getOwner(driver, exclusionOwner, option ? option.owner : undefined);
+  const permission = option && option.permission || PERMISSION_DEFAULT;
 
   const addInfo: StoreObj<any> = {
     order,
@@ -35,16 +71,16 @@ async function touchData(driver: Driver, exclusionOwner: string, arg: RequestTyp
   };
 
   let docRef;
-  if (!arg.id) {
+  if (!id) {
     try {
       docRef = await c.add(addInfo);
     } catch (err) {
       throw new ApplicationError(`Failure add doc.`, addInfo);
     }
   } else {
-    docRef = c.doc(arg.id);
+    docRef = c.doc(id);
 
-    if ((await docRef.get()).exists()) throw new ApplicationError(`Already exists.`, arg);
+    if ((await docRef.get()).exists()) throw new ApplicationError(`Already exists.`, msgArg);
 
     try {
       await docRef.set(addInfo);
@@ -54,11 +90,11 @@ async function touchData(driver: Driver, exclusionOwner: string, arg: RequestTyp
   }
 
   // collectionの記録
-  await registCollectionName(driver, arg.collection);
+  await registCollectionName(driver, collection);
 
-  await addTouchier(driver, exclusionOwner, arg.collection, docRef.id, null);
+  await addTouchier(driver, exclusionOwner, collection, docRef.id, null);
 
-  return docRef.id;
+  resultIdList.push(docRef.id!);
 }
 
 const resist: Resister = (driver: Driver, socket: any): void => {

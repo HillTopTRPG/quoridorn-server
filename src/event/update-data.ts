@@ -21,20 +21,40 @@ export async function updateData(driver: Driver, exclusionOwner: string, arg: Re
   // タッチ解除
   await releaseTouchData(driver, exclusionOwner, arg, true);
 
-  const docSnap = await getData(driver, arg.collection, arg.id);
+  // 直列の非同期で全部実行する
+  await arg.idList
+  .map((id: string, idx: number) => () => singleUpdateData(
+    driver,
+    arg.collection,
+    id,
+    arg.dataList[idx],
+    arg.optionList ? arg.optionList[idx] : undefined
+  ))
+  .reduce((prev, curr) => prev.then(curr), Promise.resolve());
+}
+
+async function singleUpdateData(
+  driver: Driver,
+  collection: string,
+  id: string,
+  data: any,
+  option?: Partial<StoreObj<unknown>> & { continuous?: boolean }
+): Promise<void> {
+  const msgArg = { collection, id, option };
+  const docSnap = await getData(driver, collection, id);
 
   // No such check.
-  if (!docSnap || !docSnap.exists() || !docSnap.data.data) throw new ApplicationError(`No such data.`, arg);
+  if (!docSnap || !docSnap.exists() || !docSnap.data.data) throw new ApplicationError(`No such data.`, msgArg);
 
   const updateInfo: Partial<StoreObj<any>> = {
-    data: arg.data,
+    data,
     status: "modified",
     updateTime: new Date()
   };
-  if (arg.option) {
-    if (arg.option.permission) updateInfo.permission = arg.option.permission;
-    if (arg.option.order !== undefined) updateInfo.order = arg.option.order || 0;
-    if (arg.option.owner) updateInfo.owner = arg.option.owner;
+  if (option) {
+    if (option.permission) updateInfo.permission = option.permission;
+    if (option.order !== undefined) updateInfo.order = option.order || 0;
+    if (option.owner) updateInfo.owner = option.owner;
   }
   try {
     await docSnap.ref.update(updateInfo);
