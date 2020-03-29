@@ -1,6 +1,6 @@
 import {StoreObj} from "../@types/store";
 import {PERMISSION_DEFAULT, Resister} from "../server";
-import {getMaxOrder, getOwner, registCollectionName, setEvent} from "./common";
+import {getMaxOrder, getOwner, notifyProgress, registCollectionName, setEvent} from "./common";
 import Driver from "nekostore/lib/Driver";
 import {ApplicationError} from "../error/ApplicationError";
 import {AddDirectRequest} from "../@types/socket";
@@ -14,10 +14,11 @@ type ResponseType = string[];
 /**
  * データ作成処理
  * @param driver
- * @param exclusionOwner
+ * @param socket
  * @param arg
  */
-async function addDirect(driver: Driver, exclusionOwner: string, arg: RequestType): Promise<ResponseType> {
+async function addDirect(driver: Driver, socket: any, arg: RequestType): Promise<ResponseType> {
+  const exclusionOwner: string = socket.id;
   const { c, maxOrder } = await getMaxOrder<any>(driver, arg.collection);
   let order = maxOrder + 1;
 
@@ -26,7 +27,9 @@ async function addDirect(driver: Driver, exclusionOwner: string, arg: RequestTyp
 
   const docIdList: string[] = [];
 
-  const addFunc = async (data: any): Promise<void> => {
+  const addFunc = async (data: any, current: number): Promise<void> => {
+    // 進捗報告
+    notifyProgress(socket, arg.dataList.length, current);
     const addInfo: StoreObj<any> = {
       order: order++,
       exclusionOwner: null,
@@ -51,13 +54,16 @@ async function addDirect(driver: Driver, exclusionOwner: string, arg: RequestTyp
 
   // 直列の非同期で全部実行する
   await arg.dataList
-    .map((data: any) => () => addFunc(data))
+    .map((data: any, idx: number) => () => addFunc(data, idx))
     .reduce((prev, curr) => prev.then(curr), Promise.resolve());
+
+  // 進捗報告
+  notifyProgress(socket, arg.dataList.length, arg.dataList.length);
 
   return docIdList;
 }
 
 const resist: Resister = (driver: Driver, socket: any): void => {
-  setEvent<RequestType, ResponseType>(driver, socket, eventName, (driver: Driver, arg: RequestType) => addDirect(driver, socket.id, arg));
+  setEvent<RequestType, ResponseType>(driver, socket, eventName, (driver: Driver, arg: RequestType) => addDirect(driver, socket, arg));
 };
 export default resist;

@@ -1,5 +1,5 @@
 import {accessUrl, bucket, Resister, s3Client} from "../server";
-import {getSocketDocSnap, setEvent} from "./common";
+import {getSocketDocSnap, notifyProgress, setEvent} from "./common";
 import Driver from "nekostore/lib/Driver";
 import {UploadFileInfo, UploadFileRequest} from "../@types/socket";
 import * as path from "path";
@@ -22,12 +22,9 @@ async function uploadFile(driver: Driver, socket: any, arg: RequestType): Promis
   const storageId = socketData.storageId!;
 
   const urlList: string[] = [];
-  const addFunc = async (info: UploadFileInfo): Promise<void> => {
-    // 着手報告
-    socket.emit("upload-process", null, {
-      all: arg.length,
-      current: urlList.length
-    });
+  const uploadFunc = async (info: UploadFileInfo): Promise<void> => {
+    // 進捗報告
+    notifyProgress(socket, arg.length, urlList.length);
 
     // アップロード
     const filePath = path.join(storageId, info.name);
@@ -37,8 +34,11 @@ async function uploadFile(driver: Driver, socket: any, arg: RequestType): Promis
 
   // 直列の非同期で全部実行する
   await arg
-    .map((info: UploadFileInfo) => () => addFunc(info))
+    .map((info: UploadFileInfo) => () => uploadFunc(info))
     .reduce((prev, curr) => prev.then(curr), Promise.resolve());
+
+  // 進捗報告
+  notifyProgress(socket, arg.length, urlList.length);
 
   return urlList;
 }

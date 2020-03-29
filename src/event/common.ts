@@ -84,6 +84,10 @@ export async function registCollectionName(driver: Driver, collection: string) {
   }
 }
 
+export function notifyProgress(socket: any, all: number, current: number) {
+  if (all > 1) socket.emit("notify-progress", null, { all, current });
+}
+
 /**
  * 部屋情報コレクションから特定の部屋の情報を取得する
  * @param driver
