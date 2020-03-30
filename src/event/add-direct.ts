@@ -22,12 +22,12 @@ async function addDirect(driver: Driver, socket: any, arg: RequestType): Promise
   const { c, maxOrder } = await getMaxOrder<any>(driver, arg.collection);
   let order = maxOrder + 1;
 
-  const owner = await getOwner(driver, exclusionOwner, arg.option ? arg.option.owner : undefined);
-  const permission = arg.option && arg.option.permission || PERMISSION_DEFAULT;
-
   const docIdList: string[] = [];
 
   const addFunc = async (data: any, current: number): Promise<void> => {
+    const owner = await getOwner(driver, exclusionOwner, arg.optionList ? arg.optionList[current].owner : undefined);
+    const permission = arg.optionList && arg.optionList[current].permission || PERMISSION_DEFAULT;
+
     // 進捗報告
     notifyProgress(socket, arg.dataList.length, current);
     const addInfo: StoreObj<any> = {

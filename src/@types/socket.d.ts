@@ -99,7 +99,7 @@ export type ReleaseTouchDataRequest = TouchModifyDataRequest & {
 export type AddDirectRequest = {
   collection: string;
   dataList: any[];
-  option?: Partial<StoreObj<unknown>>;
+  optionList?: Partial<StoreObj<unknown>>[];
 };
 export type CreateDataRequest = TouchModifyDataRequest & {
   dataList: any[];

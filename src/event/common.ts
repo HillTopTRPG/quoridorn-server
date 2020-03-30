@@ -158,12 +158,12 @@ export async function getData(
     const data = docSnap.data;
     if (!data.exclusionOwner)
       throw new ApplicationError(
-        `Failure getRoomInfo. (Target roomInfo document has not exclusionOwner.)`,
+        `Failure getData. (Target data document has not exclusionOwner.)`,
         { collection, id }
       );
     if (data.exclusionOwner !== option.exclusionOwner)
       throw new ApplicationError(
-        `Failure getRoomInfo. (Already touched.)`,
+        `Failure getData. (Already touched.)`,
         { collection, id }
       );
   }
