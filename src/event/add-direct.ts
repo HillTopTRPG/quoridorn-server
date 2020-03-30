@@ -20,18 +20,20 @@ type ResponseType = string[];
 async function addDirect(driver: Driver, socket: any, arg: RequestType): Promise<ResponseType> {
   const exclusionOwner: string = socket.id;
   const { c, maxOrder } = await getMaxOrder<any>(driver, arg.collection);
-  let order = maxOrder + 1;
+  let startOrder = maxOrder + 1;
 
   const docIdList: string[] = [];
 
   const addFunc = async (data: any, current: number): Promise<void> => {
-    const owner = await getOwner(driver, exclusionOwner, arg.optionList ? arg.optionList[current].owner : undefined);
-    const permission = arg.optionList && arg.optionList[current].permission || PERMISSION_DEFAULT;
+    const option = arg.optionList && arg.optionList[current];
+    const owner = await getOwner(driver, exclusionOwner, option && option.owner || undefined);
+    const permission = option && option.permission || PERMISSION_DEFAULT;
+    const order = option && option.order !== undefined ? option.order : startOrder++;
 
     // 進捗報告
     notifyProgress(socket, arg.dataList.length, current);
     const addInfo: StoreObj<any> = {
-      order: order++,
+      order,
       exclusionOwner: null,
       lastExclusionOwner: null,
       owner,
