@@ -1,6 +1,6 @@
 import {Resister} from "../server";
 import {ApplicationError} from "../error/ApplicationError";
-import {deleteTouchier, getData, setEvent} from "./common";
+import {deleteTouchier, getData, procAsyncSplit, setEvent} from "./common";
 import Driver from "nekostore/lib/Driver";
 import {ReleaseTouchDataRequest} from "../@types/socket";
 import {StoreObj} from "../@types/store";
@@ -18,17 +18,14 @@ type ResponseType = void;
  * @param updateForce
  */
 export async function releaseTouchData(driver: Driver, exclusionOwner: string, arg: RequestType, updateForce?: boolean): Promise<ResponseType> {
-  // 直列の非同期で全部実行する
-  await arg.idList
-    .map((id: string, idx: number) => () => singleReleaseTouchData(
-      driver,
-      exclusionOwner,
-      arg.collection,
-      id,
-      arg.optionList ? (arg.optionList[idx] || undefined) : undefined,
-      updateForce
-    ))
-    .reduce((prev, curr) => prev.then(curr), Promise.resolve());
+  await procAsyncSplit(arg.idList.map((id: string, idx: number) => singleReleaseTouchData(
+    driver,
+    exclusionOwner,
+    arg.collection,
+    id,
+    arg.optionList ? (arg.optionList[idx] || undefined) : undefined,
+    updateForce
+  )));
 }
 
 async function singleReleaseTouchData(

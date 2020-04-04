@@ -1,6 +1,6 @@
 import {Resister} from "../server";
 import {ApplicationError} from "../error/ApplicationError";
-import {addTouchier, getData, setEvent} from "./common";
+import {addTouchier, getData, procAsyncSplit, setEvent} from "./common";
 import Driver from "nekostore/lib/Driver";
 import {StoreObj} from "../@types/store";
 import {TouchModifyDataRequest} from "../@types/socket";
@@ -19,16 +19,13 @@ type ResponseType = string[];
 export async function touchDataModify(driver: Driver, exclusionOwner: string, arg: RequestType): Promise<ResponseType> {
   const resultIdList: string[] = [];
 
-  // 直列の非同期で全部実行する
-  await arg.idList
-    .map((id: string) => () => singleTouchDataModify(
-      driver,
-      exclusionOwner,
-      arg.collection,
-      resultIdList,
-      id
-    ))
-    .reduce((prev, curr) => prev.then(curr), Promise.resolve());
+  await procAsyncSplit(arg.idList.map((id: string) => singleTouchDataModify(
+    driver,
+    exclusionOwner,
+    arg.collection,
+    resultIdList,
+    id
+  )));
 
   return resultIdList;
 }

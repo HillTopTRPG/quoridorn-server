@@ -1,6 +1,6 @@
 import {StoreObj} from "../@types/store";
 import {Resister} from "../server";
-import {addActorGroup, additionalStatus, getData, getSocketDocSnap, setEvent} from "./common";
+import {addActorGroup, additionalStatus, getData, getSocketDocSnap, procAsyncSplit, setEvent} from "./common";
 import Driver from "nekostore/lib/Driver";
 import DocumentSnapshot from "nekostore/lib/DocumentSnapshot";
 import {ApplicationError} from "../error/ApplicationError";
@@ -24,18 +24,15 @@ async function createData(driver: Driver, exclusionOwner: string, arg: RequestTy
   await releaseTouchData(driver, exclusionOwner, arg, true);
   const resultIdList: string[] = [];
 
-  // 直列の非同期で全部実行する
-  await arg.idList
-    .map((id: string, idx: number) => () => singleReleaseCreateData(
-      driver,
-      exclusionOwner,
-      arg.collection,
-      id,
-      arg.dataList[idx],
-      resultIdList,
-      arg.optionList ? arg.optionList[idx] : undefined
-    ))
-    .reduce((prev, curr) => prev.then(curr), Promise.resolve());
+  await procAsyncSplit(arg.idList.map((id: string, idx: number) => singleReleaseCreateData(
+    driver,
+    exclusionOwner,
+    arg.collection,
+    id,
+    arg.dataList[idx],
+    resultIdList,
+    arg.optionList ? arg.optionList[idx] : undefined
+  )));
 
   return resultIdList;
 }

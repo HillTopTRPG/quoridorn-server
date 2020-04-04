@@ -1,6 +1,6 @@
 import {StoreObj} from "../@types/store";
 import {PERMISSION_DEFAULT, Resister} from "../server";
-import {addTouchier, getMaxOrder, getOwner, registCollectionName, setEvent} from "./common";
+import {addTouchier, getMaxOrder, getOwner, procAsyncSplit, registCollectionName, setEvent} from "./common";
 import Driver from "nekostore/lib/Driver";
 import {TouchDataRequest} from "../@types/socket";
 import {ApplicationError} from "../error/ApplicationError";
@@ -19,17 +19,14 @@ type ResponseType = string[];
 async function touchData(driver: Driver, exclusionOwner: string, arg: RequestType): Promise<ResponseType> {
   const resultIdList: string[] = [];
   if (arg.idList) {
-    // 直列の非同期で全部実行する
-    await arg.idList
-      .map((id: string, idx: number) => () => singleTouchData(
-        driver,
-        exclusionOwner,
-        arg.collection,
-        resultIdList,
-        id,
-        arg.optionList ? (arg.optionList[idx] || undefined) : undefined
-      ))
-      .reduce((prev, curr) => prev.then(curr), Promise.resolve());
+    await procAsyncSplit(arg.idList.map((id: string, idx: number) => singleTouchData(
+      driver,
+      exclusionOwner,
+      arg.collection,
+      resultIdList,
+      id,
+      arg.optionList ? (arg.optionList[idx] || undefined) : undefined
+    )));
   } else {
     await singleTouchData(
       driver,

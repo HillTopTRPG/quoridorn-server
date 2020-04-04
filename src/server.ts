@@ -17,6 +17,7 @@ import resistTouchDataEvent from "./event/touch-data";
 import resistTouchDataModifyEvent from "./event/touch-data-modify";
 import resistReleaseTouchDataEvent from "./event/release-touch-data";
 import resistUpdateDataEvent from "./event/update-data";
+import resistUpdateDataPackageEvent from "./event/update-data-package";
 import resistCreateDataEvent from "./event/create-data";
 import resistDeleteDataEvent from "./event/delete-data";
 import resistSendDataEvent from "./event/send-data";
@@ -293,6 +294,8 @@ async function main(): Promise<void> {
         resistCreateDataEvent,
         // データ更新リクエスト
         resistUpdateDataEvent,
+        // データ更新リクエスト
+        resistUpdateDataPackageEvent,
         // データ削除リクエスト
         resistDeleteDataEvent,
         // データ送信リクエスト

@@ -1,6 +1,6 @@
 import {StoreObj} from "../@types/store";
 import {Resister} from "../server";
-import {getData, setEvent} from "./common";
+import {getData, procAsyncSplit, setEvent} from "./common";
 import Driver from "nekostore/lib/Driver";
 import DocumentSnapshot from "nekostore/lib/DocumentSnapshot";
 import {ApplicationError} from "../error/ApplicationError";
@@ -22,14 +22,11 @@ async function deleteData(driver: Driver, exclusionOwner: string, arg: RequestTy
   // タッチ解除
   await releaseTouchData(driver, exclusionOwner, arg, true);
 
-  // 直列の非同期で全部実行する
-  await arg.idList
-    .map((id: string) => () => singleDeleteData(
-      driver,
-      arg.collection,
-      id
-    ))
-    .reduce((prev, curr) => prev.then(curr), Promise.resolve());
+  await procAsyncSplit(arg.idList.map((id: string) => singleDeleteData(
+    driver,
+    arg.collection,
+    id
+  )));
 }
 
 async function singleDeleteData(

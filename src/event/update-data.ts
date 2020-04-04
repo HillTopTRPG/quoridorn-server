@@ -1,6 +1,6 @@
 import {Resister} from "../server";
 import {ApplicationError} from "../error/ApplicationError";
-import {getData, setEvent} from "./common";
+import {getData, procAsyncSplit, setEvent} from "./common";
 import Driver from "nekostore/lib/Driver";
 import {UpdateDataRequest} from "../@types/socket";
 import {releaseTouchData} from "./release-touch-data";
@@ -21,19 +21,16 @@ export async function updateData(driver: Driver, exclusionOwner: string, arg: Re
   // タッチ解除
   await releaseTouchData(driver, exclusionOwner, arg, true);
 
-  // 直列の非同期で全部実行する
-  await arg.idList
-  .map((id: string, idx: number) => () => singleUpdateData(
+  await procAsyncSplit(arg.idList.map((id: string, idx: number) => singleUpdateData(
     driver,
     arg.collection,
     id,
     arg.dataList[idx],
     arg.optionList ? arg.optionList[idx] : undefined
-  ))
-  .reduce((prev, curr) => prev.then(curr), Promise.resolve());
+  )));
 }
 
-async function singleUpdateData(
+export async function singleUpdateData(
   driver: Driver,
   collection: string,
   id: string,
