@@ -26,7 +26,7 @@ async function addDirect(driver: Driver, socket: any, arg: RequestType): Promise
 
   const addFunc = async (data: any, current: number): Promise<void> => {
     const option = arg.optionList && arg.optionList[current];
-    const ownerType = option ? option.owner || null : "user";
+    const ownerType = option ? option.ownerType || null : "user";
     const owner = await getOwner(driver, exclusionOwner, option && option.owner || undefined);
     const permission = option && option.permission || PERMISSION_DEFAULT;
     const order = option && option.order !== undefined ? option.order : startOrder++;
