@@ -53,14 +53,16 @@ async function singleTouchData(
   const { c, maxOrder } = await getMaxOrder<any>(driver, collection);
   const order = maxOrder + 1;
 
+  const ownerType = option ? option.ownerType || null : "user";
   const owner = await getOwner(driver, exclusionOwner, option ? option.owner : undefined);
   const permission = option && option.permission || PERMISSION_DEFAULT;
 
   const addInfo: StoreObj<any> = {
+    ownerType,
+    owner,
     order,
     exclusionOwner,
     lastExclusionOwner: exclusionOwner,
-    owner,
     status: "initial-touched",
     createTime: new Date(),
     updateTime: null,

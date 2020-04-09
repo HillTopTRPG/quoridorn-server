@@ -87,10 +87,11 @@ async function createRoom(driver: Driver, exclusionOwner: string, arg: RequestTy
 
   const addGroup = async (name: string, order: number) => {
     await actorGroupCC.add({
+      ownerType: null,
+      owner: null,
       order,
       exclusionOwner: null,
       lastExclusionOwner: null,
-      owner: null,
       permission: PERMISSION_DEFAULT,
       status: "added",
       createTime: new Date(),

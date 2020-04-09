@@ -52,6 +52,7 @@ export async function singleUpdateData(
     if (option.permission) updateInfo.permission = option.permission;
     if (option.order !== undefined) updateInfo.order = option.order || 0;
     if (option.owner) updateInfo.owner = option.owner;
+    if (option.ownerType) updateInfo.ownerType = option.ownerType;
   }
   try {
     await docSnap.ref.update(updateInfo);

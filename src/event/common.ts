@@ -185,10 +185,11 @@ export async function additionalStatus(
   const statusCollection = statusResult.c;
 
   const statusDocRef = await statusCollection.add({
+    ownerType: "user",
+    owner: actorId,
     order: statusResult.maxOrder + 1,
     exclusionOwner: null,
     lastExclusionOwner: null,
-    owner: actorId,
     status: "added",
     createTime: new Date(),
     updateTime: null,
@@ -227,10 +228,11 @@ export async function addActor(
   };
 
   const actorDocRef = await actorCollection.add({
+    ownerType: "user",
+    owner,
     order: actorResult.maxOrder + 1,
     exclusionOwner: null,
     lastExclusionOwner: null,
-    owner,
     status: "added",
     createTime: new Date(),
     updateTime: null,
@@ -304,10 +306,11 @@ export async function addUser(
   const token = uuid.v4();
 
   const userDocRef = await userCollection.add({
+    ownerType: null,
+    owner: null,
     order: -1,
     exclusionOwner: null,
     lastExclusionOwner: null,
-    owner: null,
     status: "added",
     createTime: new Date(),
     updateTime: null,

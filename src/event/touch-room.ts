@@ -29,10 +29,11 @@ async function touchRoom(driver: Driver, exclusionOwner: string, arg: RequestTyp
 
   let docRef;
   const addInfo: StoreObj<RoomStore> = {
+    ownerType: null,
+    owner: null,
     order: arg.roomNo,
     exclusionOwner,
     lastExclusionOwner: exclusionOwner,
-    owner: null,
     status: "initial-touched",
     createTime: new Date(),
     updateTime: null,

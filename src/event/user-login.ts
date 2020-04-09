@@ -161,10 +161,11 @@ async function userLogin(driver: Driver, exclusionOwner: string, arg: RequestTyp
   const roomSocketUserCollectionName = `${roomCollectionPrefix}-DATA-socket-user-list`;
   const socketUserCollection = driver.collection<StoreObj<SocketUserStore>>(roomSocketUserCollectionName);
   await socketUserCollection.add({
+    ownerType: null,
+    owner: null,
     order: 0,
     exclusionOwner: null,
     lastExclusionOwner: null,
-    owner: null,
     status: "modified",
     createTime: new Date(),
     updateTime: null,
