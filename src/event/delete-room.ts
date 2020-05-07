@@ -1,6 +1,6 @@
 import {StoreObj} from "../@types/store";
 import {DeleteRoomRequest} from "../@types/socket";
-import {hashAlgorithm, Resister} from "../server";
+import {hashAlgorithm, Resister, accessUrl, bucket, s3Client} from "../server";
 import {verify} from "../utility/password";
 import {getRoomInfo, setEvent} from "./common";
 import Driver from "nekostore/lib/Driver";
@@ -10,7 +10,6 @@ import {SystemError} from "../error/SystemError";
 import {releaseTouchRoom} from "./release-touch-room";
 import { Db } from "mongodb";
 import {RoomStore} from "../@types/data";
-import {deleteFile} from "./delete-file";
 
 // インタフェース
 const eventName = "delete-room";
@@ -45,6 +44,7 @@ async function deleteRoom(driver: Driver, socket: any, arg: RequestType, db?: Db
   // Already check.
   const data = docSnap.data.data;
   if (!data) throw new ApplicationError(`Already deleted.`, arg);
+  const storageId = data.storageId;
 
   // 部屋パスワードチェック
   try {
@@ -75,8 +75,10 @@ async function deleteRoom(driver: Driver, socket: any, arg: RequestType, db?: Db
     // メディアコレクションからメディアストレージの削除
     const mediaCCName = `${roomCollectionPrefix}-DATA-media-list`;
     const mediaCC = driver.collection<StoreObj<{ url: string }>>(mediaCCName);
-    const deleteUrlList = (await mediaCC.get()).docs.map(d => d.data!.data!.url);
-    await deleteFile(driver, socket, { urlList: deleteUrlList });
+    const deleteUrlList = (await mediaCC.get()).docs.map(d => d.data!.data!.url)
+      .map(url => url.replace(accessUrl, ""))
+      .filter(url => url.startsWith(storageId));
+    await s3Client!.removeObjects(bucket, deleteUrlList);
 
     // 部屋のコレクションの削除
     const collectionNameCollectionName = `${roomCollectionPrefix}-DATA-collection-list`;
@@ -85,8 +87,6 @@ async function deleteRoom(driver: Driver, socket: any, arg: RequestType, db?: Db
       deleteCollection(name);
     });
     deleteCollection(collectionNameCollectionName);
-
-    // TODO Storageも削除する
   }
 
   return true;

@@ -14,7 +14,7 @@ type ResponseType = void;
  * @param socket
  * @param arg
  */
-export async function deleteFile(driver: Driver, socket: any, arg: RequestType): Promise<ResponseType> {
+async function deleteFile(driver: Driver, socket: any, arg: RequestType): Promise<ResponseType> {
   const snap = (await getSocketDocSnap(driver, socket.id));
   const storageId = snap.data!.storageId!;
   const urlList = arg.urlList
