@@ -10,6 +10,7 @@ import {SystemError} from "../error/SystemError";
 import {releaseTouchRoom} from "./release-touch-room";
 import { Db } from "mongodb";
 import {RoomStore} from "../@types/data";
+import {deleteFile} from "./delete-file";
 
 // インタフェース
 const eventName = "delete-room";
@@ -19,11 +20,13 @@ type ResponseType = boolean;
 /**
  * 部屋削除処理
  * @param driver
- * @param exclusionOwner
+ * @param socket
  * @param arg
  * @param db
  */
-async function deleteRoom(driver: Driver, exclusionOwner: string, arg: RequestType, db?: Db): Promise<ResponseType> {
+async function deleteRoom(driver: Driver, socket: any, arg: RequestType, db?: Db): Promise<ResponseType> {
+  const exclusionOwner: string = socket.id;
+
   // タッチ解除
   await releaseTouchRoom(driver, exclusionOwner, {
     roomNo: arg.roomNo
@@ -72,9 +75,8 @@ async function deleteRoom(driver: Driver, exclusionOwner: string, arg: RequestTy
     // メディアコレクションからメディアストレージの削除
     const mediaCCName = `${roomCollectionPrefix}-DATA-media-list`;
     const mediaCC = driver.collection<StoreObj<{ url: string }>>(mediaCCName);
-    (await mediaCC.get()).docs.map(d => d.data!.data!.url).forEach(url => {
-      deleteCollection(url);
-    });
+    const deleteUrlList = (await mediaCC.get()).docs.map(d => d.data!.data!.url);
+    await deleteFile(driver, socket, { urlList: deleteUrlList });
 
     // 部屋のコレクションの削除
     const collectionNameCollectionName = `${roomCollectionPrefix}-DATA-collection-list`;
@@ -91,6 +93,6 @@ async function deleteRoom(driver: Driver, exclusionOwner: string, arg: RequestTy
 }
 
 const resist: Resister = (driver: Driver, socket: any, _io: any, db?: Db): void => {
-  setEvent<RequestType, ResponseType>(driver, socket, eventName, (driver: Driver, arg: RequestType) => deleteRoom(driver, socket.id, arg, db));
+  setEvent<RequestType, ResponseType>(driver, socket, eventName, (driver: Driver, arg: RequestType) => deleteRoom(driver, socket, arg, db));
 };
 export default resist;

@@ -29,7 +29,9 @@ async function uploadFile(driver: Driver, socket: any, arg: RequestType): Promis
     // アップロード
     const filePath = path.join(storageId, info.name);
     await s3Client!.putObject(bucket, filePath, info.src);
-    urlList.push(path.join(accessUrl, filePath));
+    // XXX 以下の方法だと、「https://~~」が「http:/~~」になってしまうことが判明したので、単純連結に変更
+    // urlList.push(path.join(accessUrl, filePath));
+    urlList.push(accessUrl + filePath);
   };
 
   // 直列の非同期で全部実行する
