@@ -90,7 +90,7 @@ export type TouchDataRequest = {
   optionList?: Partial<StoreObj<unknown>>[];
 };
 export type DeleteFileRequest = {
-  filePathList: string[];
+  urlList: string[];
 };
 export type TouchModifyDataRequest = TouchDataRequest & {
   idList: string[];
