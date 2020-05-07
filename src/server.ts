@@ -23,6 +23,7 @@ import resistDeleteDataEvent from "./event/delete-data";
 import resistSendDataEvent from "./event/send-data";
 import resistAddDirectEvent from "./event/add-direct";
 import resistUploadFileEvent from "./event/upload-file";
+import resistDeleteFileEvent from "./event/delete-file";
 import Driver from "nekostore/lib/Driver";
 import Store from "nekostore/src/store/Store";
 import MongoStore from "nekostore/lib/store/MongoStore";
@@ -303,7 +304,9 @@ async function main(): Promise<void> {
         // データ一括追加リクエスト
         resistAddDirectEvent,
         // ファイルアップロードリクエスト
-        resistUploadFileEvent
+        resistUploadFileEvent,
+        // ファイル削除リクエスト
+        resistDeleteFileEvent
       ].forEach((r: Resister) => r(driver, socket, io, db));
     });
 
