@@ -76,7 +76,7 @@ type GetRoomInfoOption = {
 };
 
 export async function registCollectionName(driver: Driver, collection: string) {
-  const roomCollectionPrefix = collection.replace(/DATA-.+$/, "");
+  const roomCollectionPrefix = collection.replace(/-DATA-.+$/, "");
   const collectionNameCollectionName = `${roomCollectionPrefix}-DATA-collection-list`;
   const cnCC = driver.collection<{ name: string }>(collectionNameCollectionName);
   if (!(await cnCC.where("name", "==", collection).get()).docs.length) {
@@ -208,7 +208,7 @@ export async function additionalStatus(
 export async function addActor(
   driver: Driver,
   roomCollectionPrefix: string,
-  owner: string,
+  owner: string | null,
   actorInfoPartial: Partial<ActorStore>
 ): Promise<string> {
   const actorCollectionName = `${roomCollectionPrefix}-DATA-actor-list`;

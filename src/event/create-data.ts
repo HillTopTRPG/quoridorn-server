@@ -47,7 +47,7 @@ async function singleReleaseCreateData(
   option?: Partial<StoreObj<unknown>> & { continuous?: boolean }
 ): Promise<void> {
   const msgArg = { collection, id, option };
-  const roomCollectionPrefix = collection.replace(/DATA-.+$/, "");
+  const roomCollectionPrefix = collection.replace(/-DATA-.+$/, "");
 
   // データの更新
   const docSnap: DocumentSnapshot<StoreObj<any>> | null = await getData(

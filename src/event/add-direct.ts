@@ -1,6 +1,6 @@
 import {StoreObj} from "../@types/store";
 import {PERMISSION_DEFAULT, Resister} from "../server";
-import {getMaxOrder, getOwner, notifyProgress, registCollectionName, setEvent} from "./common";
+import {addActor, addActorGroup, getMaxOrder, getOwner, notifyProgress, registCollectionName, setEvent} from "./common";
 import Driver from "nekostore/lib/Driver";
 import {ApplicationError} from "../error/ApplicationError";
 import {AddDirectRequest} from "../@types/socket";
@@ -50,6 +50,31 @@ async function addDirect(driver: Driver, socket: any, arg: RequestType): Promise
       docIdList.push(docRef.id);
     } catch (err) {
       throw new ApplicationError(`Failure add doc.`, addInfo);
+    }
+
+    const roomCollectionPrefix = arg.collection.replace(/-DATA-.+$/, "");
+    const collectionName = arg.collection.replace(/^.+-DATA-/, "");
+
+    if (collectionName === "scene-object-list" && data.type === "character") {
+      // キャラクターの追加
+      const actorId: string = await addActor(driver, roomCollectionPrefix, owner, {
+        name: data.name,
+        type: "character",
+        chatFontColorType: "owner",
+        chatFontColor: "#000000",
+        standImagePosition: 1,
+        isUseTableData: true
+      });
+
+      const addActorGroupFix = (addActorGroup as Function).bind(
+        null,
+        driver,
+        roomCollectionPrefix,
+        actorId,
+        "other",
+        owner
+      );
+      await addActorGroupFix("All");
     }
   };
 
