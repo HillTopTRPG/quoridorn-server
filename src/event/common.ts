@@ -242,12 +242,11 @@ export async function addActor(
 
   const actorId = actorDocRef.id;
 
-  const statusId = await additionalStatus(driver, roomCollectionPrefix, actorId);
-
   const copyParam = <T extends keyof ActorStore>(param: T) => {
-    if (actorInfoPartial[param] !== undefined) actorInfo[param] = actorInfoPartial[param] as ActorStore[T];
+    if (actorInfoPartial[param] !== undefined)
+      actorInfo[param] = actorInfoPartial[param] as ActorStore[T];
   };
-  actorInfoPartial.statusId = statusId;
+  actorInfoPartial.statusId = await additionalStatus(driver, roomCollectionPrefix, actorId);
   copyParam("name");
   copyParam("type");
   copyParam("chatFontColorType");
@@ -255,6 +254,7 @@ export async function addActor(
   copyParam("standImagePosition");
   copyParam("statusId");
   copyParam("isUseTableData");
+  copyParam("pieceIdList");
 
   await actorDocRef.update({
     status: "modified",
