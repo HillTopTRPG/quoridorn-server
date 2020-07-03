@@ -2,8 +2,8 @@ import {StoreObj} from "../@types/store";
 import {PERMISSION_DEFAULT, Resister} from "../server";
 import {
   addActor,
-  addActorGroup,
-  getData,
+  addResourceMaster,
+  addSceneObject,
   getMaxOrder,
   getOwner,
   notifyProgress,
@@ -27,7 +27,7 @@ type ResponseType = string[];
  * @param arg
  * @param isNest
  */
-async function addDirect(driver: Driver, socket: any, arg: RequestType, isNest: boolean = false): Promise<ResponseType> {
+export async function addDirect(driver: Driver, socket: any, arg: RequestType, isNest: boolean = false): Promise<ResponseType> {
   const exclusionOwner: string = socket.id;
   const { c, maxOrder } = await getMaxOrder<any>(driver, arg.collection);
   let startOrder = maxOrder + 1;
@@ -36,14 +36,27 @@ async function addDirect(driver: Driver, socket: any, arg: RequestType, isNest: 
 
   const addFunc = async (data: any, current: number): Promise<void> => {
     const option = arg.optionList && arg.optionList[current];
-    const owner = await getOwner(driver, exclusionOwner, option && option.owner || undefined);
+    const owner = await getOwner(driver, exclusionOwner, option ? option.owner : undefined);
 
     // 進捗報告
     if (!isNest) notifyProgress(socket, arg.dataList.length, current);
 
+    const roomCollectionPrefix = arg.collection.replace(/-DATA-.+$/, "");
+    const collectionName = arg.collection.replace(/^.+-DATA-/, "");
+
+    if (collectionName === "actor-list") {
+      docIdList.push(await addActor(driver, socket, roomCollectionPrefix, owner, data));
+      return;
+    }
+
+    if (collectionName === "resource-master-list") {
+      docIdList.push(await addResourceMaster(driver, socket, roomCollectionPrefix, owner, data));
+      return;
+    }
+
     // 追加する１件のデータ
     const addInfo: StoreObj<any> = {
-      ownerType: option ? option.ownerType || null : "user",
+      ownerType: option && option.ownerType !== undefined ? option.ownerType : "user",
       owner,
       order: option && option.order !== undefined ? option.order : startOrder++,
       exclusionOwner: null,
@@ -57,77 +70,17 @@ async function addDirect(driver: Driver, socket: any, arg: RequestType, isNest: 
 
     // DBに追加
     let docRef: DocumentReference<any>;
-    let docId: string;
     try {
       docRef = await c.add(addInfo);
-      docId = docRef.id;
-      docIdList.push(docId);
+      docIdList.push(docRef.id);
     } catch (err) {
       throw new ApplicationError(`Failure add doc.`, addInfo);
     }
 
-    const roomCollectionPrefix = arg.collection.replace(/-DATA-.+$/, "");
-    const collectionName = arg.collection.replace(/^.+-DATA-/, "");
-
+    // 追加のデータ操作
     if (collectionName === "scene-object-list") {
       // シーンオブジェクトの追加
-      const sceneListCCName = `${roomCollectionPrefix}-DATA-scene-list`;
-      const sceneListCC = driver.collection<any>(sceneListCCName);
-      // 現存する各シーンすべてに今回登録したシーンオブジェクトを紐づかせる
-      const sceneAndObjectList = (await sceneListCC.get()).docs.map(doc => ({
-        sceneId: doc.ref.id,
-        objectId: docId,
-        isOriginalAddress: false,
-        originalAddress: null,
-        entering: "normal"
-      }));
-      await addDirect(driver, socket, {
-        collection: "scene-and-object-list",
-        dataList: sceneAndObjectList
-      }, true);
-
-      if (data.type === "character") {
-        // キャラクターコマの追加
-        if (!data.actorId) {
-          // 併せてActorの登録も行う
-          const actorId: string = await addActor(driver, roomCollectionPrefix, owner, {
-            name: data.name,
-            type: "character",
-            chatFontColorType: "owner",
-            chatFontColor: "#000000",
-            standImagePosition: 1,
-            isUseTableData: true,
-            pieceIdList: [docId]
-          });
-
-          // ActorIdをキャラクターコマに登録
-          addInfo.data.actorId = actorId;
-          await docRef.update(addInfo);
-
-          // キャラクターをActorグループに登録
-          const addActorGroupFix = (addActorGroup as Function).bind(
-            null,
-            driver,
-            roomCollectionPrefix,
-            actorId,
-            "other",
-            owner
-          );
-          await addActorGroupFix("All");
-        } else {
-          // 既存Actorにコマを追加するパターン
-          const actorDocSnap = await getData(
-            driver,
-            `${roomCollectionPrefix}-DATA-actor-list`,
-            data.actorId,
-            {}
-          );
-          if (actorDocSnap && actorDocSnap.exists()) {
-            (actorDocSnap.data.data.pieceIdList as string[]).push(docId);
-            await actorDocSnap.ref.update(actorDocSnap.data);
-          }
-        }
-      }
+      await addSceneObject(driver, socket, roomCollectionPrefix, owner, docRef, addInfo);
     }
   };
 

@@ -21,7 +21,7 @@ type ResponseType = UserLoginResponse;
  * @param exclusionOwner
  * @param arg
  */
-async function userLogin(driver: Driver, exclusionOwner: string, arg: RequestType): Promise<ResponseType> {
+async function userLogin(driver: Driver, socket: any, exclusionOwner: string, arg: RequestType): Promise<ResponseType> {
   // 部屋一覧の更新
   const socketDocSnap = (await getSocketDocSnap(driver, exclusionOwner));
 
@@ -57,6 +57,7 @@ async function userLogin(driver: Driver, exclusionOwner: string, arg: RequestTyp
     // ユーザが存在しない場合
     userLoginResponse = await addUser(
       driver,
+      socket,
       exclusionOwner,
       roomCollectionPrefix,
       arg.name,
@@ -180,6 +181,6 @@ async function userLogin(driver: Driver, exclusionOwner: string, arg: RequestTyp
 }
 
 const resist: Resister = (driver: Driver, socket: any): void => {
-  setEvent<RequestType, ResponseType>(driver, socket, eventName, (driver: Driver, arg: RequestType) => userLogin(driver, socket.id, arg));
+  setEvent<RequestType, ResponseType>(driver, socket, eventName, (driver: Driver, arg: RequestType) => userLogin(driver, socket, socket.id, arg));
 };
 export default resist;

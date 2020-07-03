@@ -14,12 +14,16 @@ import {
   ActorGroup,
   ActorStatusStore,
   ActorStore,
+  ResourceMasterStore,
+  ResourceStore,
   RoomStore,
   SocketStore,
   TouchierStore,
   UserStore
 } from "../@types/data";
 import uuid = require("uuid");
+import {addDirect} from "./add-direct";
+import DocumentReference from "nekostore/src/DocumentReference";
 
 /**
  * リクエスト処理を登録するための関数。
@@ -69,10 +73,10 @@ export function getStoreObj<T>(
   }
 }
 
-type GetRoomInfoOption = {
+type GetDataOption<T> = {
   exclusionOwner?: string;
   id?: string;
-  collectionReference?: CollectionReference<StoreObj<RoomStore>>;
+  collectionReference?: CollectionReference<StoreObj<T>>;
 };
 
 export async function registCollectionName(driver: Driver, collection: string) {
@@ -97,7 +101,7 @@ export function notifyProgress(socket: any, all: number, current: number) {
 export async function getRoomInfo(
   driver: Driver,
   roomNo: number,
-  option: GetRoomInfoOption = {}
+  option: GetDataOption<RoomStore> = {}
 ): Promise<DocumentSnapshot<StoreObj<RoomStore>> | null> {
   const collectionReference = option.collectionReference || driver.collection<StoreObj<RoomStore>>(SYSTEM_COLLECTION.ROOM_LIST);
   const roomDocList = (await collectionReference.where("order", "==", roomNo).get()).docs;
@@ -146,7 +150,7 @@ export async function getData(
   driver: Driver,
   collection: string,
   id: string,
-  option: GetRoomInfoOption = {}
+  option: GetDataOption<any> = {}
 ): Promise<DocumentSnapshot<StoreObj<any>> | null> {
   const collectionReference = option.collectionReference || driver.collection<StoreObj<any>>(collection);
   const docSnap = (await collectionReference.doc(id).get());
@@ -205,8 +209,329 @@ export async function additionalStatus(
   return statusDocRef.id;
 }
 
+/**
+ * リソースマスターが更新された後の処理
+ * @param driver
+ * @param socket
+ * @param roomCollectionPrefix
+ * @param docId
+ * @param docData
+ */
+export async function updateResourceMaster(
+  driver: Driver,
+  socket: any,
+  roomCollectionPrefix: string,
+  docId: string,
+  docData: ResourceMasterStore
+) {
+  const isAutoAddActor = docData.isAutoAddActor;
+  const isAutoAddMapObject = docData.isAutoAddMapObject;
+  const type = docData.type;
+  const defaultValue = docData.defaultValue;
+
+  const resourceCCName = `${roomCollectionPrefix}-DATA-resource-list`;
+  const resourceCC = driver.collection<StoreObj<ResourceStore>>(resourceCCName);
+  const resourceDocs = (await resourceCC.where("data.masterId", "==", docId).get()).docs;
+
+  /*
+   * 種類が変更されたらリソースの値をデフォルト値に更新する
+   */
+  const updateResource = async (doc: DocumentChange<StoreObj<ResourceStore>>, updateInfo: Partial<ResourceStore>) => {
+    doc.data!.updateTime = new Date();
+    doc.data!.data!.value = updateInfo.value!;
+    doc.data!.data!.type = updateInfo.type!;
+    await doc.ref.update(doc.data!);
+  };
+
+  // 直列の非同期で全部実行する
+  await resourceDocs
+    .filter(doc => doc.data!.data!.type !== type)
+    .map(doc => () => updateResource(doc, { type, value: defaultValue }))
+    .reduce((prev, curr) => prev.then(curr), Promise.resolve());
+
+  /*
+   * 必要なリソースを追加
+   */
+  const optionList: Partial<StoreObj<unknown>>[] = [];
+
+  if (isAutoAddActor) {
+    const actorCCName = `${roomCollectionPrefix}-DATA-actor-list`;
+    const actorCC = driver.collection<StoreObj<ActorStore>>(actorCCName);
+    (await actorCC.get()).docs
+      .filter(async actorDoc =>
+        !resourceDocs.filter(
+          rDoc => rDoc.data!.ownerType === "actor" && rDoc.data!.owner === actorDoc.ref.id
+        )[0]
+      )
+      .forEach(actorDoc => {
+        optionList.push({
+          ownerType: "actor",
+          owner: actorDoc.ref.id,
+          order: -1
+        });
+      });
+  }
+
+  if (isAutoAddMapObject) {
+    const sceneObjectCCName = `${roomCollectionPrefix}-DATA-scene-object-list`;
+    const sceneObjectCC = driver.collection<StoreObj<any>>(sceneObjectCCName);
+    (await sceneObjectCC.get()).docs
+      .filter(async sceneObjectDoc =>
+        !resourceDocs.filter(
+          rDoc => rDoc.data!.ownerType === "actor" && rDoc.data!.owner === sceneObjectDoc.ref.id
+        )[0]
+      )
+      .forEach(sceneObjectDoc => {
+        optionList.push({
+          ownerType: "scene-object",
+          owner: sceneObjectDoc.ref.id,
+          order: -1
+        });
+      });
+  }
+
+  const initiativeColumnCCName = `${roomCollectionPrefix}-DATA-initiative-column-list`;
+  const initiativeColumnCC = driver.collection<StoreObj<any>>(initiativeColumnCCName);
+  const initiativeColumnDoc = (await initiativeColumnCC.where("data.resourceMasterId", "==", docId).get()).docs[0];
+
+  if (isAutoAddActor || isAutoAddMapObject) {
+    // リソースインスタンスを追加
+    if (optionList.length) {
+      console.log(`リソース: ${docId}を追加するゾ`, isAutoAddActor, isAutoAddMapObject);
+      await addDirect(driver, socket, {
+        collection: `${roomCollectionPrefix}-DATA-resource-list`,
+        dataList: optionList.map(_id => ({
+          masterId: docId,
+          value: docData.defaultValue
+        })),
+        optionList
+      }, true);
+    }
+
+    // イニシアティブ表の表示に追加
+    if (!initiativeColumnDoc || !initiativeColumnDoc.exists()) {
+      console.log(`initiativeColumn: ${docId}を追加するゾ`);
+      await addDirect(driver, socket, {
+        collection: `${roomCollectionPrefix}-DATA-initiative-column-list`,
+        dataList: [{
+          resourceMasterId: docId
+        }],
+        optionList: [{
+          ownerType: null,
+          owner: null
+        }]
+      }, true);
+    }
+  } else {
+    if (initiativeColumnDoc && initiativeColumnDoc.exists()) {
+      console.log(`initiativeColumn: ${initiativeColumnDoc.data!.data!.resourceMasterId}を削除するゾ`);
+      await initiativeColumnDoc.ref.delete();
+    }
+  }
+
+  /*
+   * 余分なリソースを削除
+   */
+  const deleteResourceIdList: string[] = [];
+
+  resourceDocs.forEach(rDoc => {
+    if (!isAutoAddActor && rDoc.data!.ownerType === "actor")
+      deleteResourceIdList.push(rDoc.ref.id);
+    if (!isAutoAddMapObject && rDoc.data!.ownerType === "scene-object")
+      deleteResourceIdList.push(rDoc.ref.id);
+  });
+
+  const deleteResource = async (resourceId: string) => {
+    console.log(`リソース: ${resourceId}を削除するゾ`);
+    const resourceDocSnap = await getData(driver, resourceCCName, resourceId, {
+      collectionReference: resourceCC
+    });
+    await resourceDocSnap!.ref.delete();
+  };
+
+  // 直列の非同期で全部実行する
+  await deleteResourceIdList
+    .map(resourceId => () => deleteResource(resourceId))
+    .reduce((prev, curr) => prev.then(curr), Promise.resolve());
+}
+
+export async function addResourceMaster(
+  driver: Driver,
+  socket: any,
+  roomCollectionPrefix: string,
+  owner: string | null,
+  resourceMaster: ResourceMasterStore
+): Promise<string> {
+  // まずはリソース定義を追加
+  const resourceMasterCCName = `${roomCollectionPrefix}-DATA-resource-master-list`;
+  const resourceMasterResult = await getMaxOrder<ResourceMasterStore>(driver, resourceMasterCCName);
+  const resourceMasterCC = resourceMasterResult.c;
+
+  const resourceMasterDocRef = await resourceMasterCC.add({
+    ownerType: "user",
+    owner,
+    order: resourceMasterResult.maxOrder + 1,
+    exclusionOwner: null,
+    lastExclusionOwner: null,
+    status: "added",
+    createTime: new Date(),
+    updateTime: null,
+    data: resourceMaster,
+    permission: PERMISSION_DEFAULT
+  });
+
+  // 自動付与（アクター）なら、リソース連携
+  if (resourceMaster.isAutoAddActor) {
+    // アクター一覧を取得
+    const actorCCName = `${roomCollectionPrefix}-DATA-actor-list`;
+    const actorCC = driver.collection<StoreObj<ActorStore>>(actorCCName);
+    const idList = (await actorCC.get()).docs.map(doc => doc.ref.id);
+
+    // リソースインスタンスを追加
+    await addDirect(driver, socket, {
+      collection: `${roomCollectionPrefix}-DATA-resource-list`,
+      dataList: idList.map(_id => ({
+        masterId: resourceMasterDocRef.id,
+        value: resourceMaster.defaultValue
+      })),
+      optionList: idList.map(id => ({
+        ownerType: "actor",
+        owner: id,
+        order: -1
+      }))
+    }, true);
+  }
+
+  // 自動付与（コマ）なら、リソース連携
+  if (resourceMaster.isAutoAddMapObject) {
+    // アクター一覧を取得
+    const sceneObjectCCName = `${roomCollectionPrefix}-DATA-scene-object-list`;
+    const sceneObjectCC = driver.collection<StoreObj<any>>(sceneObjectCCName);
+    const idList = (await sceneObjectCC.get()).docs.map(doc => doc.ref.id);
+
+    // リソースインスタンスを追加
+    await addDirect(driver, socket, {
+      collection: `${roomCollectionPrefix}-DATA-resource-list`,
+      dataList: idList.map(_id => ({
+        masterId: resourceMasterDocRef.id,
+        value: resourceMaster.defaultValue
+      })),
+      optionList: idList.map(id => ({
+        ownerType: "scene-object",
+        owner: id,
+        order: -1
+      }))
+    }, true);
+  }
+
+  if (resourceMaster.isAutoAddActor || resourceMaster.isAutoAddMapObject) {
+    // イニシアティブカラムインスタンスを追加
+    await addDirect(driver, socket, {
+      collection: `${roomCollectionPrefix}-DATA-initiative-column-list`,
+      dataList: [{
+        resourceMasterId: resourceMasterDocRef.id
+      }],
+      optionList: [{
+        ownerType: null,
+        owner: null
+      }]
+    }, true);
+  }
+
+  return resourceMasterDocRef.id;
+}
+
+export async function addSceneObject(
+  driver: Driver,
+  socket: any,
+  roomCollectionPrefix: string,
+  owner: string | null,
+  docRef: DocumentReference<any>,
+  addInfo: StoreObj<any>
+) {
+  // シーンオブジェクトの追加
+  const sceneListCCName = `${roomCollectionPrefix}-DATA-scene-list`;
+  const sceneListCC = driver.collection<any>(sceneListCCName);
+  // 現存する各シーンすべてに今回登録したシーンオブジェクトを紐づかせる
+  const sceneAndObjectList = (await sceneListCC.get()).docs.map(doc => ({
+    sceneId: doc.ref.id,
+    objectId: docRef.id,
+    isOriginalAddress: false,
+    originalAddress: null,
+    entering: "normal"
+  }));
+  await addDirect(driver, socket, {
+    collection: "scene-and-object-list",
+    dataList: sceneAndObjectList
+  }, true);
+
+  if (addInfo.data.type === "character") {
+    // キャラクターコマの追加
+
+    // アクターの追加の場合
+    if (!addInfo.data.actorId) {
+      // 併せてActorの登録も行う
+      const actorId: string = await addActor(driver, socket, roomCollectionPrefix, owner, {
+        name: addInfo.data.name,
+        type: "character",
+        chatFontColorType: "owner",
+        chatFontColor: "#000000",
+        standImagePosition: 1,
+        pieceIdList: [docRef.id]
+      });
+
+      // ActorIdをキャラクターコマに登録
+      addInfo.data.actorId = actorId;
+      await docRef.update(addInfo);
+
+      // キャラクターをActorグループに登録
+      const addActorGroupFix = (addActorGroup as Function).bind(
+        null,
+        driver,
+        roomCollectionPrefix,
+        actorId,
+        "other",
+        owner
+      );
+      await addActorGroupFix("All");
+    } else {
+      // 既存Actorにコマを追加するパターン
+      const actorDocSnap = await getData(
+        driver,
+        `${roomCollectionPrefix}-DATA-actor-list`,
+        addInfo.data.actorId,
+        {}
+      );
+      if (actorDocSnap && actorDocSnap.exists()) {
+        (actorDocSnap.data.data.pieceIdList as string[]).push(docRef.id);
+        await actorDocSnap.ref.update(actorDocSnap.data);
+      }
+    }
+
+    // リソースの自動追加
+    const resourceMasterCCName = `${roomCollectionPrefix}-DATA-resource-master-list`;
+    const resourceMasterCC = driver.collection<StoreObj<ResourceMasterStore>>(resourceMasterCCName);
+    const resourceMasterDocList = (await resourceMasterCC.where("data.isAutoAddMapObject", "==", true).get()).docs;
+
+    // リソースインスタンスを追加
+    await addDirect(driver, socket, {
+      collection: `${roomCollectionPrefix}-DATA-resource-list`,
+      dataList: resourceMasterDocList.map(rmDoc => ({
+        masterId: rmDoc.ref.id,
+        value: rmDoc.data!.data!.defaultValue
+      })),
+      optionList: resourceMasterDocList.map(_rmDoc => ({
+        ownerType: "scene-object",
+        owner: docRef.id,
+        order: -1
+      }))
+    }, true);
+  }
+}
+
 export async function addActor(
   driver: Driver,
+  socket: any,
   roomCollectionPrefix: string,
   owner: string | null,
   actorInfoPartial: Partial<ActorStore>
@@ -223,8 +548,7 @@ export async function addActor(
     chatFontColorType: "original",
     chatFontColor: "#000000",
     standImagePosition: 1,
-    statusId: "",
-    isUseTableData: false
+    statusId: ""
   };
 
   const actorDocRef = await actorCollection.add({
@@ -253,7 +577,6 @@ export async function addActor(
   copyParam("chatFontColor");
   copyParam("standImagePosition");
   copyParam("statusId");
-  copyParam("isUseTableData");
   copyParam("pieceIdList");
 
   await actorDocRef.update({
@@ -261,6 +584,25 @@ export async function addActor(
     data: actorInfo,
     updateTime: new Date()
   });
+
+  // リソースの自動追加
+  const resourceMasterCCName = `${roomCollectionPrefix}-DATA-resource-master-list`;
+  const resourceMasterCC = driver.collection<StoreObj<ResourceMasterStore>>(resourceMasterCCName);
+  const resourceMasterDocList = (await resourceMasterCC.where("data.isAutoAddActor", "==", true).get()).docs;
+
+  // リソースインスタンスを追加
+  await addDirect(driver, socket, {
+    collection: `${roomCollectionPrefix}-DATA-resource-list`,
+    dataList: resourceMasterDocList.map(rmDoc => ({
+      masterId: rmDoc.ref.id,
+      value: rmDoc.data!.data!.defaultValue
+    })),
+    optionList: resourceMasterDocList.map(_rmDoc => ({
+      ownerType: "actor",
+      owner: actorId,
+      order: -1
+    }))
+  }, true);
 
   return actorId;
 }
@@ -290,6 +632,7 @@ export async function addActorGroup(
 
 export async function addUser(
   driver: Driver,
+  socket: any,
   exclusionOwner: string,
   roomCollectionPrefix: string,
   name: string,
@@ -330,13 +673,12 @@ export async function addUser(
     userId
   });
 
-  const actorId: string = await addActor(driver, roomCollectionPrefix, userId, {
+  const actorId: string = await addActor(driver, socket, roomCollectionPrefix, userId, {
     name: name,
     type: "user",
     chatFontColorType: "original",
     chatFontColor: "#000000",
-    standImagePosition: 1,
-    isUseTableData: false
+    standImagePosition: 1
   });
 
   const addActorGroupFix = (addActorGroup as Function).bind(

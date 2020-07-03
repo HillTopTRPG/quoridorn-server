@@ -13,9 +13,10 @@ type ResponseType = void;
 /**
  * データ編集処理
  * @param driver
+ * @param socket
  * @param arg
  */
-export async function updateDataPackage(driver: Driver, arg: RequestType): Promise<ResponseType> {
+export async function updateDataPackage(driver: Driver, socket: any, arg: RequestType): Promise<ResponseType> {
   // タッチチェック
   await procAsyncSplit(arg.idList.map((id: string) => touchCheck(
     driver,
@@ -26,6 +27,7 @@ export async function updateDataPackage(driver: Driver, arg: RequestType): Promi
   // データ更新
   await procAsyncSplit(arg.idList.map((id: string, idx: number) => singleUpdateData(
     driver,
+    socket,
     arg.collection,
     id,
     arg.dataList[idx],
@@ -49,6 +51,6 @@ async function touchCheck(
 }
 
 const resist: Resister = (driver: Driver, socket: any): void => {
-  setEvent<RequestType, ResponseType>(driver, socket, eventName, (driver: Driver, arg: RequestType) => updateDataPackage(driver, arg));
+  setEvent<RequestType, ResponseType>(driver, socket, eventName, (driver: Driver, arg: RequestType) => updateDataPackage(driver, socket, arg));
 };
 export default resist;
