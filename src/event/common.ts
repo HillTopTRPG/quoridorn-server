@@ -302,7 +302,7 @@ export async function updateResourceMaster(
       console.log(`リソース: ${docId}を追加するゾ`, isAutoAddActor, isAutoAddMapObject);
       await addDirect(driver, socket, {
         collection: `${roomCollectionPrefix}-DATA-resource-list`,
-        dataList: optionList.map(_id => ({
+        dataList: optionList.map(() => ({
           masterId: docId,
           type: docData.type,
           value: docData.defaultValue
@@ -393,7 +393,7 @@ export async function addResourceMaster(
     // リソースインスタンスを追加
     await addDirect(driver, socket, {
       collection: `${roomCollectionPrefix}-DATA-resource-list`,
-      dataList: idList.map(_id => ({
+      dataList: idList.map(() => ({
         masterId: resourceMasterDocRef.id,
         type: resourceMaster.type,
         value: resourceMaster.defaultValue
@@ -416,7 +416,7 @@ export async function addResourceMaster(
     // リソースインスタンスを追加
     await addDirect(driver, socket, {
       collection: `${roomCollectionPrefix}-DATA-resource-list`,
-      dataList: idList.map(_id => ({
+      dataList: idList.map(() => ({
         masterId: resourceMasterDocRef.id,
         type: resourceMaster.type,
         value: resourceMaster.defaultValue
@@ -444,6 +444,64 @@ export async function addResourceMaster(
   }
 
   return resourceMasterDocRef.id;
+}
+
+export async function addScene(
+  driver: Driver,
+  socket: any,
+  roomCollectionPrefix: string,
+  docRef: DocumentReference<any>
+) {
+  // シーンレイヤーの追加
+  const sceneLayerListCCName = `${roomCollectionPrefix}-DATA-scene-layer-list`;
+  const sceneLayerListCC = driver.collection<any>(sceneLayerListCCName);
+  // 現存する各シーンすべてに今回登録したシーンオブジェクトを紐づかせる
+  const sceneAndLayerList = (await sceneLayerListCC.get()).docs.map(doc => ({
+    sceneId: docRef.id,
+    layerId: doc.ref.id,
+    isUse: true
+  }));
+  await addDirect(driver, socket, {
+    collection: `${roomCollectionPrefix}-DATA-scene-and-layer-list`,
+    dataList: sceneAndLayerList
+  }, true);
+
+  // シーンオブジェクトの追加
+  const sceneObjectListCCName = `${roomCollectionPrefix}-DATA-scene-object-list`;
+  const sceneObjectListCC = driver.collection<any>(sceneObjectListCCName);
+  // 現存する各シーンすべてに今回登録したシーンオブジェクトを紐づかせる
+  const sceneAndObjectList = (await sceneObjectListCC.get()).docs.map(doc => ({
+    sceneId: docRef.id,
+    objectId: doc.ref.id,
+    isOriginalAddress: false,
+    originalAddress: null,
+    entering: "normal"
+  }));
+  await addDirect(driver, socket, {
+    collection: `${roomCollectionPrefix}-DATA-scene-and-object-list`,
+    dataList: sceneAndObjectList
+  }, true);
+}
+
+export async function addSceneLayer(
+  driver: Driver,
+  socket: any,
+  roomCollectionPrefix: string,
+  docRef: DocumentReference<any>
+) {
+  // シーンオブジェクトの追加
+  const sceneListCCName = `${roomCollectionPrefix}-DATA-scene-list`;
+  const sceneListCC = driver.collection<any>(sceneListCCName);
+  // 現存する各シーンすべてに今回登録したシーンオブジェクトを紐づかせる
+  const sceneAndLayerList = (await sceneListCC.get()).docs.map(doc => ({
+    sceneId: doc.ref.id,
+    layerId: docRef.id,
+    isUse: true
+  }));
+  await addDirect(driver, socket, {
+    collection: `${roomCollectionPrefix}-DATA-scene-and-layer-list`,
+    dataList: sceneAndLayerList
+  }, true);
 }
 
 export async function addSceneObject(
@@ -526,7 +584,7 @@ export async function addSceneObject(
         type: rmDoc.data!.data!.type,
         value: rmDoc.data!.data!.defaultValue
       })),
-      optionList: resourceMasterDocList.map(_rmDoc => ({
+      optionList: resourceMasterDocList.map(() => ({
         ownerType: "scene-object",
         owner: docRef.id,
         order: -1
@@ -572,11 +630,26 @@ export async function addActor(
 
   const actorId = actorDocRef.id;
 
+  actorInfoPartial.statusId = (await addDirect(driver, socket, {
+    collection: `${roomCollectionPrefix}-DATA-status-list`,
+    dataList: [
+      {
+        name: "◆",
+        isSystem: true,
+        standImageInfoId: null,
+        chatPaletteInfoId: null
+      }
+    ],
+    optionList: [{
+      ownerType: "actor",
+      owner: actorId
+    }]
+  }, true))[0];
+
   const copyParam = <T extends keyof ActorStore>(param: T) => {
     if (actorInfoPartial[param] !== undefined)
       actorInfo[param] = actorInfoPartial[param] as ActorStore[T];
   };
-  actorInfoPartial.statusId = await additionalStatus(driver, roomCollectionPrefix, actorId);
   copyParam("name");
   copyParam("type");
   copyParam("chatFontColorType");
@@ -604,7 +677,7 @@ export async function addActor(
       type: rmDoc.data!.data!.type,
       value: rmDoc.data!.data!.defaultValue
     })),
-    optionList: resourceMasterDocList.map(_rmDoc => ({
+    optionList: resourceMasterDocList.map(() => ({
       ownerType: "actor",
       owner: actorId,
       order: -1

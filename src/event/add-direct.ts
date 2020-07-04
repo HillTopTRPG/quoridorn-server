@@ -3,6 +3,8 @@ import {PERMISSION_DEFAULT, Resister} from "../server";
 import {
   addActor,
   addResourceMaster,
+  addScene,
+  addSceneLayer,
   addSceneObject,
   getMaxOrder,
   getOwner,
@@ -78,9 +80,17 @@ export async function addDirect(driver: Driver, socket: any, arg: RequestType, i
     }
 
     // 追加のデータ操作
+    if (collectionName === "scene-list") {
+      // シーンオブジェクトの追加
+      await addScene(driver, socket, roomCollectionPrefix, docRef);
+    }
     if (collectionName === "scene-object-list") {
       // シーンオブジェクトの追加
       await addSceneObject(driver, socket, roomCollectionPrefix, owner, docRef, addInfo);
+    }
+    if (collectionName === "scene-layer-list") {
+      // シーンレイヤーの追加
+      await addSceneLayer(driver, socket, roomCollectionPrefix, docRef);
     }
   };
 

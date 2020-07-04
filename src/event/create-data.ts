@@ -7,6 +7,7 @@ import {ApplicationError} from "../error/ApplicationError";
 import {releaseTouchData} from "./release-touch-data";
 import {CreateDataRequest} from "../@types/socket";
 import {ActorStore} from "../@types/data";
+import {addDirect} from "./add-direct";
 
 // インタフェース
 const eventName = "create-data";
@@ -16,16 +17,23 @@ type ResponseType = string[];
 /**
  * データ作成処理
  * @param driver
+ * @param socket
  * @param exclusionOwner
  * @param arg
  */
-async function createData(driver: Driver, exclusionOwner: string, arg: RequestType): Promise<ResponseType> {
+async function createData(
+  driver: Driver,
+  socket: any,
+  exclusionOwner: string,
+  arg: RequestType
+): Promise<ResponseType> {
   // タッチ解除
   await releaseTouchData(driver, exclusionOwner, arg, true);
   const resultIdList: string[] = [];
 
   await procAsyncSplit(arg.idList.map((id: string, idx: number) => singleReleaseCreateData(
     driver,
+    socket,
     exclusionOwner,
     arg.collection,
     id,
@@ -39,6 +47,7 @@ async function createData(driver: Driver, exclusionOwner: string, arg: RequestTy
 
 async function singleReleaseCreateData(
   driver: Driver,
+  socket: any,
   exclusionOwner: string,
   collection: string,
   id: string,
@@ -66,7 +75,21 @@ async function singleReleaseCreateData(
 
   if (collection.endsWith("DATA-actor-list")) {
     // アクターにはデフォルトステータスを登録する
-    (data as ActorStore).statusId = await additionalStatus(driver, roomCollectionPrefix, id);
+    (data as ActorStore).statusId = (await addDirect(driver, socket, {
+      collection: `${roomCollectionPrefix}-DATA-status-list`,
+      dataList: [
+        {
+          name: "◆",
+          isSystem: true,
+          standImageInfoId: null,
+          chatPaletteInfoId: null
+        }
+      ],
+      optionList: [{
+        ownerType: "actor",
+        owner: id
+      }]
+    }, true))[0];
 
     // アクターグループ「All」に追加
     await addActorGroup(driver, roomCollectionPrefix, id, "other", null, "All");
@@ -88,6 +111,6 @@ async function singleReleaseCreateData(
 }
 
 const resist: Resister = (driver: Driver, socket: any): void => {
-  setEvent<RequestType, ResponseType>(driver, socket, eventName, (driver: Driver, arg: RequestType) => createData(driver, socket.id, arg));
+  setEvent<RequestType, ResponseType>(driver, socket, eventName, (driver: Driver, arg: RequestType) => createData(driver, socket, socket.id, arg));
 };
 export default resist;
