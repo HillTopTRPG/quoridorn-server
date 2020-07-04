@@ -1,7 +1,7 @@
 import Driver from "nekostore/lib/Driver";
 import DocumentSnapshot from "nekostore/lib/DocumentSnapshot";
 import {Permission, StoreMetaData, StoreObj} from "../@types/store";
-import {PERMISSION_DEFAULT, hashAlgorithm, SYSTEM_COLLECTION, PERMISSION_OWNER_CHANGE} from "../server";
+import {hashAlgorithm, PERMISSION_DEFAULT, PERMISSION_OWNER_CHANGE, SYSTEM_COLLECTION} from "../server";
 import {SystemError} from "../error/SystemError";
 import {UploadFileInfo, UserLoginResponse, UserType} from "../@types/socket";
 import {ApplicationError} from "../error/ApplicationError";
@@ -21,9 +21,9 @@ import {
   TouchierStore,
   UserStore
 } from "../@types/data";
-import uuid = require("uuid");
 import {addDirect} from "./add-direct";
 import DocumentReference from "nekostore/src/DocumentReference";
+import uuid = require("uuid");
 
 /**
  * リクエスト処理を登録するための関数。
@@ -79,7 +79,7 @@ type GetDataOption<T> = {
   collectionReference?: CollectionReference<StoreObj<T>>;
 };
 
-export async function registCollectionName(driver: Driver, collection: string) {
+export async function resistCollectionName(driver: Driver, collection: string) {
   const roomCollectionPrefix = collection.replace(/-DATA-.+$/, "");
   const collectionNameCollectionName = `${roomCollectionPrefix}-DATA-collection-list`;
   const cnCC = driver.collection<{ name: string }>(collectionNameCollectionName);
@@ -189,7 +189,7 @@ export async function additionalStatus(
   const statusCollection = statusResult.c;
 
   const statusDocRef = await statusCollection.add({
-    ownerType: "user",
+    ownerType: "actor",
     owner: actorId,
     order: statusResult.maxOrder + 1,
     exclusionOwner: null,
@@ -205,6 +205,8 @@ export async function additionalStatus(
     },
     permission: PERMISSION_DEFAULT
   });
+
+  await resistCollectionName(driver, statusCollectionName);
 
   return statusDocRef.id;
 }
@@ -258,7 +260,7 @@ export async function updateResourceMaster(
     const actorCCName = `${roomCollectionPrefix}-DATA-actor-list`;
     const actorCC = driver.collection<StoreObj<ActorStore>>(actorCCName);
     (await actorCC.get()).docs
-      .filter(async actorDoc =>
+      .filter(actorDoc =>
         !resourceDocs.filter(
           rDoc => rDoc.data!.ownerType === "actor" && rDoc.data!.owner === actorDoc.ref.id
         )[0]
@@ -276,9 +278,9 @@ export async function updateResourceMaster(
     const sceneObjectCCName = `${roomCollectionPrefix}-DATA-scene-object-list`;
     const sceneObjectCC = driver.collection<StoreObj<any>>(sceneObjectCCName);
     (await sceneObjectCC.get()).docs
-      .filter(async sceneObjectDoc =>
+      .filter(sceneObjectDoc =>
         !resourceDocs.filter(
-          rDoc => rDoc.data!.ownerType === "actor" && rDoc.data!.owner === sceneObjectDoc.ref.id
+          rDoc => rDoc.data!.ownerType === "scene-object" && rDoc.data!.owner === sceneObjectDoc.ref.id
         )[0]
       )
       .forEach(sceneObjectDoc => {
@@ -302,6 +304,7 @@ export async function updateResourceMaster(
         collection: `${roomCollectionPrefix}-DATA-resource-list`,
         dataList: optionList.map(_id => ({
           masterId: docId,
+          type: docData.type,
           value: docData.defaultValue
         })),
         optionList
@@ -392,6 +395,7 @@ export async function addResourceMaster(
       collection: `${roomCollectionPrefix}-DATA-resource-list`,
       dataList: idList.map(_id => ({
         masterId: resourceMasterDocRef.id,
+        type: resourceMaster.type,
         value: resourceMaster.defaultValue
       })),
       optionList: idList.map(id => ({
@@ -414,6 +418,7 @@ export async function addResourceMaster(
       collection: `${roomCollectionPrefix}-DATA-resource-list`,
       dataList: idList.map(_id => ({
         masterId: resourceMasterDocRef.id,
+        type: resourceMaster.type,
         value: resourceMaster.defaultValue
       })),
       optionList: idList.map(id => ({
@@ -461,7 +466,7 @@ export async function addSceneObject(
     entering: "normal"
   }));
   await addDirect(driver, socket, {
-    collection: "scene-and-object-list",
+    collection: `${roomCollectionPrefix}-DATA-scene-and-object-list`,
     dataList: sceneAndObjectList
   }, true);
 
@@ -518,6 +523,7 @@ export async function addSceneObject(
       collection: `${roomCollectionPrefix}-DATA-resource-list`,
       dataList: resourceMasterDocList.map(rmDoc => ({
         masterId: rmDoc.ref.id,
+        type: rmDoc.data!.data!.type,
         value: rmDoc.data!.data!.defaultValue
       })),
       optionList: resourceMasterDocList.map(_rmDoc => ({
@@ -595,6 +601,7 @@ export async function addActor(
     collection: `${roomCollectionPrefix}-DATA-resource-list`,
     dataList: resourceMasterDocList.map(rmDoc => ({
       masterId: rmDoc.ref.id,
+      type: rmDoc.data!.data!.type,
       value: rmDoc.data!.data!.defaultValue
     })),
     optionList: resourceMasterDocList.map(_rmDoc => ({
@@ -603,6 +610,8 @@ export async function addActor(
       order: -1
     }))
   }, true);
+
+  await resistCollectionName(driver, actorCollectionName);
 
   return actorId;
 }
@@ -694,6 +703,8 @@ export async function addUser(
   if (type === "PL") await addActorGroupFix("Players");
   if (type === "GM") await addActorGroupFix("GameMasters");
   if (type === "VISITOR") await addActorGroupFix("Visitors");
+
+  await resistCollectionName(driver, roomUserCollectionName);
 
   return {
     userId,

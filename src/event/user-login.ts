@@ -1,7 +1,7 @@
 import {PERMISSION_DEFAULT, hashAlgorithm, Resister, SYSTEM_COLLECTION} from "../server";
 import {SystemError} from "../error/SystemError";
 import {verify} from "../utility/password";
-import {addUser, getSocketDocSnap, setEvent} from "./common";
+import {addUser, getSocketDocSnap, resistCollectionName, setEvent} from "./common";
 import Driver from "nekostore/lib/Driver";
 import DocumentSnapshot from "nekostore/lib/DocumentSnapshot";
 import {UserLoginRequest, UserLoginResponse, UserType} from "../@types/socket";
@@ -176,6 +176,8 @@ async function userLogin(driver: Driver, socket: any, exclusionOwner: string, ar
       userId
     }
   });
+
+  await resistCollectionName(driver, roomSocketUserCollectionName);
 
   return userLoginResponse;
 }

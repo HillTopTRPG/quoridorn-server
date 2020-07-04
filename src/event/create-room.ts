@@ -3,7 +3,7 @@ import {CreateRoomRequest} from "../@types/socket";
 import {PERMISSION_DEFAULT, hashAlgorithm, Resister} from "../server";
 import {hash} from "../utility/password";
 import uuid from "uuid";
-import {getRoomInfo, getSocketDocSnap, setEvent} from "./common";
+import {getRoomInfo, getSocketDocSnap, resistCollectionName, setEvent} from "./common";
 import Driver from "nekostore/lib/Driver";
 import DocumentSnapshot from "nekostore/lib/DocumentSnapshot";
 import {ApplicationError} from "../error/ApplicationError";
@@ -108,6 +108,8 @@ async function createRoom(driver: Driver, exclusionOwner: string, arg: RequestTy
   await addGroup("GameMasters", 2);
   await addGroup("Players", 3);
   await addGroup("Visitors", 4);
+
+  await resistCollectionName(driver, actorGroupCCName);
 
   // 接尾句を返却
   return roomCollectionPrefix;

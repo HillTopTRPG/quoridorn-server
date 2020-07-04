@@ -7,7 +7,7 @@ import {
   getMaxOrder,
   getOwner,
   notifyProgress,
-  registCollectionName,
+  resistCollectionName,
   setEvent
 } from "./common";
 import Driver from "nekostore/lib/Driver";
@@ -85,7 +85,7 @@ export async function addDirect(driver: Driver, socket: any, arg: RequestType, i
   };
 
   // collectionの記録
-  await registCollectionName(driver, arg.collection);
+  await resistCollectionName(driver, arg.collection);
 
   // 直列の非同期で全部実行する
   await arg.dataList

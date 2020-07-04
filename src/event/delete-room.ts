@@ -63,8 +63,8 @@ async function deleteRoom(driver: Driver, socket: any, arg: RequestType, db?: Db
   }
 
   if (db) {
-    const deleteCollection = (suffix: string) => {
-      db.collection(`${data.roomCollectionPrefix}-DATA-${suffix}`).drop(() => {
+    const deleteCollection = (name: string) => {
+      db.collection(name).drop(() => {
         // args: err, delOK
         // nothing.
       });

@@ -1,6 +1,6 @@
 import {StoreObj} from "../@types/store";
 import {PERMISSION_DEFAULT, Resister} from "../server";
-import {addTouchier, getMaxOrder, getOwner, procAsyncSplit, registCollectionName, setEvent} from "./common";
+import {addTouchier, getMaxOrder, getOwner, procAsyncSplit, resistCollectionName, setEvent} from "./common";
 import Driver from "nekostore/lib/Driver";
 import {TouchDataRequest} from "../@types/socket";
 import {ApplicationError} from "../error/ApplicationError";
@@ -89,7 +89,7 @@ async function singleTouchData(
   }
 
   // collectionの記録
-  await registCollectionName(driver, collection);
+  await resistCollectionName(driver, collection);
 
   await addTouchier(driver, exclusionOwner, collection, docRef.id, null);
 
