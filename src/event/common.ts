@@ -252,7 +252,7 @@ export async function updateResourceMaster(
     .reduce((prev, curr) => prev.then(curr), Promise.resolve());
 
   /*
-   * 必要なリソースを追加
+   * 必要なリソースを追加（フラグの変更によるリソースの削除は行わない）
    */
   const optionList: Partial<StoreObj<unknown>>[] = [];
 
@@ -299,7 +299,6 @@ export async function updateResourceMaster(
   if (isAutoAddActor || isAutoAddMapObject) {
     // リソースインスタンスを追加
     if (optionList.length) {
-      console.log(`リソース: ${docId}を追加するゾ`, isAutoAddActor, isAutoAddMapObject);
       await addDirect(driver, socket, {
         collection: `${roomCollectionPrefix}-DATA-resource-list`,
         dataList: optionList.map(() => ({
@@ -313,7 +312,6 @@ export async function updateResourceMaster(
 
     // イニシアティブ表の表示に追加
     if (!initiativeColumnDoc || !initiativeColumnDoc.exists()) {
-      console.log(`initiativeColumn: ${docId}を追加するゾ`);
       await addDirect(driver, socket, {
         collection: `${roomCollectionPrefix}-DATA-initiative-column-list`,
         dataList: [{
@@ -327,35 +325,9 @@ export async function updateResourceMaster(
     }
   } else {
     if (initiativeColumnDoc && initiativeColumnDoc.exists()) {
-      console.log(`initiativeColumn: ${initiativeColumnDoc.data!.data!.resourceMasterId}を削除するゾ`);
       await initiativeColumnDoc.ref.delete();
     }
   }
-
-  /*
-   * 余分なリソースを削除
-   */
-  const deleteResourceIdList: string[] = [];
-
-  resourceDocs.forEach(rDoc => {
-    if (!isAutoAddActor && rDoc.data!.ownerType === "actor")
-      deleteResourceIdList.push(rDoc.ref.id);
-    if (!isAutoAddMapObject && rDoc.data!.ownerType === "scene-object")
-      deleteResourceIdList.push(rDoc.ref.id);
-  });
-
-  const deleteResource = async (resourceId: string) => {
-    console.log(`リソース: ${resourceId}を削除するゾ`);
-    const resourceDocSnap = await getData(driver, resourceCCName, resourceId, {
-      collectionReference: resourceCC
-    });
-    await resourceDocSnap!.ref.delete();
-  };
-
-  // 直列の非同期で全部実行する
-  await deleteResourceIdList
-    .map(resourceId => () => deleteResource(resourceId))
-    .reduce((prev, curr) => prev.then(curr), Promise.resolve());
 }
 
 export async function addResourceMaster(
