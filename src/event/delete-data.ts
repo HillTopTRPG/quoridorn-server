@@ -1,6 +1,6 @@
 import {StoreObj} from "../@types/store";
 import {Resister} from "../server";
-import {getData, procAsyncSplit, setEvent} from "./common";
+import {deleteResourceMaster, getData, procAsyncSplit, setEvent} from "./common";
 import Driver from "nekostore/lib/Driver";
 import DocumentSnapshot from "nekostore/lib/DocumentSnapshot";
 import {ApplicationError} from "../error/ApplicationError";
@@ -53,6 +53,12 @@ async function singleDeleteData(
     await docSnap.ref.delete();
   } catch (err) {
     throw new ApplicationError(`Failure delete doc.`, msgArg);
+  }
+
+  const roomCollectionPrefix = collection.replace(/-DATA-.+$/, "");
+  const collectionName = collection.replace(/^.+-DATA-/, "");
+  if (collectionName === "resource-master-list") {
+    await deleteResourceMaster(driver, roomCollectionPrefix, id);
   }
 }
 

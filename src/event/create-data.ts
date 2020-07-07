@@ -1,6 +1,6 @@
 import {StoreObj} from "../@types/store";
 import {Resister} from "../server";
-import {addActorGroup, additionalStatus, getData, getSocketDocSnap, procAsyncSplit, setEvent} from "./common";
+import {addActorGroup, getData, getSocketDocSnap, procAsyncSplit, setEvent} from "./common";
 import Driver from "nekostore/lib/Driver";
 import DocumentSnapshot from "nekostore/lib/DocumentSnapshot";
 import {ApplicationError} from "../error/ApplicationError";
@@ -18,15 +18,15 @@ type ResponseType = string[];
  * データ作成処理
  * @param driver
  * @param socket
- * @param exclusionOwner
  * @param arg
  */
 async function createData(
   driver: Driver,
   socket: any,
-  exclusionOwner: string,
   arg: RequestType
 ): Promise<ResponseType> {
+  const exclusionOwner: string = socket.id;
+
   // タッチ解除
   await releaseTouchData(driver, exclusionOwner, arg, true);
   const resultIdList: string[] = [];
@@ -34,7 +34,6 @@ async function createData(
   await procAsyncSplit(arg.idList.map((id: string, idx: number) => singleReleaseCreateData(
     driver,
     socket,
-    exclusionOwner,
     arg.collection,
     id,
     arg.dataList[idx],
@@ -48,13 +47,14 @@ async function createData(
 async function singleReleaseCreateData(
   driver: Driver,
   socket: any,
-  exclusionOwner: string,
   collection: string,
   id: string,
   data: any,
   resultIdList: string[],
   option?: Partial<StoreObj<unknown>> & { continuous?: boolean }
 ): Promise<void> {
+  const exclusionOwner: string = socket.id;
+
   const msgArg = { collection, id, option };
   const roomCollectionPrefix = collection.replace(/-DATA-.+$/, "");
 
@@ -111,6 +111,6 @@ async function singleReleaseCreateData(
 }
 
 const resist: Resister = (driver: Driver, socket: any): void => {
-  setEvent<RequestType, ResponseType>(driver, socket, eventName, (driver: Driver, arg: RequestType) => createData(driver, socket, socket.id, arg));
+  setEvent<RequestType, ResponseType>(driver, socket, eventName, (driver: Driver, arg: RequestType) => createData(driver, socket, arg));
 };
 export default resist;

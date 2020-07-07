@@ -16,15 +16,15 @@ type ResponseType = void;
  * データ編集処理
  * @param driver
  * @param socket
- * @param exclusionOwner
  * @param arg
  */
 export async function updateData(
   driver: Driver,
   socket: any,
-  exclusionOwner: string,
   arg: RequestType
 ): Promise<ResponseType> {
+  const exclusionOwner: string = socket.id;
+
   // タッチ解除
   await releaseTouchData(driver, exclusionOwner, arg, true);
 
@@ -84,6 +84,6 @@ export async function singleUpdateData(
 }
 
 const resist: Resister = (driver: Driver, socket: any): void => {
-  setEvent<RequestType, ResponseType>(driver, socket, eventName, (driver: Driver, arg: RequestType) => updateData(driver, socket, socket.id, arg));
+  setEvent<RequestType, ResponseType>(driver, socket, eventName, (driver: Driver, arg: RequestType) => updateData(driver, socket, arg));
 };
 export default resist;

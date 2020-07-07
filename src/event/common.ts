@@ -330,6 +330,28 @@ export async function updateResourceMaster(
   }
 }
 
+export async function deleteResourceMaster(
+  driver: Driver,
+  roomCollectionPrefix: string,
+  id: string
+): Promise<void> {
+  const initiativeColumnCC = driver.collection<any>(`${roomCollectionPrefix}-DATA-initiative-column-list`);
+  // 直列の非同期で全部実行する
+  await procAsyncSplit(
+    (await initiativeColumnCC.where("data.resourceMasterId", "==", id).get())
+      .docs
+      .map(doc => doc.ref.delete())
+  );
+
+  const resourceCC = driver.collection<any>(`${roomCollectionPrefix}-DATA-resource-list`);
+  // 直列の非同期で全部実行する
+  await procAsyncSplit(
+    (await resourceCC.where("data.masterId", "==", id).get())
+      .docs
+      .map(doc => doc.ref.delete())
+  );
+}
+
 export async function addResourceMaster(
   driver: Driver,
   socket: any,
