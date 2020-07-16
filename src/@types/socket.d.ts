@@ -1,6 +1,7 @@
 import {ChangeType} from "nekostore/lib/DocumentChange";
 import {StoreMetaData, StoreObj} from "./store";
 import {TargetVersion} from "../utility/GitHub";
+import {CutInDeclareInfo, MediaInfo, Scene} from "./data";
 
 export type RoomInfoExtend = {
   visitable: boolean;
@@ -124,3 +125,17 @@ export type UploadFileInfo = {
 };
 
 export type UploadFileRequest = UploadFileInfo[];
+
+type AddRoomPresetDataRequest = {
+  mediaDataList: MediaInfo[],
+  backgroundMediaIndex: number,
+  cutInDataList: CutInDeclareInfo[],
+  sceneData: Scene,
+  roomExtendInfo: RoomInfoExtend,
+  roomName: string,
+  language: {
+    mainChatTabName: string,
+    allGroupChatTabName: string,
+    nameLabel: string
+  }
+};

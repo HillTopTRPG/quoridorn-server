@@ -24,6 +24,7 @@ import resistSendDataEvent from "./event/send-data";
 import resistAddDirectEvent from "./event/add-direct";
 import resistUploadFileEvent from "./event/upload-file";
 import resistDeleteFileEvent from "./event/delete-file";
+import resistAddRoomPresetDataEvent from "./event/add-room-preset-data";
 import Driver from "nekostore/lib/Driver";
 import Store from "nekostore/src/store/Store";
 import MongoStore from "nekostore/lib/store/MongoStore";
@@ -306,7 +307,9 @@ async function main(): Promise<void> {
         // ファイルアップロードリクエスト
         resistUploadFileEvent,
         // ファイル削除リクエスト
-        resistDeleteFileEvent
+        resistDeleteFileEvent,
+        // 部屋プリセットデータ登録
+        resistAddRoomPresetDataEvent
       ].forEach((r: Resister) => r(driver, socket, io, db));
     });
 
