@@ -307,7 +307,7 @@ export async function updateResourceMaster(
           value: docData.defaultValue
         })),
         optionList
-      }, true);
+      }, false);
     }
 
     // イニシアティブ表の表示に追加
@@ -321,7 +321,7 @@ export async function updateResourceMaster(
           ownerType: null,
           owner: null
         }]
-      }, true);
+      }, false);
     }
   } else {
     if (initiativeColumnDoc && initiativeColumnDoc.exists()) {
@@ -397,7 +397,7 @@ export async function addResourceMaster(
         owner: id,
         order: -1
       }))
-    }, true);
+    }, false);
   }
 
   // 自動付与（コマ）なら、リソース連携
@@ -420,7 +420,7 @@ export async function addResourceMaster(
         owner: id,
         order: -1
       }))
-    }, true);
+    }, false);
   }
 
   if (resourceMaster.isAutoAddActor || resourceMaster.isAutoAddMapObject) {
@@ -434,7 +434,7 @@ export async function addResourceMaster(
         ownerType: null,
         owner: null
       }]
-    }, true);
+    }, false);
   }
 
   return resourceMasterDocRef.id;
@@ -458,7 +458,7 @@ export async function addScene(
   await addDirect(driver, socket, {
     collection: `${roomCollectionPrefix}-DATA-scene-and-layer-list`,
     dataList: sceneAndLayerList
-  }, true);
+  }, false);
 
   // シーンオブジェクトの追加
   const sceneObjectListCCName = `${roomCollectionPrefix}-DATA-scene-object-list`;
@@ -474,7 +474,7 @@ export async function addScene(
   await addDirect(driver, socket, {
     collection: `${roomCollectionPrefix}-DATA-scene-and-object-list`,
     dataList: sceneAndObjectList
-  }, true);
+  }, false);
 }
 
 export async function addSceneLayer(
@@ -495,7 +495,7 @@ export async function addSceneLayer(
   await addDirect(driver, socket, {
     collection: `${roomCollectionPrefix}-DATA-scene-and-layer-list`,
     dataList: sceneAndLayerList
-  }, true);
+  }, false);
 }
 
 export async function addSceneObject(
@@ -520,7 +520,7 @@ export async function addSceneObject(
   await addDirect(driver, socket, {
     collection: `${roomCollectionPrefix}-DATA-scene-and-object-list`,
     dataList: sceneAndObjectList
-  }, true);
+  }, false);
 
   if (addInfo.data.type === "character") {
     // キャラクターコマの追加
@@ -583,7 +583,7 @@ export async function addSceneObject(
         owner: docRef.id,
         order: -1
       }))
-    }, true);
+    }, false);
   }
 }
 
@@ -638,7 +638,7 @@ export async function addActor(
       ownerType: "actor",
       owner: actorId
     }]
-  }, true))[0];
+  }, false))[0];
 
   const copyParam = <T extends keyof ActorStore>(param: T) => {
     if (actorInfoPartial[param] !== undefined)
@@ -676,7 +676,7 @@ export async function addActor(
       owner: actorId,
       order: -1
     }))
-  }, true);
+  }, false);
 
   await resistCollectionName(driver, actorCollectionName);
 

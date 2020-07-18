@@ -89,7 +89,7 @@ async function singleReleaseCreateData(
         ownerType: "actor",
         owner: id
       }]
-    }, true))[0];
+    }, false))[0];
 
     // アクターグループ「All」に追加
     await addActorGroup(driver, roomCollectionPrefix, id, "other", null, "All");

@@ -27,21 +27,35 @@ type ResponseType = string[];
  * @param driver
  * @param socket
  * @param arg
- * @param isNest
+ * @param sendNotify
+ * @param nestNum
+ * @param nestNumTotal
  */
-export async function addDirect(driver: Driver, socket: any, arg: RequestType, isNest: boolean = false): Promise<ResponseType> {
+export async function addDirect(
+  driver: Driver,
+  socket: any,
+  arg: RequestType,
+  sendNotify: boolean = true,
+  nestNum: number = 0,
+  nestNumTotal: number = 0
+): Promise<ResponseType> {
   const exclusionOwner: string = socket.id;
   const { c, maxOrder } = await getMaxOrder<any>(driver, arg.collection);
   let startOrder = maxOrder + 1;
 
   const docIdList: string[] = [];
 
-  const addFunc = async (data: any, current: number): Promise<void> => {
-    const option = arg.optionList && arg.optionList[current];
+  const total = nestNumTotal || arg.dataList.length;
+
+  const addFunc = async (data: any, idx: number): Promise<void> => {
+    const option = arg.optionList && arg.optionList[idx];
     const owner = await getOwner(driver, exclusionOwner, option ? option.owner : undefined);
 
     // 進捗報告
-    if (!isNest) notifyProgress(socket, arg.dataList.length, current);
+    if (sendNotify) {
+      const current = nestNum + idx;
+      notifyProgress(socket, total, current);
+    }
 
     const roomCollectionPrefix = arg.collection.replace(/-DATA-.+$/, "");
     const collectionName = arg.collection.replace(/^.+-DATA-/, "");
@@ -103,7 +117,7 @@ export async function addDirect(driver: Driver, socket: any, arg: RequestType, i
     .reduce((prev, curr) => prev.then(curr), Promise.resolve());
 
   // 進捗報告
-  if (!isNest) notifyProgress(socket, arg.dataList.length, arg.dataList.length);
+  if (!sendNotify) notifyProgress(socket, total, nestNum + arg.dataList.length);
 
   return docIdList;
 }
