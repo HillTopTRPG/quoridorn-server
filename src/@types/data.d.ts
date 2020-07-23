@@ -257,3 +257,17 @@ type Scene = ChatLinkable & {
     border: Border;
   };
 };
+
+type ChatPaletteStore = {
+  name: string,
+  paletteText: string;
+  chatFontColorType: "owner" | "original"; // チャット文字色はオーナーの色か独自の色か
+  chatFontColor: string; // 独自のチャット文字色
+  actorId: string | null;
+  sceneObjectId: string | null;
+  targetId: string | null;
+  outputTabId: string | null;
+  statusId: string | null;
+  system: string | null;
+  isSecret: boolean;
+};

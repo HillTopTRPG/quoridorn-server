@@ -14,6 +14,7 @@ import {
   ActorGroup,
   ActorStatusStore,
   ActorStore,
+  ChatPaletteStore,
   ResourceMasterStore,
   ResourceStore,
   RoomStore,
@@ -772,6 +773,35 @@ export async function addUser(
   if (type === "VISITOR") await addActorGroupFix("Visitors");
 
   await resistCollectionName(driver, roomUserCollectionName);
+
+  const createChatPaletteObj = (name: string): ChatPaletteStore => ({
+    name,
+    paletteText: "",
+    chatFontColorType: "owner",
+    chatFontColor: "#000000",
+    actorId: null,
+    sceneObjectId: null,
+    targetId: null,
+    outputTabId: null,
+    statusId: null,
+    system: null,
+    isSecret: false
+  });
+  const chatPaletteList: ChatPaletteStore[] = [
+    createChatPaletteObj("1"),
+    createChatPaletteObj("2"),
+    createChatPaletteObj("3"),
+    createChatPaletteObj("4"),
+    createChatPaletteObj("5"),
+  ];
+  await addDirect(driver, socket, {
+    collection: `${roomCollectionPrefix}-DATA-chat-palette-list`,
+    dataList: chatPaletteList,
+    optionList: chatPaletteList.map(_ => ({
+      ownerType: "user",
+      owner: userId
+    }))
+  }, false);
 
   return {
     userId,
