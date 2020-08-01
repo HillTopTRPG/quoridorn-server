@@ -1,8 +1,9 @@
 import {Resister, SYSTEM_COLLECTION} from "../server";
-import {getSocketDocSnap, setEvent} from "./common";
 import Driver from "nekostore/lib/Driver";
 import {SendDataRequest} from "../@types/socket";
 import {SocketStore} from "../@types/data";
+import {setEvent} from "../utility/server";
+import {getSocketDocSnap} from "../utility/collection";
 
 // インタフェース
 const eventName = "send-data";

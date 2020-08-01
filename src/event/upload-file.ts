@@ -1,9 +1,11 @@
 import {accessUrl, bucket, Resister, s3Client} from "../server";
-import {getSocketDocSnap, notifyProgress, setEvent} from "./common";
 import Driver from "nekostore/lib/Driver";
 import {UploadFileInfo, UploadFileRequest} from "../@types/socket";
 import * as path from "path";
 import {SocketStore} from "../@types/data";
+import {setEvent} from "../utility/server";
+import {notifyProgress} from "../utility/emit";
+import {getSocketDocSnap} from "../utility/collection";
 
 // インタフェース
 const eventName = "upload-file";

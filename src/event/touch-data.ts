@@ -1,9 +1,12 @@
 import {StoreObj} from "../@types/store";
 import {PERMISSION_DEFAULT, Resister} from "../server";
-import {addTouchier, getMaxOrder, getOwner, procAsyncSplit, resistCollectionName, setEvent} from "./common";
 import Driver from "nekostore/lib/Driver";
 import {TouchDataRequest} from "../@types/socket";
 import {ApplicationError} from "../error/ApplicationError";
+import {getMaxOrder, getOwner, resistCollectionName} from "../utility/collection";
+import {setEvent} from "../utility/server";
+import {addTouchier} from "../utility/touch";
+import {procAsyncSplit} from "../utility/async";
 
 // インタフェース
 const eventName = "touch-data";

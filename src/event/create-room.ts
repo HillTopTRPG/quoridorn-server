@@ -3,12 +3,13 @@ import {CreateRoomRequest} from "../@types/socket";
 import {PERMISSION_DEFAULT, hashAlgorithm, Resister} from "../server";
 import {hash} from "../utility/password";
 import uuid from "uuid";
-import {getRoomInfo, getSocketDocSnap, resistCollectionName, setEvent} from "./common";
 import Driver from "nekostore/lib/Driver";
 import DocumentSnapshot from "nekostore/lib/DocumentSnapshot";
 import {ApplicationError} from "../error/ApplicationError";
 import {releaseTouchRoom} from "./release-touch-room";
 import {ActorGroup, RoomStore, SocketStore} from "../@types/data";
+import {getRoomInfo, getSocketDocSnap, resistCollectionName} from "../utility/collection";
+import {setEvent} from "../utility/server";
 
 // インタフェース
 const eventName = "create-room";

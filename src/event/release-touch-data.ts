@@ -1,9 +1,12 @@
 import {Resister} from "../server";
 import {ApplicationError} from "../error/ApplicationError";
-import {deleteTouchier, getData, procAsyncSplit, setEvent} from "./common";
 import Driver from "nekostore/lib/Driver";
 import {ReleaseTouchDataRequest} from "../@types/socket";
 import {StoreObj} from "../@types/store";
+import {getData} from "../utility/collection";
+import {setEvent} from "../utility/server";
+import {deleteTouchier} from "../utility/touch";
+import {procAsyncSplit} from "../utility/async";
 
 // インタフェース
 const eventName = "release-touch-data";

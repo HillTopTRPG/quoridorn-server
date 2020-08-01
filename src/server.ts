@@ -25,11 +25,11 @@ import resistAddDirectEvent from "./event/add-direct";
 import resistUploadFileEvent from "./event/upload-file";
 import resistDeleteFileEvent from "./event/delete-file";
 import resistAddRoomPresetDataEvent from "./event/add-room-preset-data";
+import resistDeleteDataPackageEvent from "./event/delete-data-package";
 import Driver from "nekostore/lib/Driver";
 import Store from "nekostore/src/store/Store";
 import MongoStore from "nekostore/lib/store/MongoStore";
 import MemoryStore from "nekostore/lib/store/MemoryStore";
-import {getSocketDocSnap, releaseTouch} from "./event/common";
 import {HashAlgorithmType} from "./utility/password";
 const co = require("co");
 import { Db } from "mongodb";
@@ -41,17 +41,13 @@ import {compareVersion, getFileRow, TargetVersion} from "./utility/GitHub";
 import {accessLog} from "./utility/logger";
 import {RoomStore, SocketStore, SocketUserStore, TouchierStore, UserStore} from "./@types/data";
 import * as Minio from "minio";
+import {releaseTouch} from "./utility/touch";
+import {getSocketDocSnap} from "./utility/collection";
 
 export const PERMISSION_DEFAULT: Permission = {
   view: { type: "none", list: [] },
   edit: { type: "none", list: [] },
   chmod: { type: "none", list: [] }
-};
-
-export const PERMISSION_OWNER_CHANGE: Permission = {
-  view: { type: "none", list: [] },
-  edit: { type: "allow", list: [{ type: "owner" }] },
-  chmod: { type: "allow", list: [{ type: "owner" }] }
 };
 
 export type Resister = (d: Driver, socket: any, io: any, db?: Db) => void;
@@ -309,7 +305,9 @@ async function main(): Promise<void> {
         // ファイル削除リクエスト
         resistDeleteFileEvent,
         // 部屋プリセットデータ登録
-        resistAddRoomPresetDataEvent
+        resistAddRoomPresetDataEvent,
+        // データ削除リクエスト
+        resistDeleteDataPackageEvent
       ].forEach((r: Resister) => r(driver, socket, io, db));
     });
 
@@ -337,7 +335,7 @@ async function main(): Promise<void> {
 async function initDataBase(driver: Driver): Promise<void> {
   // 部屋情報の入室人数を0人にリセット
   (await driver.collection<StoreObj<RoomStore>>(SYSTEM_COLLECTION.ROOM_LIST).get()).docs.forEach(async roomDoc => {
-    if (roomDoc.exists()) {
+    if (roomDoc.exists() && roomDoc.data.data) {
       const roomData = roomDoc.data.data!;
       roomData.memberNum = 0;
       const roomCollectionPrefix = roomData.roomCollectionPrefix;
@@ -347,7 +345,7 @@ async function initDataBase(driver: Driver): Promise<void> {
 
       const roomUserCollectionName = `${roomCollectionPrefix}-DATA-user-list`;
       (await driver.collection<StoreObj<UserStore>>(roomUserCollectionName).get()).docs.forEach(async userDoc => {
-        if (userDoc.exists()) {
+        if (userDoc.exists() && userDoc.data.data) {
           const userData = userDoc.data.data!;
           userData.login = 0;
           await userDoc.ref.update({

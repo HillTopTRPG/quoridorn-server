@@ -2,7 +2,6 @@ import {StoreObj} from "../@types/store";
 import {DeleteRoomRequest} from "../@types/socket";
 import {hashAlgorithm, Resister, accessUrl, bucket, s3Client} from "../server";
 import {verify} from "../utility/password";
-import {getRoomInfo, setEvent} from "./common";
 import Driver from "nekostore/lib/Driver";
 import DocumentSnapshot from "nekostore/lib/DocumentSnapshot";
 import {ApplicationError} from "../error/ApplicationError";
@@ -10,6 +9,8 @@ import {SystemError} from "../error/SystemError";
 import {releaseTouchRoom} from "./release-touch-room";
 import { Db } from "mongodb";
 import {RoomStore} from "../@types/data";
+import {getRoomInfo} from "../utility/collection";
+import {setEvent} from "../utility/server";
 
 // インタフェース
 const eventName = "delete-room";

@@ -1,7 +1,6 @@
 import {PERMISSION_DEFAULT, hashAlgorithm, Resister, SYSTEM_COLLECTION} from "../server";
 import {SystemError} from "../error/SystemError";
 import {verify} from "../utility/password";
-import {addUser, getSocketDocSnap, resistCollectionName, setEvent} from "./common";
 import Driver from "nekostore/lib/Driver";
 import DocumentSnapshot from "nekostore/lib/DocumentSnapshot";
 import {UserLoginRequest, UserLoginResponse, UserType} from "../@types/socket";
@@ -9,6 +8,9 @@ import {StoreObj} from "../@types/store";
 import {ApplicationError} from "../error/ApplicationError";
 import DocumentChange from "nekostore/lib/DocumentChange";
 import {ActorGroup, RoomStore, SocketStore, SocketUserStore, UserStore} from "../@types/data";
+import {getSocketDocSnap, resistCollectionName} from "../utility/collection";
+import {setEvent} from "../utility/server";
+import {addUser} from "../utility/data-user";
 
 // インタフェース
 const eventName = "user-login";
@@ -60,7 +62,6 @@ async function userLogin(driver: Driver, socket: any, arg: RequestType): Promise
     userLoginResponse = await addUser(
       driver,
       socket,
-      exclusionOwner,
       roomCollectionPrefix,
       arg.name,
       arg.password,

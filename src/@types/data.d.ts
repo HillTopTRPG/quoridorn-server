@@ -258,6 +258,32 @@ type Scene = ChatLinkable & {
   };
 };
 
+type Point = {
+  x: number;
+  y: number;
+};
+
+type Matrix = {
+  column: number;
+  row: number;
+};
+
+type Address = Point & Matrix;
+
+/**
+ * sceneAndObjectCCのデータ定義
+ * マップとオブジェクトの紐付き1本単位の情報
+ */
+type SceneAndObject = {
+  sceneId: string;
+  objectId: string;
+  // startTimeStatus: "" | "normal" | string; // マップに同期切替した際に設定されるステータス（キャラクターのみ）
+  // startTimePlace: "" | Place; // マップに同期切替した際に設定される場所
+  isOriginalAddress: boolean; // マップ独自の座標を持つかどうか
+  originalAddress: Address | null; // 独自座標を持つならその座標
+  entering: "normal" | string; // 登場の仕方
+};
+
 type ChatPaletteStore = {
   name: string,
   paletteText: string;
