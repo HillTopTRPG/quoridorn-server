@@ -2,8 +2,8 @@ import {
   GetVersionResponse
 } from "../@types/socket";
 import {getMessage, Resister, targetClient, version} from "../server";
-import {setEvent} from "./common";
 import Driver from "nekostore/lib/Driver";
+import {setEvent} from "../utility/server";
 
 // インタフェース
 const eventName = "get-version";

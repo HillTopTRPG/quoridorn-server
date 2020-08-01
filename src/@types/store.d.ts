@@ -1,3 +1,5 @@
+import CollectionReference from "nekostore/src/CollectionReference";
+
 export type StoreObj<T> = {
   ownerType: string | null;
   owner: string | null;
@@ -29,4 +31,10 @@ export type Permission = {
   view: PermissionRule;
   edit: PermissionRule;
   chmod: PermissionRule;
+};
+
+type GetDataOption<T> = {
+  exclusionOwner?: string;
+  id?: string;
+  collectionReference?: CollectionReference<StoreObj<T>>;
 };

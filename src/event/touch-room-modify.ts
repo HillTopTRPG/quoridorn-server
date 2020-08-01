@@ -1,10 +1,12 @@
 import {Resister, SYSTEM_COLLECTION} from "../server";
 import {ApplicationError} from "../error/ApplicationError";
-import {addTouchier, checkViewer, getRoomInfo, setEvent} from "./common";
 import Driver from "nekostore/lib/Driver";
 import {TouchRoomRequest} from "../@types/socket";
 import {StoreObj} from "../@types/store";
 import {RoomStore} from "../@types/data";
+import {checkViewer, getRoomInfo} from "../utility/collection";
+import {setEvent} from "../utility/server";
+import {addTouchier} from "../utility/touch";
 
 // インタフェース
 const eventName = "touch-room-modify";

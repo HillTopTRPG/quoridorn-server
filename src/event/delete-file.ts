@@ -1,7 +1,8 @@
 import {accessUrl, bucket, Resister, s3Client} from "../server";
-import {getSocketDocSnap, setEvent} from "./common";
 import Driver from "nekostore/lib/Driver";
 import {DeleteFileRequest} from "../@types/socket";
+import {setEvent} from "../utility/server";
+import {getSocketDocSnap} from "../utility/collection";
 
 // インタフェース
 const eventName = "delete-file";

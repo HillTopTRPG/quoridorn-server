@@ -1,16 +1,30 @@
 import {Resister} from "../server";
-import {ApplicationError} from "../error/ApplicationError";
-import {getData, procAsyncSplit, setEvent, updateResourceMaster} from "./common";
 import Driver from "nekostore/lib/Driver";
 import {UpdateDataRequest} from "../@types/socket";
 import {releaseTouchData} from "./release-touch-data";
 import {StoreObj} from "../@types/store";
-import {ResourceMasterStore} from "../@types/data";
+import {setEvent} from "../utility/server";
+import {updateResourceMasterRelation} from "../utility/data-resource-master";
+import {procAsyncSplit} from "../utility/async";
+import {updateSimple} from "../utility/data";
 
 // インタフェース
 const eventName = "update-data";
 type RequestType = UpdateDataRequest;
 type ResponseType = void;
+
+const relationCollectionTable: {
+  [collectionSuffixName: string]: (
+    driver: Driver,
+    socket: any,
+    collection: string,
+    id: string,
+    data: any,
+    option?: Partial<StoreObj<unknown>> & { continuous?: boolean }
+  ) => Promise<void>
+} = {
+  "resource-master-list": updateResourceMasterRelation,
+};
 
 /**
  * データ編集処理
@@ -23,12 +37,10 @@ export async function updateData(
   socket: any,
   arg: RequestType
 ): Promise<ResponseType> {
-  const exclusionOwner: string = socket.id;
-
   // タッチ解除
-  await releaseTouchData(driver, exclusionOwner, arg, true);
+  await releaseTouchData(driver, socket.id, arg, true);
 
-  await procAsyncSplit(arg.idList.map((id: string, idx: number) => singleUpdateData(
+  await procAsyncSplit(arg.idList.map((id: string, idx: number) => updateSingleData(
     driver,
     socket,
     arg.collection,
@@ -38,49 +50,17 @@ export async function updateData(
   )));
 }
 
-export async function singleUpdateData(
+export async function updateSingleData(
   driver: Driver,
   socket: any,
-  collection: string,
+  collectionName: string,
   id: string,
   data: any,
   option?: Partial<StoreObj<unknown>> & { continuous?: boolean }
 ): Promise<void> {
-  const msgArg = { collection, id, option };
-  const docSnap = await getData(driver, collection, id);
-
-  // No such check.
-  if (!docSnap || !docSnap.exists() || !docSnap.data.data) throw new ApplicationError(`No such data.`, msgArg);
-
-  const updateInfo: Partial<StoreObj<any>> = {
-    data,
-    status: "modified",
-    updateTime: new Date()
-  };
-  if (option) {
-    if (option.permission) updateInfo.permission = option.permission;
-    if (option.order !== undefined) updateInfo.order = option.order || 0;
-    if (option.owner) updateInfo.owner = option.owner;
-    if (option.ownerType) updateInfo.ownerType = option.ownerType;
-  }
-  try {
-    await docSnap.ref.update(updateInfo);
-  } catch (err) {
-    throw new ApplicationError(`Failure update doc.`, updateInfo);
-  }
-
-  const roomCollectionPrefix = collection.replace(/-DATA-.+$/, "");
-  const collectionName = collection.replace(/^.+-DATA-/, "");
-
-  if (collectionName === "resource-master-list") {
-    await updateResourceMaster(
-      driver,
-      socket,
-      roomCollectionPrefix,
-      docSnap.ref.id,
-      data as ResourceMasterStore
-    );
-  }
+  const collectionSuffixName = collectionName.replace(/^.+-DATA-/, "");
+  const callUpdateFunc = relationCollectionTable[collectionSuffixName] || updateSimple;
+  await callUpdateFunc(driver, socket, collectionName, id, data, option);
 }
 
 const resist: Resister = (driver: Driver, socket: any): void => {

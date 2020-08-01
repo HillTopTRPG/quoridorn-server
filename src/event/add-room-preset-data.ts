@@ -1,11 +1,12 @@
 import {Resister} from "../server";
-import {getSocketDocSnap, setEvent} from "./common";
 import Driver from "nekostore/lib/Driver";
 import {AddRoomPresetDataRequest} from "../@types/socket";
 import {addDirect} from "./add-direct";
 import {PermissionNode, StoreObj} from "../@types/store";
 import {ApplicationError} from "../error/ApplicationError";
 import {ResourceMasterStore} from "../@types/data";
+import {setEvent} from "../utility/server";
+import {getSocketDocSnap} from "../utility/collection";
 
 // インタフェース
 const eventName = "add-room-preset-data";
@@ -195,9 +196,8 @@ async function addRoomPresetData(driver: Driver, socket: any, arg: RequestType):
   await addDirect(driver, socket, {
     collection: `${roomCollectionPrefix}-DATA-resource-master-list`,
     dataList: resourceMasterList,
-    optionList: resourceMasterList.map(_ => ({ owner: null, ownerType: null }))
+    optionList: resourceMasterList.map(() => ({ owner: null, ownerType: null }))
   }, true, current, total);
-  current += resourceMasterList.length;
 }
 
 const resist: Resister = (driver: Driver, socket: any): void => {

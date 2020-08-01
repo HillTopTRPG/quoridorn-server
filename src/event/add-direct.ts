@@ -1,26 +1,42 @@
 import {StoreObj} from "../@types/store";
-import {PERMISSION_DEFAULT, Resister} from "../server";
-import {
-  addActor,
-  addResourceMaster,
-  addScene,
-  addSceneLayer,
-  addSceneObject,
-  getMaxOrder,
-  getOwner,
-  notifyProgress,
-  resistCollectionName,
-  setEvent
-} from "./common";
+import {Resister} from "../server";
 import Driver from "nekostore/lib/Driver";
-import {ApplicationError} from "../error/ApplicationError";
 import {AddDirectRequest} from "../@types/socket";
+import {addActorRelation} from "../utility/data-actor";
+import {addUserRelation} from "../utility/data-user";
+import {resistCollectionName} from "../utility/collection";
+import {setEvent} from "../utility/server";
+import {addResourceMasterRelation} from "../utility/data-resource-master";
+import {addSceneRelation} from "../utility/data-scene";
+import {addSceneObjectRelation} from "../utility/data-scene-object";
+import {addSceneLayerRelation} from "../utility/data-scene-layer";
+import {notifyProgress} from "../utility/emit";
 import DocumentReference from "nekostore/src/DocumentReference";
+import {addSimple} from "../utility/data";
 
 // インタフェース
 const eventName = "add-direct";
 type RequestType = AddDirectRequest;
 type ResponseType = string[];
+
+export function getAddRelationCollectionMap(): {
+  [collectionSuffixName: string]: (
+    driver: Driver,
+    socket: any,
+    roomCollectionPrefix: string,
+    actorInfoPartial: any,
+    option?: Partial<StoreObj<any>>
+  ) => Promise<DocumentReference<StoreObj<any>>>
+} {
+  return {
+    "resource-master-list": addResourceMasterRelation,
+    "actor-list": addActorRelation,
+    "scene-list": addSceneRelation,
+    "scene-object-list": addSceneObjectRelation,
+    "user-list": addUserRelation,
+    "scene-layer-list": addSceneLayerRelation
+  };
+}
 
 /**
  * データ作成処理
@@ -39,73 +55,26 @@ export async function addDirect(
   nestNum: number = 0,
   nestNumTotal: number = 0
 ): Promise<ResponseType> {
-  const exclusionOwner: string = socket.id;
-  const { c, maxOrder } = await getMaxOrder<any>(driver, arg.collection);
-  let startOrder = maxOrder + 1;
+  const addRelationCollectionMap = getAddRelationCollectionMap();
 
   const docIdList: string[] = [];
-
   const total = nestNumTotal || arg.dataList.length;
 
-  const addFunc = async (data: any, idx: number): Promise<void> => {
-    const option = arg.optionList && arg.optionList[idx];
-    const owner = await getOwner(driver, exclusionOwner, option ? option.owner : undefined);
+  const collectionSuffixName = arg.collection.replace(/^.+-DATA-/, "");
+  const callAddFunc = addRelationCollectionMap[collectionSuffixName] || addSimple;
 
-    // 進捗報告
-    if (sendNotify) {
-      const current = nestNum + idx;
-      notifyProgress(socket, total, current);
-    }
+  const addSingleData = async (data: any, idx: number): Promise<void> => {
+    // 進捗報告(処理中)
+    if (sendNotify) notifyProgress(socket, total, nestNum + idx);
 
-    const roomCollectionPrefix = arg.collection.replace(/-DATA-.+$/, "");
-    const collectionName = arg.collection.replace(/^.+-DATA-/, "");
-
-    if (collectionName === "actor-list") {
-      docIdList.push(await addActor(driver, socket, roomCollectionPrefix, owner, data));
-      return;
-    }
-
-    if (collectionName === "resource-master-list") {
-      docIdList.push(await addResourceMaster(driver, socket, roomCollectionPrefix, owner, data));
-      return;
-    }
-
-    // 追加する１件のデータ
-    const addInfo: StoreObj<any> = {
-      ownerType: option && option.ownerType !== undefined ? option.ownerType : "user",
-      owner,
-      order: option && option.order !== undefined ? option.order : startOrder++,
-      exclusionOwner: null,
-      lastExclusionOwner: null,
-      status: "added",
-      createTime: new Date(),
-      updateTime: new Date(),
-      permission: option && option.permission || PERMISSION_DEFAULT,
-      data
-    };
-
-    // DBに追加
-    let docRef: DocumentReference<any>;
-    try {
-      docRef = await c.add(addInfo);
-      docIdList.push(docRef.id);
-    } catch (err) {
-      throw new ApplicationError(`Failure add doc.`, addInfo);
-    }
-
-    // 追加のデータ操作
-    if (collectionName === "scene-list") {
-      // シーンオブジェクトの追加
-      await addScene(driver, socket, roomCollectionPrefix, docRef);
-    }
-    if (collectionName === "scene-object-list") {
-      // シーンオブジェクトの追加
-      await addSceneObject(driver, socket, roomCollectionPrefix, owner, docRef, addInfo);
-    }
-    if (collectionName === "scene-layer-list") {
-      // シーンレイヤーの追加
-      await addSceneLayer(driver, socket, roomCollectionPrefix, docRef);
-    }
+    // データを追加し、idをリストに追加
+    docIdList.push((await callAddFunc(
+      driver,
+      socket,
+      arg.collection,
+      data,
+      arg.optionList ? arg.optionList[idx] : undefined
+    )).id);
   };
 
   // collectionの記録
@@ -113,11 +82,11 @@ export async function addDirect(
 
   // 直列の非同期で全部実行する
   await arg.dataList
-    .map((data: any, idx: number) => () => addFunc(data, idx))
+    .map((data: any, idx: number) => () => addSingleData(data, idx))
     .reduce((prev, curr) => prev.then(curr), Promise.resolve());
 
-  // 進捗報告
-  if (!sendNotify) notifyProgress(socket, total, nestNum + arg.dataList.length);
+  // 進捗報告(完了)
+  if (sendNotify) notifyProgress(socket, total, nestNum + arg.dataList.length);
 
   return docIdList;
 }

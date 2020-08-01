@@ -5,12 +5,13 @@ import {
   RoomViewResponse
 } from "../@types/socket";
 import {getMessage, Resister, serverSetting, SYSTEM_COLLECTION, targetClient} from "../server";
-import {setEvent, getStoreObj, checkViewer} from "./common";
 import Driver from "nekostore/lib/Driver";
 import {ChangeType} from "nekostore/lib/DocumentChange";
 import Unsubscribe from "nekostore/src/Unsubscribe";
 import {compareVersion} from "../utility/GitHub";
 import {RoomStore} from "../@types/data";
+import {checkViewer, getStoreObj} from "../utility/collection";
+import {setEvent} from "../utility/server";
 
 
 // インタフェース

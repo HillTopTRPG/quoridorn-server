@@ -1,7 +1,6 @@
 import {hashAlgorithm, Resister} from "../server";
 import {SystemError} from "../error/SystemError";
 import {verify} from "../utility/password";
-import {setEvent, getRoomInfo, getSocketDocSnap} from "./common";
 import Driver from "nekostore/lib/Driver";
 import DocumentSnapshot from "nekostore/lib/DocumentSnapshot";
 import {RoomLoginRequest} from "../@types/socket";
@@ -9,6 +8,8 @@ import {StoreObj} from "../@types/store";
 import {ApplicationError} from "../error/ApplicationError";
 import {releaseTouchRoom} from "./release-touch-room";
 import {RoomStore, SocketStore} from "../@types/data";
+import {getRoomInfo, getSocketDocSnap} from "../utility/collection";
+import {setEvent} from "../utility/server";
 
 // インタフェース
 const eventName = "room-login";

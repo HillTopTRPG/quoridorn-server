@@ -1,6 +1,5 @@
 import {StoreObj} from "../@types/store";
 import {Resister} from "../server";
-import {addActorGroup, getData, getSocketDocSnap, procAsyncSplit, setEvent} from "./common";
 import Driver from "nekostore/lib/Driver";
 import DocumentSnapshot from "nekostore/lib/DocumentSnapshot";
 import {ApplicationError} from "../error/ApplicationError";
@@ -8,6 +7,10 @@ import {releaseTouchData} from "./release-touch-data";
 import {CreateDataRequest} from "../@types/socket";
 import {ActorStore} from "../@types/data";
 import {addDirect} from "./add-direct";
+import {getData, getSocketDocSnap} from "../utility/collection";
+import {setEvent} from "../utility/server";
+import {addActorGroup} from "../utility/data-actor-group";
+import {procAsyncSplit} from "../utility/async";
 
 // インタフェース
 const eventName = "create-data";
@@ -92,7 +95,7 @@ async function singleReleaseCreateData(
     }, false))[0];
 
     // アクターグループ「All」に追加
-    await addActorGroup(driver, roomCollectionPrefix, id, "other", null, "All");
+    await addActorGroup(driver, roomCollectionPrefix, "All", id, "other", null);
   }
 
   try {
