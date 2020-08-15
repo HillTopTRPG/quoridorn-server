@@ -40,8 +40,16 @@ Application server of the Quoridorn.
 
 1. Quoridornサーバの設定を編集
    1. 「quoridorn-server/conf/server.yaml」を編集する（テキストエディタで編集可能）<br>
-      書き方や注意点はyamlファイル内にコメントを書いてあるので、それを見ながら頑張って設定値を書いて欲しい<br>
+      サーバ稼働に関する設定ファイル<br>
+      書き方や注意点はyamlファイル内にコメントを書いてあるので、それを見ながら頑張って設定値を書いてください<br>
       前項でメモしておいたMongoDBの接続文字列はこのファイルに設定する
+   1. 「quoridorn-server/conf/storage.yaml」を編集する（テキストエディタで編集可能）<br>
+      ストレージサービスとの連携に関する設定ファイル<br>
+      書き方や注意点はyamlファイル内にコメントを書いてあるので、それを見ながら頑張って設定値を書いてください
+   1. 「quoridorn-server/message/message.yaml」を編集する（テキストエディタで編集可能）<br>
+      クライアントに表示されるサーバ情報の設定ファイル
+   1. 「termsOfUse.txt」を編集する（テキストエディタで編集可能）<br>
+      サーバ側の利用規約の文章をここに書いてください
 
 1. Quoridornサーバを起動
    1. `npm run node-server` Node.jsサーバを起動
