@@ -4,7 +4,7 @@ import {AddRoomPresetDataRequest} from "../@types/socket";
 import {addDirect} from "./add-direct";
 import {PermissionNode, StoreObj} from "../@types/store";
 import {ApplicationError} from "../error/ApplicationError";
-import {ResourceMasterStore} from "../@types/data";
+import {DiceAndPips, DiceType, ResourceMasterStore} from "../@types/data";
 import {setEvent} from "../utility/server";
 import {getSocketDocSnap} from "../utility/collection";
 
@@ -66,28 +66,61 @@ async function addRoomPresetData(driver: Driver, socket: any, arg: RequestType):
       defaultValue: "0"
     }
   ];
+  const diceTypeList: DiceType[] = [];
+  let pipsNum: number = 0;
+  Object.keys(arg.diceMaterial).forEach(faceNum => {
+    arg.diceMaterial[faceNum].forEach(diceType => {
+      diceTypeList.push({
+        faceNum,
+        subType: diceType.type || "",
+        label: diceType.label || ""
+      });
+      pipsNum += Object.keys(diceType.pips).length;
+    });
+  });
+
+  const total = diceTypeList.length + pipsNum + arg.cutInDataList.length + sceneLayerList.length + resourceMasterList.length + 4;
+  let current = 0;
 
   /* --------------------------------------------------
-   * メディアデータのプリセットデータ投入
+   * ダイスタイプのプリセットデータ投入
    */
-  const total = arg.mediaDataList.length + arg.cutInDataList.length + sceneLayerList.length + resourceMasterList.length + 4;
-  let current = 0;
-  const mediaIdList = await addDirect(driver, socket, {
-    collection: `${roomCollectionPrefix}-DATA-media-list`,
-    dataList: arg.mediaDataList,
-    optionList: arg.mediaDataList.map(() => ({ owner: null, ownerType: null }))
+  const diceTypeIdList = await addDirect(driver, socket, {
+    collection: `${roomCollectionPrefix}-DATA-dice-type-list`,
+    dataList: diceTypeList,
+    optionList: diceTypeList.map(() => ({ ownerType: null, owner: null }))
   }, true, current, total);
-  current += arg.mediaDataList.length;
+  current += diceTypeList.length;
 
-  const backgroundMediaId = mediaIdList[arg.backgroundMediaIndex]!;
-  const backgroundMediaTag = arg.mediaDataList[arg.backgroundMediaIndex]!.tag;
+  /* --------------------------------------------------
+   * ダイス目のプリセットデータ投入
+   */
+  const diceAndPipsList: DiceAndPips[] = [];
+  let diceTypeIdx: number = 0;
+  Object.keys(arg.diceMaterial).forEach(faceNum => {
+    arg.diceMaterial[faceNum].forEach(diceType => {
+      const diceTypeId = diceTypeIdList[diceTypeIdx++];
+      diceAndPipsList.push(...Object.keys(diceType.pips).map(pips => ({
+        diceTypeId,
+        pips,
+        mediaId: diceType.pips[pips]
+      })));
+    });
+  });
+  await addDirect(driver, socket, {
+    collection: `${roomCollectionPrefix}-DATA-dice-and-pips-list`,
+    dataList: diceAndPipsList,
+    optionList: diceAndPipsList.map(() => ({ ownerType: null, owner: null }))
+  }, true, current, total);
+  current += diceAndPipsList.length;
 
   /* --------------------------------------------------
    * カットインデータのプリセットデータ投入
    */
   await addDirect(driver, socket, {
     collection: `${roomCollectionPrefix}-DATA-cut-in-list`,
-    dataList: arg.cutInDataList
+    dataList: arg.cutInDataList,
+    optionList: arg.cutInDataList.map(() => ({ ownerType: null, owner: null }))
   }, true, current, total);
   current += arg.cutInDataList.length;
 
@@ -95,21 +128,10 @@ async function addRoomPresetData(driver: Driver, socket: any, arg: RequestType):
    * マップデータのプリセットデータ投入
    */
   const sceneData = arg.sceneData;
-  if (sceneData.texture.type === "image") {
-    sceneData.texture.imageId = backgroundMediaId;
-    sceneData.texture.imageTag = backgroundMediaTag;
-  }
-  if (sceneData.background.texture.type === "image") {
-    sceneData.background.texture.imageId = backgroundMediaId;
-    sceneData.background.texture.imageTag = backgroundMediaTag;
-  }
-  if (sceneData.margin.texture.type === "image") {
-    sceneData.margin.texture.imageId = backgroundMediaId;
-    sceneData.margin.texture.imageTag = backgroundMediaTag;
-  }
   const sceneIdList = await addDirect(driver, socket, {
     collection: `${roomCollectionPrefix}-DATA-scene-list`,
-    dataList: [sceneData]
+    dataList: [sceneData],
+    optionList: [{ ownerType: null, owner: null }]
   }, true, current, total);
   current += 1;
 
@@ -118,7 +140,8 @@ async function addRoomPresetData(driver: Driver, socket: any, arg: RequestType):
    */
   await addDirect(driver, socket, {
     collection: `${roomCollectionPrefix}-DATA-scene-layer-list`,
-    dataList: sceneLayerList
+    dataList: sceneLayerList,
+    optionList: sceneLayerList.map(() => ({ ownerType: null, owner: null }))
   }, true, current, total);
   current += sceneLayerList.length;
 
@@ -131,7 +154,8 @@ async function addRoomPresetData(driver: Driver, socket: any, arg: RequestType):
       sceneId: sceneIdList[0],
       settings: arg.roomExtendInfo,
       name: arg.roomName
-    }]
+    }],
+    optionList: [{ ownerType: null, owner: null }]
   }, true, current, total);
   current += 1;
 
@@ -186,7 +210,8 @@ async function addRoomPresetData(driver: Driver, socket: any, arg: RequestType):
         isSecret: false,
         outputChatTabId: null
       }
-    ]
+    ],
+    optionList: [{ ownerType: null, owner: null }]
   }, true, current, total);
   current += 1;
 

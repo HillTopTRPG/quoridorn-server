@@ -127,7 +127,8 @@ async function userLogin(driver: Driver, socket: any, arg: RequestType): Promise
     addRoomMember = userData.login === 1;
 
     const updateUserInfo: Partial<StoreObj<UserStore>> = {
-      data: userData
+      data: userData,
+      updateTime: new Date()
     };
     try {
       await userDocSnap.ref.update(updateUserInfo);

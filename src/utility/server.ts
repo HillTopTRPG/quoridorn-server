@@ -1,4 +1,4 @@
-import {UploadFileInfo} from "../@types/socket";
+import {UploadMediaInfo} from "../@types/socket";
 import {accessLog, errorLog} from "./logger";
 import Driver from "nekostore/lib/Driver";
 import {Permission} from "../@types/store";
@@ -14,9 +14,13 @@ export function setEvent<T, U>(driver: Driver, socket: any, eventName: string, f
   const resultEvent = `result-${eventName}`;
   socket.on(eventName, async (arg: T) => {
     const logArg = arg ? JSON.parse(JSON.stringify(arg)) : null;
-    if (eventName === "upload-file") {
-      logArg.forEach((info: UploadFileInfo) => {
-        info.src = "[Binary Array]";
+    if (eventName === "upload-media") {
+      logArg.uploadMediaInfoList.forEach((info: UploadMediaInfo) => {
+        info.imageSrc = "[Binary Array]";
+        if (info.dataLocation === "server") {
+          delete info.blob;
+          delete info.arrayBuffer;
+        }
       });
     }
     accessLog(socket.id, eventName, "START", logArg);

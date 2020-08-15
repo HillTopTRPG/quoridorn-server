@@ -1,7 +1,7 @@
 import {ChangeType} from "nekostore/lib/DocumentChange";
 import {StoreMetaData, StoreObj} from "./store";
 import {TargetVersion} from "../utility/GitHub";
-import {CutInDeclareInfo, MediaInfo, Scene} from "./data";
+import {CutInDeclareInfo, MediaInfo, Scene, UrlType} from "./data";
 
 export type RoomInfoExtend = {
   visitable: boolean;
@@ -120,22 +120,57 @@ export type SendDataRequest = {
 };
 
 export type UploadFileInfo = {
+  srcType: "string" | "file";
+  tag: string;
+  type: string;
   name: string;
   src: string;
 };
 
-export type UploadFileRequest = UploadFileInfo[];
+export type UploadFileRequest = {
+  fileInfoList: UploadFileInfo[];
+  option: Partial<StoreObj<any>>;
+};
+
+export type UploadMediaInfo = MediaInfo & (
+  | { dataLocation: "direct"; }
+  | {
+    dataLocation: "server";
+    blob: Blob;
+    arrayBuffer: string;
+  }
+);
+
+export type UploadMediaRequest = {
+  uploadMediaInfoList: UploadMediaInfo[];
+  option: Partial<StoreObj<any>>;
+};
+
+export type UploadMediaResponse = {
+  docId: string;
+  oldUrl: string;
+  url: string;
+  name: string;
+  tag: string;
+  urlType: UrlType;
+}[];
+
+type DiceInfo = {
+  type: string;
+  label: string;
+  pips: { [P: string]: string };
+};
+type DiceMaterial = { [P: string]: DiceInfo[] };
 
 type AddRoomPresetDataRequest = {
-  mediaDataList: MediaInfo[],
-  backgroundMediaIndex: number,
-  cutInDataList: CutInDeclareInfo[],
-  sceneData: Scene,
-  roomExtendInfo: RoomInfoExtend,
-  roomName: string,
+  diceMaterial: DiceMaterial,
+  cutInDataList: CutInDeclareInfo[];
+  sceneData: Scene;
+  roomExtendInfo: RoomInfoExtend;
+  roomName: string;
   language: {
-    mainChatTabName: string,
-    allGroupChatTabName: string,
-    nameLabel: string
-  }
+    mainChatTabName: string;
+    allGroupChatTabName: string;
+    nameLabel: string;
+  };
 };

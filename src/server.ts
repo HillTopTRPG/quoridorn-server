@@ -22,7 +22,7 @@ import resistCreateDataEvent from "./event/create-data";
 import resistDeleteDataEvent from "./event/delete-data";
 import resistSendDataEvent from "./event/send-data";
 import resistAddDirectEvent from "./event/add-direct";
-import resistUploadFileEvent from "./event/upload-file";
+import resistUploadMediaEvent from "./event/upload-media";
 import resistDeleteFileEvent from "./event/delete-file";
 import resistAddRoomPresetDataEvent from "./event/add-room-preset-data";
 import resistDeleteDataPackageEvent from "./event/delete-data-package";
@@ -300,8 +300,8 @@ async function main(): Promise<void> {
         resistSendDataEvent,
         // データ一括追加リクエスト
         resistAddDirectEvent,
-        // ファイルアップロードリクエスト
-        resistUploadFileEvent,
+        // メディアアップロードリクエスト
+        resistUploadMediaEvent,
         // ファイル削除リクエスト
         resistDeleteFileEvent,
         // 部屋プリセットデータ登録

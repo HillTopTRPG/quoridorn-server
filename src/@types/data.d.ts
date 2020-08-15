@@ -122,11 +122,28 @@ type ResourceStore = {
   value: string;
 };
 
+export type IconClass =
+  | "icon-warning"
+  | "icon-youtube2"
+  | "icon-image"
+  | "icon-music"
+  | "icon-text";
+
+export type UrlType =
+  | "youtube"
+  | "image"
+  | "music"
+  | "setting"
+  | "unknown";
+
 type MediaInfo = {
-  tag: string;
   name: string;
+  tag: string;
   url: string;
-  type: string;
+  urlType: UrlType;
+  iconClass: IconClass;
+  imageSrc: string;
+  dataLocation: "server" | "direct";
 };
 
 /**
@@ -296,4 +313,16 @@ type ChatPaletteStore = {
   statusId: string | null;
   system: string | null;
   isSecret: boolean;
+};
+
+export type DiceType = {
+  faceNum: string;
+  subType: string;
+  label: string;
+};
+
+export type DiceAndPips = {
+  diceTypeId: string;
+  pips: string;
+  mediaId: string;
 };
