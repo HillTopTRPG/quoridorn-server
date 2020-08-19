@@ -7,6 +7,7 @@ import {setEvent} from "../utility/server";
 import {notifyProgress} from "../utility/emit";
 import {getSocketDocSnap} from "../utility/collection";
 import {addDirect} from "./add-direct";
+import uuid = require("uuid");
 
 // インタフェース
 const eventName = "upload-media";
@@ -37,7 +38,7 @@ async function uploadMedia(driver: Driver, socket: any, arg: RequestType): Promi
 
     // アップロード
     if (info.dataLocation === "server") {
-      const filePath = path.join(storageId, info.name);
+      const filePath = path.join(storageId, uuid.v4());
       await s3Client!.putObject(bucket, filePath, info.arrayBuffer);
 
       // XXX 以下の方法だと、「https://~~」が「http:/~~」になってしまうことが判明したので、単純連結に変更
