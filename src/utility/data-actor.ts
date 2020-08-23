@@ -1,5 +1,5 @@
 import Driver from "nekostore/lib/Driver";
-import {ActorStore, ResourceMasterStore} from "../@types/data";
+import {ActorStatusStore, ActorStore, ResourceMasterStore} from "../@types/data";
 import {addDirect} from "../event/add-direct";
 import {StoreObj} from "../@types/store";
 import {getOwner, resistCollectionName} from "./collection";
@@ -35,7 +35,7 @@ export async function addActorRelation(
 
   // ステータスを自動追加
   const statusCollectionName = `${roomCollectionPrefix}-DATA-status-list`;
-  actorInfoPartial.statusId = (await addSimple(
+  actorInfoPartial.statusId = (await addSimple<ActorStatusStore>(
     driver,
     socket,
     `${roomCollectionPrefix}-DATA-status-list`,

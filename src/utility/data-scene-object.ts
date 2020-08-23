@@ -2,7 +2,7 @@ import Driver from "nekostore/lib/Driver";
 import {StoreObj} from "../@types/store";
 import {addDirect} from "../event/add-direct";
 import {getData, resistCollectionName} from "./collection";
-import {ResourceMasterStore} from "../@types/data";
+import {ResourceMasterStore, SceneAndObject, SceneObject} from "../@types/data";
 import {addActorRelation} from "./data-actor";
 import DocumentReference from "nekostore/src/DocumentReference";
 import {addSimple, deleteSimple, getDataForDelete, multipleTouchCheck, touchCheck} from "./data";
@@ -14,18 +14,18 @@ export async function addSceneObjectRelation(
   driver: Driver,
   socket: any,
   collectionName: string,
-  sceneObject: any,
-  option?: Partial<StoreObj<any>>
-): Promise<DocumentReference<StoreObj<any>>> {
+  sceneObject: SceneObject,
+  option?: Partial<StoreObj<SceneObject>>
+): Promise<DocumentReference<StoreObj<SceneObject>>> {
   const roomCollectionPrefix = collectionName.replace(/-DATA-.+$/, "");
   const docRef = await addSimple(driver, socket, collectionName, sceneObject, option);
   const sceneObjectId = docRef.id;
 
   // シーンオブジェクトの追加
   const sceneListCCName = `${roomCollectionPrefix}-DATA-scene-list`;
-  const sceneListCC = driver.collection<any>(sceneListCCName);
+  const sceneListCC = driver.collection<SceneObject>(sceneListCCName);
   // 現存する各シーンすべてに今回登録したシーンオブジェクトを紐づかせる
-  const sceneAndObjectList = (await sceneListCC.get()).docs.map(doc => ({
+  const sceneAndObjectList: SceneAndObject[] = (await sceneListCC.get()).docs.map(doc => ({
     sceneId: doc.ref.id,
     objectId: sceneObjectId,
     isOriginalAddress: false,
@@ -107,7 +107,7 @@ export async function deleteSceneObjectRelation(
   collectionName: string,
   id: string
 ): Promise<void> {
-  const docSnap: DocumentSnapshot<StoreObj<any>> = await getDataForDelete(driver, collectionName, id);
+  const docSnap: DocumentSnapshot<StoreObj<SceneObject>> = await getDataForDelete(driver, collectionName, id);
   const sceneObject = docSnap.data!;
   const roomCollectionPrefix = collectionName.replace(/-DATA-.+$/, "");
 
@@ -121,7 +121,7 @@ export async function deleteSceneObjectRelation(
     const sceneAndObjectDocChangeList = await multipleTouchCheck(driver, sceneAndObjectCCName, "data.objectId", id);
 
     // アクターが削除できる状態かをチェック
-    const actorId = sceneObject.data!.actorId;
+    const actorId = sceneObject.data!.actorId!;
     const actorListCollectionName = `${roomCollectionPrefix}-DATA-actor-list`;
     const actorDocSnap = await touchCheck(driver, actorListCollectionName, actorId);
 
@@ -156,5 +156,5 @@ export async function deleteSceneObjectRelation(
     }
   }
 
-  await deleteSimple<any>(driver, socket, collectionName, id);
+  await deleteSimple<SceneObject>(driver, socket, collectionName, id);
 }

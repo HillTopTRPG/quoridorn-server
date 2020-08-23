@@ -326,3 +326,33 @@ export type DiceAndPips = {
   pips: string;
   mediaId: string;
 };
+
+type SceneObjectType =
+  | "character"
+  | "map-mask"
+  | "map-marker"
+  | "dice-symbol"
+  | "chit"
+  | "floor-tile";
+
+type Place = "field" | "graveyard" | "backstage";
+type SceneObject = Address & {
+  type: SceneObjectType;
+  tag: string;
+  name: string;
+  actorId: string | null; // id
+  rows: number;
+  columns: number;
+  isHideBorder: boolean;
+  isHideHighlight: boolean;
+  isLock: boolean;
+  place: Place;
+  layerId: string;
+  textures: Texture[];
+  textureIndex: number;
+  angle: number;
+  url: string; // character
+  subTypeId: string; // サイコロの種類など
+  subTypeValue: string; // 出目など
+  isHideSubType: boolean; // 出目を隠すかどうか
+};
