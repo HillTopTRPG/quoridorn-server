@@ -10,8 +10,8 @@ info:
   license:
     name: AGPL-3.0 License
     url: 'https://www.gnu.org/licenses/agpl-3.0.html'
-host: quori-dev.onlinesession.app
-basePath: /web-if
+host: (host)
+basePath: /(webApiPathBase)
 schemes:
   - https
   - http
