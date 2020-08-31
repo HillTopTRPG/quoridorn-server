@@ -15,7 +15,17 @@ export function accessLog(socketId: string, eventName: string, category?: string
   logger.info(`[socketId:${socketId}]${categoryStr} ${eventName} ${argStr}`);
 }
 
+export function accessLogForWebApi(path: string, method: string, authorization: string | undefined) {
+  const logger = log4js.getLogger("access");
+  logger.info(`[${method}] ${path} Authorization: ${authorization}`);
+}
+
 export function errorLog(socketId: string, eventName: string, message: string) {
   const logger = log4js.getLogger("error");
   logger.error(`[socketId:${socketId}] ${eventName} ${message}`);
+}
+
+export function errorLogForWebApi(path: string, method: string, status: number, message: string) {
+  const logger = log4js.getLogger("error");
+  logger.error(`[${method}] ${path} status: ${status} msg: ${message}`);
 }

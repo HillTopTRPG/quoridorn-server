@@ -50,7 +50,7 @@ async function roomLogin(driver: Driver, exclusionOwner: string, arg: RequestTyp
   try {
     verifyResult = await verify(data.roomPassword, arg.roomPassword, hashAlgorithm);
   } catch (err) {
-    throw new SystemError(`Login verify fatal error. room-no=${arg.roomNo}`);
+    throw new SystemError(`Verify process fatal error. room-no=${arg.roomNo}`);
   }
 
   // パスワードチェックで引っかかった

@@ -1,5 +1,9 @@
 import BasicDriver from "nekostore/lib/driver/basic";
 import SocketDriverServer from "nekostore/lib/driver/socket/SocketDriverServer";
+import Driver from "nekostore/lib/Driver";
+import Store from "nekostore/src/store/Store";
+import MongoStore from "nekostore/lib/store/MongoStore";
+import MemoryStore from "nekostore/lib/store/MemoryStore";
 import fs from "fs";
 import YAML from "yaml";
 import {Interoperability, ServerSetting, StorageSetting} from "./@types/server";
@@ -26,12 +30,17 @@ import resistUploadMediaEvent from "./event/upload-media";
 import resistDeleteFileEvent from "./event/delete-file";
 import resistAddRoomPresetDataEvent from "./event/add-room-preset-data";
 import resistDeleteDataPackageEvent from "./event/delete-data-package";
-import Driver from "nekostore/lib/Driver";
-import Store from "nekostore/src/store/Store";
-import MongoStore from "nekostore/lib/store/MongoStore";
-import MemoryStore from "nekostore/lib/store/MemoryStore";
+import resistGetApi from "./rest-api/v1/get";
+import resistRoomChatPostApi from "./rest-api/v1/room-chat-post";
+import resistRoomDeleteApi from "./rest-api/v1/room-delete";
+import resistRoomGetApi from "./rest-api/v1/room-get";
+import resistRoomTokenGetApi from "./rest-api/v1/room-token-get";
+import resistRoomUserGetApi from "./rest-api/v1/room-user-get";
+import resistRoomUserTokenGetApi from "./rest-api/v1/room-user-token-get";
+import resistRoomUsersGetApi from "./rest-api/v1/room-users-get";
+import resistRoomsGetApi from "./rest-api/v1/rooms-get";
+import resistTokenGetApi from "./rest-api/v1/token-get";
 import {HashAlgorithmType} from "./utility/password";
-const co = require("co");
 import { Db } from "mongodb";
 import {Permission, StoreObj} from "./@types/store";
 import {Message} from "./@types/socket";
@@ -39,10 +48,30 @@ import {ApplicationError} from "./error/ApplicationError";
 import {SystemError} from "./error/SystemError";
 import {compareVersion, getFileRow, TargetVersion} from "./utility/GitHub";
 import {accessLog} from "./utility/logger";
-import {RoomStore, SocketStore, SocketUserStore, TouchierStore, UserStore} from "./@types/data";
+import {RoomStore, SocketStore, SocketUserStore, TokenStore, TouchierStore, UserStore} from "./@types/data";
 import * as Minio from "minio";
 import {releaseTouch} from "./utility/touch";
 import {getSocketDocSnap} from "./utility/collection";
+import {Request, Response, NextFunction} from "express";
+const co = require("co");
+const cors = require('cors');
+const express = require('express');
+const webApp = express();
+const bodyParser = require('body-parser');
+const http = require("http");
+webApp.use(bodyParser.json({
+  inflate: true,
+  limit: '100kb',
+  type: 'application/json',
+  strict: true
+}));
+webApp.use(cors());
+webApp.use((_: Request, res: Response, next: NextFunction) => {
+  res.header("Access-Control-Allow-Origin", "*");
+  res.header("Access-Control-Allow-Headers", "Authorization");
+  next();
+});
+const server = http.createServer(webApp);
 
 export const PERMISSION_DEFAULT: Permission = {
   view: { type: "none", list: [] },
@@ -51,6 +80,7 @@ export const PERMISSION_DEFAULT: Permission = {
 };
 
 export type Resister = (d: Driver, socket: any, io: any, db?: Db) => void;
+export type WebIfResister = (webApp: any, d: Driver, db: any) => void;
 export const serverSetting: ServerSetting = YAML.parse(fs.readFileSync(path.resolve(__dirname, "../config/server.yaml"), "utf8"));
 export const interoperability: Interoperability[] = YAML.parse(fs.readFileSync(path.resolve(__dirname, "./interoperability.yaml"), "utf8"));
 export const targetClient: TargetVersion = {
@@ -107,6 +137,8 @@ export namespace SYSTEM_COLLECTION {
   export const TOUCH_LIST = `touch-list-${serverSetting.secretCollectionSuffix}`;
   /** 接続中のsocket.idの一覧 */
   export const SOCKET_LIST = `socket-list-${serverSetting.secretCollectionSuffix}`;
+  /** WebAPIのトークンの一覧 */
+  export const TOKEN_LIST = `token-list-${serverSetting.secretCollectionSuffix}`;
 }
 
 async function getStore(setting: ServerSetting): Promise<{store: Store, db?: Db}> {
@@ -229,7 +261,22 @@ async function main(): Promise<void> {
     // DBを誰も接続してない状態にする
     await initDataBase(driver);
 
-    const io = require("socket.io").listen(serverSetting.port);
+    // REST APIの各リクエストに対する処理の登録
+    [
+      resistGetApi,
+      resistRoomChatPostApi,
+      resistRoomDeleteApi,
+      resistRoomGetApi,
+      resistRoomTokenGetApi,
+      resistRoomUserGetApi,
+      resistRoomUserTokenGetApi,
+      resistRoomUsersGetApi,
+      resistRoomsGetApi,
+      resistTokenGetApi
+    ].forEach((r: WebIfResister) => r(webApp, driver, db));
+
+    const io = require("socket.io").listen(server);
+    server.listen(serverSetting.port);
 
     // 🐧ハート💖ビート🕺
     io.set("heartbeat interval", 5000);
@@ -311,20 +358,18 @@ async function main(): Promise<void> {
       ].forEach((r: Resister) => r(driver, socket, io, db));
     });
 
-    // setInterval(() => {
-    //   db.listCollections().toArray(function(err: any, collectionInfoList: any[]) {
-    //     console.log("=== All Collections START ===");
-    //     if (err) {
-    //       console.warn(err);
-    //       return;
-    //     }
-    //     const collectionNameList = collectionInfoList
-    //       .filter(collectionInfo => collectionInfo.type === "collection")
-    //       .map(collectionInfo => collectionInfo.name);
-    //
-    //     console.log("=== All Collections END ===");
-    //   });
-    // }, 1000 * 60 * 5);
+    // 5分おきにトークン情報を整理する
+    setInterval(async () => {
+      console.log("-- TOKEN REFRESH --");
+      const now = new Date();
+      const c = driver.collection<TokenStore>(SYSTEM_COLLECTION.TOKEN_LIST);
+      (await c.get()).docs
+        .filter(d => d.exists() && d.data!.expires.getTime() < now.getTime())
+        .forEach(d => {
+          console.log(`Expired: ${d.data!.token}`);
+          d.ref.delete().then();
+        });
+    }, 1000 * 30);
 
   } catch (err) {
     console.error("MongoDB connect fail.");

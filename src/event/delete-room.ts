@@ -11,6 +11,7 @@ import { Db } from "mongodb";
 import {RoomStore} from "../@types/data";
 import {getRoomInfo} from "../utility/collection";
 import {setEvent} from "../utility/server";
+import {doDeleteRoom} from "../utility/data-room";
 
 // インタフェース
 const eventName = "delete-room";
@@ -45,11 +46,10 @@ async function deleteRoom(driver: Driver, socket: any, arg: RequestType, db?: Db
   // Already check.
   const data = docSnap.data.data;
   if (!data) throw new ApplicationError(`Already deleted.`, arg);
-  const storageId = data.storageId;
 
   // 部屋パスワードチェック
   try {
-    if (!await verify(docSnap.data.data!.roomPassword, arg.roomPassword, hashAlgorithm)) {
+    if (!await verify(data.roomPassword, arg.roomPassword, hashAlgorithm)) {
       // パスワードチェックで引っかかった
       return false;
     }
@@ -57,38 +57,7 @@ async function deleteRoom(driver: Driver, socket: any, arg: RequestType, db?: Db
     throw new SystemError(`Login verify fatal error. room-no=${arg.roomNo}`);
   }
 
-  try {
-    await docSnap.ref.delete();
-  } catch (err) {
-    throw new ApplicationError(`Failure delete doc.`, arg);
-  }
-
-  if (db) {
-    const deleteCollection = (name: string) => {
-      db.collection(name).drop(() => {
-        // args: err, delOK
-        // nothing.
-      });
-    };
-
-    const roomCollectionPrefix = data.roomCollectionPrefix;
-
-    // メディアコレクションからメディアストレージの削除
-    const mediaCCName = `${roomCollectionPrefix}-DATA-media-list`;
-    const mediaCC = driver.collection<StoreObj<{ url: string }>>(mediaCCName);
-    const deleteUrlList = (await mediaCC.get()).docs.map(d => d.data!.data!.url)
-      .map(url => url.replace(accessUrl, ""))
-      .filter(url => url.startsWith(storageId));
-    await s3Client!.removeObjects(bucket, deleteUrlList);
-
-    // 部屋のコレクションの削除
-    const collectionNameCollectionName = `${roomCollectionPrefix}-DATA-collection-list`;
-    const cnCC = driver.collection<{ name: string }>(collectionNameCollectionName);
-    (await cnCC.get()).docs.map(d => d.data!.name).forEach(name => {
-      deleteCollection(name);
-    });
-    deleteCollection(collectionNameCollectionName);
-  }
+  await doDeleteRoom(driver, db, docSnap);
 
   return true;
 }

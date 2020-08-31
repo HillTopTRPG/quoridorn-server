@@ -20,6 +20,16 @@ export type TouchierStore = {
   backupUpdateTime: Date | null;
 };
 
+export type TokenStore = {
+  type: "server" | "room" | "user";
+  token: string;
+  roomCollectionPrefix: string | null;
+  roomNo: number | null;
+  storageId: string | null;
+  userId: string | null;
+  expires: Date;
+}
+
 export type SocketStore = {
   socketId: string;
   roomId: string | null;

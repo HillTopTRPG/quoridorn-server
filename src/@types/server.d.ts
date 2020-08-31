@@ -1,5 +1,8 @@
 export type ServerSetting = {
   port: number;
+  webApiPassword: string;
+  webApiPathBase: string;
+  webApiTokenExpires: number;
   storeType: "memory" | "mongodb";
   secretCollectionSuffix: string;
   mongodbConnectionStrings: string;

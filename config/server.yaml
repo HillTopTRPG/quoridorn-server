@@ -1,6 +1,17 @@
 # Quoridornアプリケーションサーバ（このサーバ）のポート
 port: 8000
 
+# WebAPIを使うためのパスワード
+webApiPassword: copperin2020
+
+# WebAPIのリクエストURLの一部。
+# 前後に / は入れないでください
+webApiPathBase: web-if
+
+# WebAPTのトークンの有効時間（単位：秒）
+# デフォルトは 30秒（30秒）
+webApiTokenExpires: 30
+
 # データ保持の手段（memory or mongodb）
 # storeType: memory
 storeType: mongodb
