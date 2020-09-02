@@ -6,7 +6,6 @@
   "scripts": {
     "build": "tsc -t ES5 && cpx -C src/interoperability.yaml dist",
     "node-server": "node dist/server.js",
-    "storage-copy": "cpx config/my/storage.yaml config",
     "server": "npx ts-node src/server.ts",
     "test-server": "npx ts-node src/nekostore_test/test_server.ts",
     "test-client": "npx ts-node src/nekostore_test/test_client.ts",

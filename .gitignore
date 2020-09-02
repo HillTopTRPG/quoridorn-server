@@ -1,3 +1,7 @@
 .dist
 .env.local
 .env.*.local
+
+/config/server.yaml
+/config/storage.yaml
+/config/log4js_setting.json
