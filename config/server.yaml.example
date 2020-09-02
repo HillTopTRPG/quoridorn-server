@@ -1,16 +1,22 @@
 # Quoridornアプリケーションサーバ（このサーバ）のポート
 port: 8000
 
-# WebAPIを使うためのパスワード
+# 【注意】
+# この設定値は必ず書き換え、他人に漏らさないこと。
+# 万が一このパスワードが漏れた場合、WebAPIを使って管理者権限でいろいろ操作できてしまいます。
+# 例）部屋のパスワードを無視して部屋を削除など。
+#
+# 【説明】
+# WebAPIで管理者権限を使うためのパスワード
 webApiPassword: copperin2020
 
 # WebAPIのリクエストURLの一部。
 # 前後に / は入れないでください
-webApiPathBase: web-if
+webApiPathBase: web-api
 
 # WebAPTのトークンの有効時間（単位：秒）
-# デフォルトは 30秒（30秒）
-webApiTokenExpires: 30
+# デフォルトは 5分（60*5）
+webApiTokenExpires: 300
 
 # データ保持の手段（memory or mongodb）
 # storeType: memory

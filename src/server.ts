@@ -374,7 +374,7 @@ async function main(): Promise<void> {
           console.log(`Expired: ${d.data!.token}`);
           d.ref.delete().then();
         });
-    }, 1000 * 30);
+    }, 1000 * 60 * 5); // 5分
 
   } catch (err) {
     console.error("MongoDB connect fail.");
