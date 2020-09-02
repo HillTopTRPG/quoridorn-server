@@ -117,6 +117,11 @@ export const accessUrl = storageSetting.accessUrl;
 let _s3Client: Minio.Client | null = null;
 try {
   _s3Client = new Minio.Client(clientOption);
+  _s3Client!.putObject(bucket, "sample-test.txt", "sample-text").then(() => {
+    console.log("S3 Storage update-test success.");
+  }).catch((err) => {
+    console.log(err);
+  });
   console.log(`S3 Storage connect success. (bucket: ${bucket})`);
 } catch (err) {
   console.error("S3 Storage connect failure. ");
