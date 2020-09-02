@@ -77,7 +77,7 @@ export function setWebIfEvent(
   method: "get" | "post" | "delete",
   path: string,
   authenticationType: "none" | "empty" | "server" | "room" | "user",
-  func: (driver: Driver, req: any, res: any) => Promise<void>
+  func: (driver: Driver, req: Request, res: Response) => Promise<void>
 ) {
   // フルパスを生成
   const pathParts: string[] = [];

@@ -24,7 +24,7 @@ const resist: WebIfResister = (webApp: any, driver: Driver): void => {
     method,
     path,
     authenticationType,
-    (req: any, res: any) => infoGet(req, res)
+    (_driver: Driver, req: Request, res: Response) => infoGet(req, res)
   );
 };
 export default resist;
