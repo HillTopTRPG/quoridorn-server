@@ -96,9 +96,12 @@ export function getMessage(): Message {
 }
 
 require('dotenv').config();
-export const version: string = `Quoridorn ${process.env.VERSION}`;
+export const version: string = `Quoridorn ${process.env.npm_package_version}`;
 const hashAlgorithmStr: string = process.env.HASH_ALGORITHM as string;
 if (hashAlgorithmStr !== "argon2" && hashAlgorithmStr !== "bcrypt") {
+  throw new SystemError(`Unsupported hash algorithm. hashAlgorithm: ${hashAlgorithmStr}`);
+}
+if (hashAlgorithmStr === "argon2") {
   throw new SystemError(`Unsupported hash algorithm. hashAlgorithm: ${hashAlgorithmStr}`);
 }
 export const hashAlgorithm: HashAlgorithmType = hashAlgorithmStr;
@@ -291,7 +294,7 @@ async function main(): Promise<void> {
     io.set("heartbeat interval", 5000);
     io.set("heartbeat timeout", 15000);
 
-    console.log(`Quoridorn Server is Ready. (version: ${process.env.VERSION})`);
+    console.log(`Quoridorn Server is Ready. (version: ${process.env.npm_package_version})`);
 
     io.on("connection", async (socket: any) => {
       accessLog(socket.id, "CONNECTED");

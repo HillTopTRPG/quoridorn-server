@@ -1,6 +1,5 @@
 .dist
-.env.local
-.env.*.local
+.env
 /logs
 
 /config/server.yaml
