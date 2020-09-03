@@ -96,13 +96,17 @@ export function getMessage(): Message {
 }
 
 require('dotenv').config();
-export const version: string = `Quoridorn ${process.env.npm_package_version}`;
+if (!process.env.npm_package_version) {
+  throw new SystemError(`The version is not set in package.json.`);
+}
+export const version: string = `Quoridorn ${process.env.npm_package_version.replace("-", "")}`;
 const hashAlgorithmStr: string = process.env.HASH_ALGORITHM as string;
 if (hashAlgorithmStr !== "argon2" && hashAlgorithmStr !== "bcrypt") {
-  throw new SystemError(`Unsupported hash algorithm. hashAlgorithm: ${hashAlgorithmStr}`);
+  throw new SystemError(`Unsupported hash algorithm(${hashAlgorithmStr}). Set .env to the hash algorithm "bcrypt".`);
 }
+// 今はbcryptしか対応してない
 if (hashAlgorithmStr === "argon2") {
-  throw new SystemError(`Unsupported hash algorithm. hashAlgorithm: ${hashAlgorithmStr}`);
+  throw new SystemError(`Unsupported hash algorithm(${hashAlgorithmStr}). Set .env to the hash algorithm "bcrypt".`);
 }
 export const hashAlgorithm: HashAlgorithmType = hashAlgorithmStr;
 
