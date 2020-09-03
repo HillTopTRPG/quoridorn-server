@@ -31,8 +31,8 @@ Application server of the Quoridorn.
    1. `cd quoridorn-server` 生成された「quoridorn-server」ディレクトリに移動
    1. `npm install` ライブラリをインストール
    1. （はじめての設置の際に）`.env.example`ファイルを同じ場所に`.env`というファイル名で複製 (Ver.1.0.0a50～)
-   1. （はじめての設置の際に）`config`フォルダの中のファイル名の末尾が`.example`となっている3つのファイルを上記の`.env.example`と同じように、末尾の`.example`を除いたファイル名で複製  (Ver.1.0.0a50～)
-   1. （はじめての設置の際に）`message`フォルダの中のファイル名の末尾が`.example`となっている2つのファイルについても同様に、末尾の`.example`を除いたファイル名で複製  (Ver.1.0.0a50～)
+   1. （はじめての設置の際に）`config`フォルダの中のファイル名の末尾が`.example`となっている3つのファイルも上記と同様に、元のファイルと同じ場所に末尾の`.example`を除いたファイル名で複製  (Ver.1.0.0a50～)
+   1. （はじめての設置の際に）`message`フォルダの中のファイル名の末尾が`.example`となっている2つのファイルも上記と同様に、元のファイルと同じ場所に末尾の`.example`を除いたファイル名で複製  (Ver.1.0.0a50～)
    1. `npm run build` TypeScriptをビルドすることで「dist」フォルダにJavaScriptファイルが生成される
 
 1. MongoDBを起動 ※ MongoDBの構築は詳しくは解説しません。（できません）
