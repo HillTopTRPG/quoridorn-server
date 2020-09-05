@@ -51,7 +51,9 @@ export async function addResourceMasterRelation(
     // アクター一覧を取得
     const sceneObjectCCName = `${roomCollectionPrefix}-DATA-scene-object-list`;
     const sceneObjectCC = driver.collection<StoreObj<any>>(sceneObjectCCName);
-    const idList = (await sceneObjectCC.get()).docs.map(doc => doc.ref.id);
+    const idList = (await sceneObjectCC.get()).docs
+      .filter(doc => doc.data!.data!.type === "character")
+      .map(doc => doc.ref.id);
     await addResources(idList, "scene-object");
   }
 
