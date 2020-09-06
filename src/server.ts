@@ -126,6 +126,7 @@ try {
   _s3Client = new Minio.Client(clientOption);
   _s3Client!.putObject(bucket, "sample-test.txt", "sample-text").then(() => {
     console.log("S3 Storage upload-test success.");
+    console.log(`S3 Storage connect success. (bucket: ${bucket})`);
   }).catch((err) => {
     console.error("S3 Storage upload-test failure.");
     console.error("Please review your settings. (src: config/storage.yaml)");
@@ -133,7 +134,7 @@ try {
     console.error(err);
     return;
   });
-  console.log(`S3 Storage connect success. (bucket: ${bucket})`);
+
 } catch (err) {
   console.error("S3 Storage connect failure. ");
   console.error("Please review your settings. (src: config/storage.yaml)");

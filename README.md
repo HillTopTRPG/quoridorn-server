@@ -30,8 +30,9 @@ Application server of the Quoridorn.
    1. `git clone https://github.com/HillTopTRPG/quoridorn-server.git` GitHubからソースをダウンロード
    1. `cd quoridorn-server` 生成された「quoridorn-server」ディレクトリに移動
    1. `npm install` ライブラリをインストール
-   1. （はじめての設置の際に）`.env.local.example`ファイルを同じ場所に`.env.local`というファイル名で複製 (Ver.1.0.a50～)
-   1. （はじめての設置の際に）`config`フォルダの中のファイル名の末尾が`.example`となっている3つのファイルを上記の`.env.local`と同じように、末尾の`.example`を除いたファイル名で複製  (Ver.1.0.a50～)
+   1. （はじめての設置の際に）`.env.example`ファイルを同じ場所に`.env`というファイル名で複製 (Ver.1.0.0a50～)
+   1. （はじめての設置の際に）`config`フォルダの中のファイル名の末尾が`.example`となっている3つのファイルも上記と同様に、元のファイルと同じ場所に末尾の`.example`を除いたファイル名で複製  (Ver.1.0.0a50～)
+   1. （はじめての設置の際に）`message`フォルダの中のファイル名の末尾が`.example`となっている2つのファイルも上記と同様に、元のファイルと同じ場所に末尾の`.example`を除いたファイル名で複製  (Ver.1.0.0a50～)
    1. `npm run build` TypeScriptをビルドすることで「dist」フォルダにJavaScriptファイルが生成される
 
 1. MongoDBを起動 ※ MongoDBの構築は詳しくは解説しません。（できません）
@@ -53,11 +54,11 @@ Application server of the Quoridorn.
    1. 「quoridorn-server/message/message.yaml」を編集する（テキストエディタで編集可能）<br>
       クライアントに表示されるサーバ情報の設定ファイル
       バージョンアップに伴って項目が増える可能性もあるので、バージョンアップの際は注意してください。
-   1. 「termsOfUse.txt」を編集する（テキストエディタで編集可能）<br>
+   1. 「quoridorn-server/message/termsOfUse.txt」を編集する（テキストエディタで編集可能）<br>
       サーバ側の利用規約の文章をここに書いてください
 
 1. Quoridornサーバを起動
    1. `npm run node-server` Node.jsサーバを起動
    1. 「***Quoridorn Server is Ready.***」と表示されたら構築完了🐧🎊
-   1. (追記:Ver.1.0.a49) 起動時にs3サーバーへの疎通を確認するようになりました。<br>
+   1. (追記:Ver.1.0.0a49) 起動時にs3サーバーへの疎通を確認するようになりました。<br>
       起動後に「S3 Storage upload-test success.」と表示されたらs3サーバーの構築確認ができます。
