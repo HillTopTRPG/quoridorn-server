@@ -79,6 +79,12 @@ export const PERMISSION_DEFAULT: Permission = {
   chmod: { type: "none", list: [] }
 };
 
+export const PERMISSION_OWNER: Permission = {
+  view: { type: "allow", list: [{ type: "owner" }] },
+  edit: { type: "allow", list: [{ type: "owner" }] },
+  chmod: { type: "allow", list: [{ type: "owner" }] }
+};
+
 export type Resister = (d: Driver, socket: any, io: any, db?: Db) => void;
 export type WebIfResister = (webApp: any, d: Driver, db: any) => void;
 export const serverSetting: ServerSetting = YAML.parse(fs.readFileSync(path.resolve(__dirname, "../config/server.yaml"), "utf8"));

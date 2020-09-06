@@ -1,7 +1,7 @@
 import Driver from "nekostore/lib/Driver";
 import {UserLoginResponse, UserType} from "../@types/socket";
 import {hash} from "./password";
-import {hashAlgorithm} from "../server";
+import {hashAlgorithm, PERMISSION_OWNER} from "../server";
 import {getSocketDocSnap} from "./collection";
 import {addActorGroup} from "./data-actor-group";
 import {addActorRelation} from "./data-actor";
@@ -100,9 +100,10 @@ export async function addUserRelation(
   await addDirect(driver, socket, {
     collection: `${roomCollectionPrefix}-DATA-chat-palette-list`,
     dataList: chatPaletteList,
-    optionList: chatPaletteList.map(_ => ({
+    optionList: chatPaletteList.map(() => ({
       ownerType: "user",
-      owner: userId
+      owner: userId,
+      permission: PERMISSION_OWNER
     }))
   }, false);
 
