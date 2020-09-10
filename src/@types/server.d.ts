@@ -6,6 +6,7 @@ export type ServerSetting = {
   storeType: "memory" | "mongodb";
   secretCollectionSuffix: string;
   mongodbConnectionStrings: string;
+  roomCreatePassword: string;
   roomNum: number;
   roomAutoRemove: number;
 };

@@ -108,7 +108,8 @@ async function getRoomList(driver: Driver, socket: any, arg: RequestType): Promi
     }
     return {
       roomList,
-      message: getMessage()
+      message: getMessage(),
+      isNeedRoomCreatePassword: !!serverSetting.roomCreatePassword
     };
   } catch (err) {
     throw err;

@@ -51,7 +51,9 @@ export type TouchRoomRequest = {
 };
 export type ReleaseTouchRoomRequest = TouchRoomRequest
 
-export type CreateRoomRequest = RoomLoginInfo & BaseRoomInfo;
+export type CreateRoomRequest = RoomLoginInfo & BaseRoomInfo & {
+  roomCreatePassword?: string;
+};
 export type DeleteRoomRequest = RoomLoginInfo;
 
 export type ClientRoomInfo = BaseRoomInfo & {
@@ -66,6 +68,7 @@ export type Message = {
 export type GetRoomListResponse = {
   roomList: (StoreObj<ClientRoomInfo> & StoreMetaData)[] | null,
   message: Message;
+  isNeedRoomCreatePassword: boolean;
 };
 
 export type RoomViewResponse = {

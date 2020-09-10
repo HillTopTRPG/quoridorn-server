@@ -1,6 +1,7 @@
-.dist
-.env
+/dist
 /logs
+
+.env
 
 /config/server.yaml
 /config/storage.yaml

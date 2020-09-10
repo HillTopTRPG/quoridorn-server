@@ -1,6 +1,6 @@
 import {StoreObj} from "../@types/store";
 import {CreateRoomRequest} from "../@types/socket";
-import {PERMISSION_DEFAULT, hashAlgorithm, Resister} from "../server";
+import {PERMISSION_DEFAULT, hashAlgorithm, Resister, serverSetting} from "../server";
 import {hash} from "../utility/password";
 import uuid from "uuid";
 import Driver from "nekostore/lib/Driver";
@@ -43,10 +43,28 @@ async function createRoom(driver: Driver, exclusionOwner: string, arg: RequestTy
   // Already check.
   if (docSnap.data.data) throw new ApplicationError(`Already created room.`, arg);
 
+  const roomCreatePassword = serverSetting.roomCreatePassword || "";
+  if (
+    !roomCreatePassword && arg.roomCreatePassword !== undefined ||
+    roomCreatePassword && roomCreatePassword !== arg.roomCreatePassword
+  ) {
+    try {
+      await docSnap.ref.delete();
+    } catch (e) {
+      // Nothing.
+    }
+    throw new ApplicationError(`The password to create the room seems to be wrong.`, arg);
+  }
+
   // リクエスト情報の加工
   try {
     arg.roomPassword = await hash(arg.roomPassword, hashAlgorithm);
   } catch (err) {
+    try {
+      await docSnap.ref.delete();
+    } catch (e) {
+      // Nothing.
+    }
     throw new ApplicationError(`Failure hash.`, { hashAlgorithm });
   }
   delete arg.roomNo;
@@ -71,6 +89,11 @@ async function createRoom(driver: Driver, exclusionOwner: string, arg: RequestTy
   try {
     await docSnap.ref.update(updateRoomInfo);
   } catch (err) {
+    try {
+      await docSnap.ref.delete();
+    } catch (e) {
+      // Nothing.
+    }
     throw new ApplicationError(`Failure update roomInfo doc.`, updateRoomInfo);
   }
 
@@ -79,6 +102,11 @@ async function createRoom(driver: Driver, exclusionOwner: string, arg: RequestTy
   try {
     await socketDocSnap.ref.update(updateSocketInfo);
   } catch (err) {
+    try {
+      await docSnap.ref.delete();
+    } catch (e) {
+      // Nothing.
+    }
     throw new ApplicationError(`Failure update socketInfo doc.`, updateSocketInfo);
   }
 
@@ -104,11 +132,21 @@ async function createRoom(driver: Driver, exclusionOwner: string, arg: RequestTy
       }
     });
   };
-  await addGroup("All", 0);
-  await addGroup("Users", 1);
-  await addGroup("GameMasters", 2);
-  await addGroup("Players", 3);
-  await addGroup("Visitors", 4);
+
+  try {
+    await addGroup("All", 0);
+    await addGroup("Users", 1);
+    await addGroup("GameMasters", 2);
+    await addGroup("Players", 3);
+    await addGroup("Visitors", 4);
+  } catch (err) {
+    try {
+      await docSnap.ref.delete();
+    } catch (e) {
+      // Nothing.
+    }
+    throw err;
+  }
 
   await resistCollectionName(driver, actorGroupCCName);
 
