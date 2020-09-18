@@ -111,6 +111,26 @@ export async function deleteSceneObjectRelation(
   const sceneObject = docSnap.data!;
   const roomCollectionPrefix = collectionName.replace(/-DATA-.+$/, "");
 
+  switch (sceneObject.data!.type) {
+    case "character": // non-break
+    case "map-mask": // non-break
+    case "chit": // non-break
+    case "map-marker":
+      // memoが削除できる状態かをチェック
+      const memoCCName = `${roomCollectionPrefix}-DATA-memo-list`;
+      const memoDocChangeList = await multipleTouchCheck(driver, memoCCName, "owner", id);
+
+      // memoの削除
+      if (memoDocChangeList.length) {
+        await deleteDataPackage(driver, socket, {
+          collection: memoCCName,
+          idList: memoDocChangeList.map(mdc => mdc.ref.id)
+        }, false);
+      }
+      break;
+    default:
+  }
+
   if (sceneObject.data!.type === "character") {
     // リソースが削除できる状態かをチェック
     const resourceCCName = `${roomCollectionPrefix}-DATA-resource-list`;
@@ -126,16 +146,20 @@ export async function deleteSceneObjectRelation(
     const actorDocSnap = await touchCheck(driver, actorListCollectionName, actorId);
 
     // リソースの削除
-    await deleteDataPackage(driver, socket, {
-      collection: resourceCCName,
-      idList: resourceDocChangeList.map(rdc => rdc.ref.id)
-    }, false);
+    if (resourceDocChangeList.length) {
+      await deleteDataPackage(driver, socket, {
+        collection: resourceCCName,
+        idList: resourceDocChangeList.map(rdc => rdc.ref.id)
+      }, false);
+    }
 
     // SceneAndObjectの削除
-    await deleteDataPackage(driver, socket, {
-      collection: sceneAndObjectCCName,
-      idList: sceneAndObjectDocChangeList.map(rdc => rdc.ref.id)
-    }, false);
+    if (sceneAndObjectDocChangeList.length) {
+      await deleteDataPackage(driver, socket, {
+        collection: sceneAndObjectCCName,
+        idList: sceneAndObjectDocChangeList.map(rdc => rdc.ref.id)
+      }, false);
+    }
 
     // アクターの更新／削除
     const pieceIdList: string[] = actorDocSnap.data!.data.pieceIdList;

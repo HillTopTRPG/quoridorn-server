@@ -153,36 +153,36 @@ export async function updateResourceMasterRelation(
     const actorCCName = `${roomCollectionPrefix}-DATA-actor-list`;
     const actorCC = driver.collection<StoreObj<ActorStore>>(actorCCName);
     (await actorCC.get()).docs
-    .filter(actorDoc =>
-      !resourceDocs.filter(
-        rDoc => rDoc.data!.ownerType === "actor" && rDoc.data!.owner === actorDoc.ref.id
-      )[0]
-    )
-    .forEach(actorDoc => {
-      optionList.push({
-        ownerType: "actor",
-        owner: actorDoc.ref.id,
-        order: -1
+      .filter(actorDoc =>
+        !resourceDocs.find(
+          rDoc => rDoc.data!.ownerType === "actor" && rDoc.data!.owner === actorDoc.ref.id
+        )
+      )
+      .forEach(actorDoc => {
+        optionList.push({
+          ownerType: "actor",
+          owner: actorDoc.ref.id,
+          order: -1
+        });
       });
-    });
   }
 
   if (isAutoAddMapObject) {
     const sceneObjectCCName = `${roomCollectionPrefix}-DATA-scene-object-list`;
     const sceneObjectCC = driver.collection<StoreObj<any>>(sceneObjectCCName);
     (await sceneObjectCC.get()).docs
-    .filter(sceneObjectDoc =>
-      !resourceDocs.filter(
-        rDoc => rDoc.data!.ownerType === "scene-object" && rDoc.data!.owner === sceneObjectDoc.ref.id
-      )[0]
-    )
-    .forEach(sceneObjectDoc => {
-      optionList.push({
-        ownerType: "scene-object",
-        owner: sceneObjectDoc.ref.id,
-        order: -1
+      .filter(sceneObjectDoc =>
+        !resourceDocs.find(
+          rDoc => rDoc.data!.ownerType === "scene-object" && rDoc.data!.owner === sceneObjectDoc.ref.id
+        )
+      )
+      .forEach(sceneObjectDoc => {
+        optionList.push({
+          ownerType: "scene-object",
+          owner: sceneObjectDoc.ref.id,
+          order: -1
+        });
       });
-    });
   }
 
   const initiativeColumnCCName = `${roomCollectionPrefix}-DATA-initiative-column-list`;
