@@ -93,6 +93,7 @@ async function getRoomList(driver: Driver, socket: any, arg: RequestType): Promi
       for (let i = 0; i < serverSetting.roomNum; i++) {
         if (roomList[i] && roomList[i].order === i) continue;
         roomList.splice(i, 0, {
+          collection: "rooms",
           ownerType: null,
           owner: null,
           order: i,

@@ -56,11 +56,14 @@ async function singleTouchData(
   const { c, maxOrder } = await getMaxOrder<any>(driver, collection);
   const order = maxOrder + 1;
 
+  const collectionSuffixName = collection.replace(/^.+-DATA-/, "");
+
   const ownerType = option ? option.ownerType || null : "user";
   const owner = await getOwner(driver, exclusionOwner, option ? option.owner : undefined);
   const permission = option && option.permission || PERMISSION_DEFAULT;
 
   const addInfo: StoreObj<any> = {
+    collection: collectionSuffixName,
     ownerType,
     owner,
     order,

@@ -1,6 +1,7 @@
 import CollectionReference from "nekostore/src/CollectionReference";
 
 export type StoreObj<T> = {
+  collection: string;
   ownerType: string | null;
   owner: string | null;
   order: number;

@@ -1,6 +1,6 @@
 {
   "name": "quoridorn-server",
-  "version": "1.0.0a52",
+  "version": "1.0.0a53",
   "description": "Application server of the Quoridorn.",
   "main": "index.js",
   "scripts": {

@@ -31,6 +31,7 @@ async function touchRoom(driver: Driver, exclusionOwner: string, arg: RequestTyp
 
   let docRef;
   const addInfo: StoreObj<RoomStore> = {
+    collection: "rooms",
     ownerType: null,
     owner: null,
     order: arg.roomNo,

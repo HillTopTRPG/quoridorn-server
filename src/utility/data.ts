@@ -48,6 +48,7 @@ export async function addSimple<T>(
   const { c, maxOrder } = await getMaxOrder<T>(driver, collectionName);
   const exclusionOwner = socket.id;
 
+  const collectionSuffixName = collectionName.replace(/^.+-DATA-/, "");
   const ownerType = option && option.ownerType !== undefined ? option.ownerType : "user";
   const owner = await getOwner(driver, exclusionOwner, option ? option.owner : undefined);
   const order = option && option.order !== undefined ? option.order : maxOrder + 1;
@@ -55,6 +56,7 @@ export async function addSimple<T>(
   const permission = option && option.permission || PERMISSION_DEFAULT;
 
   const addInfo: StoreObj<T> = {
+    collection: collectionSuffixName,
     ownerType,
     owner,
     order,
