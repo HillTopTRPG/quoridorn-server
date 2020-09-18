@@ -79,7 +79,14 @@ async function addRoomPresetData(driver: Driver, socket: any, arg: RequestType):
     });
   });
 
-  const total = diceTypeList.length + pipsNum + arg.cutInDataList.length + sceneLayerList.length + resourceMasterList.length + 4;
+  const total =
+    diceTypeList.length +
+    pipsNum +
+    arg.cutInDataList.length +
+    sceneLayerList.length +
+    resourceMasterList.length +
+    arg.likeList.length +
+    4;
   let current = 0;
 
   /* --------------------------------------------------
@@ -222,6 +229,16 @@ async function addRoomPresetData(driver: Driver, socket: any, arg: RequestType):
     collection: `${roomCollectionPrefix}-DATA-resource-master-list`,
     dataList: resourceMasterList,
     optionList: resourceMasterList.map(() => ({ owner: null, ownerType: null }))
+  }, true, current, total);
+  current += resourceMasterList.length;
+
+  /* --------------------------------------------------
+   * いいねのプリセットデータ投入
+   */
+  await addDirect(driver, socket, {
+    collection: `${roomCollectionPrefix}-DATA-like-list`,
+    dataList: arg.likeList,
+    optionList: arg.likeList.map(() => ({ owner: null, ownerType: null }))
   }, true, current, total);
 }
 

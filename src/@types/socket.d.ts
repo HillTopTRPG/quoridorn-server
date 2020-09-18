@@ -165,12 +165,19 @@ type DiceInfo = {
 };
 type DiceMaterial = { [P: string]: DiceInfo[] };
 
+type LikeStore = {
+  char: string;
+  isThrowLinkage: boolean;
+  linkageResourceId: string | null;
+};
+
 type AddRoomPresetDataRequest = {
-  diceMaterial: DiceMaterial,
-  cutInDataList: CutInDeclareInfo[];
-  sceneData: Scene;
-  roomExtendInfo: RoomInfoExtend;
   roomName: string;
+  roomExtendInfo: RoomInfoExtend;
+  sceneData: Scene;
+  cutInDataList: CutInDeclareInfo[];
+  diceMaterial: DiceMaterial,
+  likeList: LikeStore[],
   language: {
     mainChatTabName: string;
     allGroupChatTabName: string;
