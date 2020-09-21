@@ -9,6 +9,7 @@ import {notifyProgress} from "../utility/emit";
 import {deleteSceneObjectRelation} from "../utility/data-scene-object";
 import {deleteSceneLayerRelation} from "../utility/data-scene-layer";
 import {deleteSceneRelation} from "../utility/data-scene";
+import {deleteActorRelation} from "../utility/data-actor";
 
 // インタフェース
 const eventName = "delete-data";
@@ -64,6 +65,7 @@ export async function deleteSingleData(
       id: string
     ) => Promise<void>
   } = {
+    "actor-list": deleteActorRelation,
     "resource-master-list": deleteResourceMasterRelation,
     "scene-object-list": deleteSceneObjectRelation,
     "scene-layer-list": deleteSceneLayerRelation,

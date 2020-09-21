@@ -15,10 +15,11 @@ export async function addSceneObjectRelation(
   socket: any,
   collectionName: string,
   sceneObject: SceneObject,
-  option?: Partial<StoreObj<SceneObject>>
+  option?: Partial<StoreObj<SceneObject>>,
+  id?: string
 ): Promise<DocumentReference<StoreObj<SceneObject>>> {
   const roomCollectionPrefix = collectionName.replace(/-DATA-.+$/, "");
-  const docRef = await addSimple(driver, socket, collectionName, sceneObject, option);
+  const docRef = await addSimple(driver, socket, collectionName, sceneObject, option, id);
   const sceneObjectId = docRef.id;
 
   // シーンオブジェクトの追加

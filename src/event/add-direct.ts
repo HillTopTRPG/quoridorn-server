@@ -25,7 +25,8 @@ export function getAddRelationCollectionMap(): {
     socket: any,
     roomCollectionPrefix: string,
     actorInfoPartial: any,
-    option?: Partial<StoreObj<any>>
+    option?: Partial<StoreObj<any>>,
+    id?: string
   ) => Promise<DocumentReference<StoreObj<any>>>
 } {
   return {
@@ -73,7 +74,8 @@ export async function addDirect(
       socket,
       arg.collection,
       data,
-      arg.optionList ? arg.optionList[idx] : undefined
+      arg.optionList ? arg.optionList[idx] : undefined,
+      arg.idList ? arg.idList[idx] : undefined
     )).id);
   };
 

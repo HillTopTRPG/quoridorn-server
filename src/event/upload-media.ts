@@ -30,15 +30,16 @@ async function uploadMedia(driver: Driver, socket: any, arg: RequestType): Promi
   const total = uploadMediaInfoList.length * 2;
 
   const mediaList: MediaInfo[] = [];
-  const oldUrlList: string[] = arg.uploadMediaInfoList.map(umi => umi.url);
+  const rawPathList: string[] = arg.uploadMediaInfoList.map(umi => umi.rawPath);
 
   const uploadFunc = async (info: UploadMediaInfo, idx: number): Promise<void> => {
     // 進捗報告
     notifyProgress(socket, total, idx);
+    const mediaFileId = uuid.v4();
 
     // アップロード
     if (info.dataLocation === "server") {
-      const filePath = path.join(storageId, uuid.v4());
+      const filePath = path.join(storageId, mediaFileId);
       await s3Client!.putObject(bucket, filePath, info.arrayBuffer);
 
       // XXX 以下の方法だと、「https://~~」が「http:/~~」になってしまうことが判明したので、単純連結に変更
@@ -48,6 +49,8 @@ async function uploadMedia(driver: Driver, socket: any, arg: RequestType): Promi
 
     mediaList.push({
       name: info.name,
+      rawPath: info.rawPath,
+      mediaFileId,
       tag: info.tag,
       url: info.url,
       urlType: info.urlType,
@@ -75,7 +78,7 @@ async function uploadMedia(driver: Driver, socket: any, arg: RequestType): Promi
 
   return idList.map((id: string, idx: number) => ({
     docId: id,
-    oldUrl: oldUrlList[idx],
+    rawPath: rawPathList[idx],
     url: mediaList[idx].url,
     name: mediaList[idx].name,
     tag: mediaList[idx].tag,

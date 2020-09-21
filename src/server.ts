@@ -17,12 +17,10 @@ import resistTouchRoomModifyEvent from "./event/touch-room-modify";
 import resistReleaseTouchRoomEvent from "./event/release-touch-room";
 import resistCreateRoomEvent from "./event/create-room";
 import resistDeleteRoomEvent from "./event/delete-room";
-import resistTouchDataEvent from "./event/touch-data";
 import resistTouchDataModifyEvent from "./event/touch-data-modify";
 import resistReleaseTouchDataEvent from "./event/release-touch-data";
 import resistUpdateDataEvent from "./event/update-data";
 import resistUpdateDataPackageEvent from "./event/update-data-package";
-import resistCreateDataEvent from "./event/create-data";
 import resistDeleteDataEvent from "./event/delete-data";
 import resistSendDataEvent from "./event/send-data";
 import resistAddDirectEvent from "./event/add-direct";
@@ -30,6 +28,7 @@ import resistUploadMediaEvent from "./event/upload-media";
 import resistDeleteFileEvent from "./event/delete-file";
 import resistAddRoomPresetDataEvent from "./event/add-room-preset-data";
 import resistDeleteDataPackageEvent from "./event/delete-data-package";
+import resistImportDataEvent from "./event/import-data";
 import resistGetApi from "./rest-api/v1/get";
 import resistRoomChatPostApi from "./rest-api/v1/room-chat-post";
 import resistRoomDeleteApi from "./rest-api/v1/room-delete";
@@ -352,14 +351,10 @@ async function main(): Promise<void> {
         resistCreateRoomEvent,
         // 部屋削除リクエスト
         resistDeleteRoomEvent,
-        // データ（作成）着手リクエスト
-        resistTouchDataEvent,
         // データ（編集・削除）着手リクエスト
         resistTouchDataModifyEvent,
         // データ（作成・削除・編集）キャンセル処理
         resistReleaseTouchDataEvent,
-        // データ作成リクエスト
-        resistCreateDataEvent,
         // データ更新リクエスト
         resistUpdateDataEvent,
         // データ更新リクエスト
@@ -377,7 +372,9 @@ async function main(): Promise<void> {
         // 部屋プリセットデータ登録
         resistAddRoomPresetDataEvent,
         // データ削除リクエスト
-        resistDeleteDataPackageEvent
+        resistDeleteDataPackageEvent,
+        // データインポート
+        resistImportDataEvent
       ].forEach((r: Resister) => r(driver, socket, io, db));
     });
 

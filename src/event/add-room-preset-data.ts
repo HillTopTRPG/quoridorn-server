@@ -39,9 +39,11 @@ async function addRoomPresetData(driver: Driver, socket: any, arg: RequestType):
       systemColumnType: "name",
       isAutoAddActor: false,
       isAutoAddMapObject: true,
-      iconImageId: null,
-      iconImageTag: null,
-      iconImageDirection: null,
+      icon: {
+        mediaTag: null,
+        mediaId: null,
+        imageDirection: null
+      },
       refProperty: "name",
       min: null,
       max: null,
@@ -55,9 +57,11 @@ async function addRoomPresetData(driver: Driver, socket: any, arg: RequestType):
       systemColumnType: "initiative",
       isAutoAddActor: false,
       isAutoAddMapObject: true,
-      iconImageId: null,
-      iconImageTag: null,
-      iconImageDirection: null,
+      icon: {
+        mediaTag: null,
+        mediaId: null,
+        imageDirection: null
+      },
       refProperty: null,
       min: -999,
       max: 1000,

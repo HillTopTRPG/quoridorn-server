@@ -19,3 +19,20 @@ export async function addActorGroup(
 
   await groupDoc.ref.update({ data });
 }
+
+export async function deleteActorGroup(
+  driver: Driver,
+  roomCollectionPrefix: string,
+  groupName: string,
+  id: string
+): Promise<void> {
+  const actorGroupCollectionName = `${roomCollectionPrefix}-DATA-actor-group-list`;
+  const actorGroupCollection = driver.collection<StoreObj<ActorGroup>>(actorGroupCollectionName);
+
+  const groupDoc = (await actorGroupCollection.where("data.name", "==", groupName).get()).docs[0];
+  const data: ActorGroup = groupDoc.data!.data!;
+  const idx = data.list.findIndex(l => l.id === id);
+  data.list.splice(idx, 1);
+
+  await groupDoc.ref.update({ data });
+}

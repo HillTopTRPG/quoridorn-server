@@ -4,15 +4,17 @@ import {addDirect} from "../event/add-direct";
 import {StoreObj} from "../@types/store";
 import {getOwner, resistCollectionName} from "./collection";
 import DocumentReference from "nekostore/src/DocumentReference";
-import {addSimple} from "./data";
-import {addActorGroup} from "./data-actor-group";
+import {addSimple, deleteSimple} from "./data";
+import {addActorGroup, deleteActorGroup} from "./data-actor-group";
+import {procAsyncSplit} from "./async";
 
 export async function addActorRelation(
   driver: Driver,
   socket: any,
   collectionName: string,
   actorInfoPartial: Partial<ActorStore>,
-  option?: Partial<StoreObj<ActorStore>>
+  option?: Partial<StoreObj<ActorStore>>,
+  id?: string
 ): Promise<DocumentReference<StoreObj<any>>> {
   const roomCollectionPrefix = collectionName.replace(/-DATA-.+$/, "");
   const actorInfo: ActorStore = {
@@ -26,7 +28,7 @@ export async function addActorRelation(
     statusId: ""
   };
 
-  const docRef = await addSimple(driver, socket, collectionName, actorInfo, option);
+  const docRef = await addSimple(driver, socket, collectionName, actorInfo, option, id);
   const actorId = docRef.id;
 
   // アクターグループ「All」に追加
@@ -38,7 +40,7 @@ export async function addActorRelation(
   actorInfoPartial.statusId = (await addSimple<ActorStatusStore>(
     driver,
     socket,
-    `${roomCollectionPrefix}-DATA-status-list`,
+    statusCollectionName,
     { name: "◆", isSystem: true, standImageInfoId: null, chatPaletteInfoId: null },
     { ownerType: "actor", owner: actorId }
   )).id;
@@ -83,4 +85,36 @@ export async function addActorRelation(
   }, false);
 
   return docRef;
+}
+
+export async function deleteActorRelation(
+  driver: Driver,
+  socket: any,
+  collectionName: string,
+  id: string
+): Promise<void> {
+  const roomCollectionPrefix = collectionName.replace(/-DATA-.+$/, "");
+
+  // アクターグループ「All」から削除
+  await deleteActorGroup(driver, roomCollectionPrefix, "All", id);
+
+  // ステータスを強制的に削除
+  const statusCollectionName = `${roomCollectionPrefix}-DATA-status-list`;
+  const statusColumnCC = driver.collection<ActorStatusStore>(statusCollectionName);
+  await procAsyncSplit(
+    (await statusColumnCC.where("owner", "==", id).get())
+    .docs
+    .map(doc => doc.ref.delete())
+  );
+
+  // リソースを強制的に削除
+  const resourceCC = driver.collection<any>(`${roomCollectionPrefix}-DATA-resource-list`);
+  await procAsyncSplit(
+    (await resourceCC.where("owner", "==", id).get())
+    .docs
+    .map(doc => doc.ref.delete())
+  );
+
+  // 最後に本体を削除
+  await deleteSimple(driver, socket, collectionName, id);
 }

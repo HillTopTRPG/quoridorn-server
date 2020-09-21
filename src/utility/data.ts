@@ -43,7 +43,8 @@ export async function addSimple<T>(
   socket: any,
   collectionName: string,
   data: T,
-  option?: Partial<StoreObj<T>>
+  option?: Partial<StoreObj<T>>,
+  id?: string
 ): Promise<DocumentReference<StoreObj<T>>> {
   const { c, maxOrder } = await getMaxOrder<T>(driver, collectionName);
   const exclusionOwner = socket.id;
@@ -69,10 +70,20 @@ export async function addSimple<T>(
     data
   };
 
-  try {
-    return await c.add(addInfo);
-  } catch (err) {
-    throw new ApplicationError(`Failure add doc.`, addInfo);
+  if (id) {
+    try {
+      const docRef = c.doc(id);
+      await docRef.set(addInfo);
+      return docRef;
+    } catch (err) {
+      throw new ApplicationError(`Failure add doc.`, addInfo);
+    }
+  } else {
+    try {
+      return await c.add(addInfo);
+    } catch (err) {
+      throw new ApplicationError(`Failure add doc.`, addInfo);
+    }
   }
 }
 

@@ -43,10 +43,11 @@ export async function addUserRelation(
   socket: any,
   collectionName: string,
   user: UserStore,
-  option?: Partial<StoreObj<UserStore>>
+  option?: Partial<StoreObj<UserStore>>,
+  id?: string
 ): Promise<DocumentReference<StoreObj<UserStore>>> {
   const roomCollectionPrefix = collectionName.replace(/-DATA-.+$/, "");
-  const docRef = await addSimple(driver, socket, collectionName, user, option);
+  const docRef = await addSimple(driver, socket, collectionName, user, option, id);
   const userId = docRef.id;
 
   const socketDocSnap = (await getSocketDocSnap(driver, socket.id));

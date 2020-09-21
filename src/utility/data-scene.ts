@@ -10,10 +10,11 @@ export async function addSceneRelation(
   socket: any,
   collectionName: string,
   scene: any,
-  option?: Partial<StoreObj<any>>
+  option?: Partial<StoreObj<any>>,
+  id?: string
 ): Promise<DocumentReference<StoreObj<any>>> {
   const roomCollectionPrefix = collectionName.replace(/-DATA-.+$/, "");
-  const docRef = await addSimple(driver, socket, collectionName, scene, option);
+  const docRef = await addSimple(driver, socket, collectionName, scene, option, id);
   const sceneId = docRef.id;
 
   // シーンレイヤーの追加

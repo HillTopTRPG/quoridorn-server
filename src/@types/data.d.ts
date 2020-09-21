@@ -113,9 +113,11 @@ type ResourceMasterStore = {
   systemColumnType: "name" | "initiative" | null; // システム列の種類
   isAutoAddActor: boolean; // アクターに自動付与するかどうか
   isAutoAddMapObject: boolean; // コマに自動付与するかどうか
-  iconImageId: string | null; // アイコンを設定するならその画像のID
-  iconImageTag: string | null; // アイコンを設定するならその画像のタグ
-  iconImageDirection: Direction | null; // アイコンを設定するならその画像の表示方法
+  icon: {
+    mediaId: string | null; // アイコンを設定するならその画像のID
+    mediaTag: string | null; // アイコンを設定するならその画像のタグ
+    imageDirection: Direction | null; // アイコンを設定するならその画像の表示方法
+  };
   refProperty: RefProperty | null; // 参照先プロパティ
   min: number | null; // 数値の場合、その最小値
   max: number | null; // 数値の場合、その最大値
@@ -148,6 +150,8 @@ export type UrlType =
 
 type MediaInfo = {
   name: string;
+  rawPath: string;
+  mediaFileId: string;
   tag: string;
   url: string;
   urlType: UrlType;
@@ -205,8 +209,8 @@ type BackgroundSize =
  */
 type TextureImage = {
   type: "image";
-  imageTag: string;
-  imageId: string;
+  mediaTag: string;
+  mediaId: string;
   direction: Direction;
   backgroundSize: BackgroundSize;
 };

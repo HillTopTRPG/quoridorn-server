@@ -107,9 +107,7 @@ export type AddDirectRequest = {
   collection: string;
   dataList: any[];
   optionList?: Partial<StoreObj<unknown>>[];
-};
-export type CreateDataRequest = TouchModifyDataRequest & {
-  dataList: any[];
+  idList?: string[];
 };
 export type DeleteDataRequest = TouchModifyDataRequest;
 export type UpdateDataRequest = TouchModifyDataRequest & {
@@ -120,19 +118,6 @@ export type UpdateDataRequest = TouchModifyDataRequest & {
 export type SendDataRequest = {
   targetList: string[],
   data: any;
-};
-
-export type UploadFileInfo = {
-  srcType: "string" | "file";
-  tag: string;
-  type: string;
-  name: string;
-  src: string;
-};
-
-export type UploadFileRequest = {
-  fileInfoList: UploadFileInfo[];
-  option: Partial<StoreObj<any>>;
 };
 
 export type UploadMediaInfo = MediaInfo & (
@@ -151,7 +136,7 @@ export type UploadMediaRequest = {
 
 export type UploadMediaResponse = {
   docId: string;
-  oldUrl: string;
+  rawPath: string;
   url: string;
   name: string;
   tag: string;

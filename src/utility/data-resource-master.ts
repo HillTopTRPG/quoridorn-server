@@ -13,11 +13,12 @@ export async function addResourceMasterRelation(
   socket: any,
   collectionName: string,
   resourceMaster: ResourceMasterStore,
-  option?: Partial<StoreObj<ResourceMasterStore>>
+  option?: Partial<StoreObj<ResourceMasterStore>>,
+  id?: string
 ): Promise<DocumentReference<StoreObj<any>>> {
   const roomCollectionPrefix = collectionName.replace(/-DATA-.+$/, "");
   // まずはリソース定義を追加
-  const docRef = await addSimple(driver, socket, collectionName, resourceMaster, option);
+  const docRef = await addSimple(driver, socket, collectionName, resourceMaster, option, id);
   const resourceMasterId = docRef.id;
 
   const addResources = async (idList: string[], ownerType: string) => {
