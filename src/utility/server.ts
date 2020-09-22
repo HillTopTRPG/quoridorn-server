@@ -178,7 +178,7 @@ export async function generateToken(
   roomNo: number | null,
   roomCollectionPrefix: string | null,
   storageId: string | null,
-  userId: string | null
+  userKey: string | null
 ): Promise<{ token: string; expires: Date}> {
   const token = uuid.v4();
   const expires = new Date();
@@ -189,7 +189,7 @@ export async function generateToken(
     roomNo,
     roomCollectionPrefix,
     storageId,
-    userId,
+    userKey,
     expires
   });
   return { token, expires };

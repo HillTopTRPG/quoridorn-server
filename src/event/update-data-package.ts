@@ -8,7 +8,7 @@ import {touchCheck} from "../utility/data";
 
 // インタフェース
 const eventName = "update-data-package";
-type RequestType = UpdateDataRequest;
+type RequestType = UpdateDataRequest<any>;
 type ResponseType = void;
 
 /**
@@ -19,20 +19,19 @@ type ResponseType = void;
  */
 export async function updateDataPackage(driver: Driver, socket: any, arg: RequestType): Promise<ResponseType> {
   // タッチチェック
-  await procAsyncSplit(arg.idList.map((id: string) => touchCheck(
+  await procAsyncSplit(arg.optionList.map(option => touchCheck(
     driver,
     arg.collection,
-    id
+    option.key
   )));
 
   // データ更新
-  await procAsyncSplit(arg.idList.map((id: string, idx: number) => updateSingleData(
+  await procAsyncSplit(arg.optionList.map((option, idx) => updateSingleData(
     driver,
     socket,
     arg.collection,
-    id,
     arg.dataList[idx],
-    arg.optionList ? arg.optionList[idx] : undefined
+    option
   )));
 }
 

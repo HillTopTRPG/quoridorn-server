@@ -7,6 +7,7 @@ import {RoomStore} from "../@types/data";
 import {checkViewer, getRoomInfo} from "../utility/collection";
 import {setEvent} from "../utility/server";
 import {addTouchier} from "../utility/touch";
+import uuid = require("uuid");
 
 // インタフェース
 const eventName = "touch-room";
@@ -16,39 +17,40 @@ type ResponseType = void;
 /**
  * 部屋（作成）着手リクエスト
  * @param driver
- * @param exclusionOwner
+ * @param socketId
  * @param arg 部屋番号
  */
-async function touchRoom(driver: Driver, exclusionOwner: string, arg: RequestType): Promise<ResponseType> {
+async function touchRoom(driver: Driver, socketId: string, arg: RequestType): Promise<ResponseType> {
   const c = await driver.collection<StoreObj<RoomStore>>(SYSTEM_COLLECTION.ROOM_LIST);
 
-  const docSnap = await getRoomInfo(driver, arg.roomNo, { collectionReference: c });
+  const doc = await getRoomInfo(driver, arg.roomNo, { collectionReference: c });
 
-  if (!await checkViewer(driver, exclusionOwner))
-    throw new ApplicationError(`Unsupported user.`, { socketId: exclusionOwner });
+  if (!await checkViewer(driver, socketId))
+    throw new ApplicationError(`Unsupported user.`, { socketId });
 
-  if (docSnap) throw new ApplicationError(`Already touched or created room.`, arg);
+  if (doc) throw new ApplicationError(`Already touched or created room.`, arg);
 
-  let docRef;
+  const key = uuid.v4();
   const addInfo: StoreObj<RoomStore> = {
     collection: "rooms",
+    key,
     ownerType: null,
     owner: null,
     order: arg.roomNo,
-    exclusionOwner,
-    lastExclusionOwner: exclusionOwner,
+    exclusionOwner: socketId,
+    lastExclusionOwner: socketId,
     status: "initial-touched",
     createTime: new Date(),
     updateTime: null,
     permission: PERMISSION_DEFAULT
   };
   try {
-    docRef = await c.add(addInfo);
+    await c.add(addInfo);
   } catch (err) {
     throw new ApplicationError(`Failure add doc.`, addInfo);
   }
 
-  await addTouchier(driver, exclusionOwner, SYSTEM_COLLECTION.ROOM_LIST, docRef.id, null);
+  await addTouchier(driver, socketId, SYSTEM_COLLECTION.ROOM_LIST, key, null);
 }
 
 const resist: Resister = (driver: Driver, socket: any): void => {

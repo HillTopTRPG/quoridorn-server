@@ -62,12 +62,12 @@ async function uploadMedia(driver: Driver, socket: any, arg: RequestType): Promi
 
   // 直列の非同期で全部実行する
   await arg.uploadMediaInfoList
-    .map((info: UploadMediaInfo, idx: number) => () => uploadFunc(info, idx))
+    .map((info, idx) => () => uploadFunc(info, idx))
     .reduce((prev, curr) => prev.then(curr), Promise.resolve());
 
   // mediaListに追加
   const mediaListCCName = `${roomCollectionPrefix}-DATA-media-list`;
-  const idList: string[] = await addDirect(driver, socket, {
+  const keyList: string[] = await addDirect(driver, socket, {
     collection: mediaListCCName,
     dataList: mediaList,
     optionList: mediaList.map(() => arg.option)
@@ -76,8 +76,8 @@ async function uploadMedia(driver: Driver, socket: any, arg: RequestType): Promi
   // 進捗報告
   notifyProgress(socket, total, total);
 
-  return idList.map((id: string, idx: number) => ({
-    docId: id,
+  return keyList.map((key, idx) => ({
+    key,
     rawPath: rawPathList[idx],
     url: mediaList[idx].url,
     name: mediaList[idx].name,

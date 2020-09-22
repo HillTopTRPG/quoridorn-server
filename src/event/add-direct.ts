@@ -1,4 +1,4 @@
-import {StoreObj} from "../@types/store";
+import {StoreObj, StoreUseData} from "../@types/store";
 import {Resister} from "../server";
 import Driver from "nekostore/lib/Driver";
 import {AddDirectRequest} from "../@types/socket";
@@ -11,23 +11,22 @@ import {addSceneRelation} from "../utility/data-scene";
 import {addSceneObjectRelation} from "../utility/data-scene-object";
 import {addSceneLayerRelation} from "../utility/data-scene-layer";
 import {notifyProgress} from "../utility/emit";
-import DocumentReference from "nekostore/src/DocumentReference";
 import {addSimple} from "../utility/data";
+import DocumentSnapshot from "nekostore/lib/DocumentSnapshot";
 
 // インタフェース
 const eventName = "add-direct";
-type RequestType = AddDirectRequest;
+type RequestType<T> = AddDirectRequest<T>;
 type ResponseType = string[];
 
 export function getAddRelationCollectionMap(): {
   [collectionSuffixName: string]: (
     driver: Driver,
     socket: any,
-    roomCollectionPrefix: string,
-    actorInfoPartial: any,
-    option?: Partial<StoreObj<any>>,
-    id?: string
-  ) => Promise<DocumentReference<StoreObj<any>>>
+    collectionName: string,
+    data: any,
+    option?: Partial<StoreUseData<any>>
+  ) => Promise<DocumentSnapshot<StoreObj<any>>>
 } {
   return {
     "resource-master-list": addResourceMasterRelation,
@@ -48,17 +47,17 @@ export function getAddRelationCollectionMap(): {
  * @param nestNum
  * @param nestNumTotal
  */
-export async function addDirect(
+export async function addDirect<T>(
   driver: Driver,
   socket: any,
-  arg: RequestType,
+  arg: RequestType<T>,
   sendNotify: boolean = true,
   nestNum: number = 0,
   nestNumTotal: number = 0
 ): Promise<ResponseType> {
   const addRelationCollectionMap = getAddRelationCollectionMap();
 
-  const docIdList: string[] = [];
+  const keyList: string[] = [];
   const total = nestNumTotal || arg.dataList.length;
 
   const collectionSuffixName = arg.collection.replace(/^.+-DATA-/, "");
@@ -69,14 +68,13 @@ export async function addDirect(
     if (sendNotify) notifyProgress(socket, total, nestNum + idx);
 
     // データを追加し、idをリストに追加
-    docIdList.push((await callAddFunc(
+    keyList.push((await callAddFunc(
       driver,
       socket,
       arg.collection,
       data,
-      arg.optionList ? arg.optionList[idx] : undefined,
-      arg.idList ? arg.idList[idx] : undefined
-    )).id);
+      arg.optionList ? arg.optionList[idx] : undefined
+    )).data!.key);
   };
 
   // collectionの記録
@@ -90,10 +88,10 @@ export async function addDirect(
   // 進捗報告(完了)
   if (sendNotify) notifyProgress(socket, total, nestNum + arg.dataList.length);
 
-  return docIdList;
+  return keyList;
 }
 
 const resist: Resister = (driver: Driver, socket: any): void => {
-  setEvent<RequestType, ResponseType>(driver, socket, eventName, (driver: Driver, arg: RequestType) => addDirect(driver, socket, arg));
+  setEvent<RequestType<any>, ResponseType>(driver, socket, eventName, (driver: Driver, arg: RequestType<any>) => addDirect(driver, socket, arg));
 };
 export default resist;

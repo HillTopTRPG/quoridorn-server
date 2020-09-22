@@ -1,6 +1,6 @@
 import {StoreObj} from "../@types/store";
 import {DeleteRoomRequest} from "../@types/socket";
-import {hashAlgorithm, Resister, accessUrl, bucket, s3Client} from "../server";
+import {hashAlgorithm, Resister} from "../server";
 import {verify} from "../utility/password";
 import Driver from "nekostore/lib/Driver";
 import DocumentSnapshot from "nekostore/lib/DocumentSnapshot";
@@ -26,10 +26,10 @@ type ResponseType = boolean;
  * @param db
  */
 async function deleteRoom(driver: Driver, socket: any, arg: RequestType, db?: Db): Promise<ResponseType> {
-  const exclusionOwner: string = socket.id;
+  const socketId: string = socket.id;
 
   // タッチ解除
-  await releaseTouchRoom(driver, exclusionOwner, {
+  await releaseTouchRoom(driver, socketId, {
     roomNo: arg.roomNo
   }, true);
 
@@ -37,7 +37,7 @@ async function deleteRoom(driver: Driver, socket: any, arg: RequestType, db?: Db
   const docSnap: DocumentSnapshot<StoreObj<RoomStore>> | null = await getRoomInfo(
     driver,
     arg.roomNo,
-    { id: arg.roomId }
+    { key: arg.roomKey }
   );
 
   // Untouched check.

@@ -34,7 +34,7 @@ async function roomLogin(driver: Driver, exclusionOwner: string, arg: RequestTyp
   const docSnap: DocumentSnapshot<StoreObj<RoomStore>> | null = await getRoomInfo(
     driver,
     arg.roomNo,
-    { id: arg.roomId }
+    { key: arg.roomKey }
   );
 
   // No such check.
@@ -57,7 +57,7 @@ async function roomLogin(driver: Driver, exclusionOwner: string, arg: RequestTyp
   if (!verifyResult) throw new ApplicationError(`Password mismatch.`, arg);
 
   const updateInfo: Partial<SocketStore> = {
-    roomId: arg.roomId,
+    roomKey: arg.roomKey,
     roomCollectionPrefix: data.roomCollectionPrefix,
     storageId: data.storageId
   };

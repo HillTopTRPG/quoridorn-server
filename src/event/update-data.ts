@@ -7,10 +7,11 @@ import {setEvent} from "../utility/server";
 import {updateResourceMasterRelation} from "../utility/data-resource-master";
 import {procAsyncSplit} from "../utility/async";
 import {updateSimple} from "../utility/data";
+import {splitCollectionName} from "../utility/collection";
 
 // インタフェース
 const eventName = "update-data";
-type RequestType = UpdateDataRequest;
+type RequestType = UpdateDataRequest<any>;
 type ResponseType = void;
 
 const relationCollectionTable: {
@@ -18,9 +19,8 @@ const relationCollectionTable: {
     driver: Driver,
     socket: any,
     collection: string,
-    id: string,
     data: any,
-    option?: Partial<StoreObj<unknown>> & { continuous?: boolean }
+    option: (Partial<StoreObj<any>> & { key: string; continuous?: boolean; })
   ) => Promise<void>
 } = {
   "resource-master-list": updateResourceMasterRelation,
@@ -40,27 +40,25 @@ export async function updateData(
   // タッチ解除
   await releaseTouchData(driver, socket.id, arg, true);
 
-  await procAsyncSplit(arg.idList.map((id: string, idx: number) => updateSingleData(
+  await procAsyncSplit(arg.optionList.map((option, idx) => updateSingleData(
     driver,
     socket,
     arg.collection,
-    id,
     arg.dataList[idx],
-    arg.optionList ? arg.optionList[idx] : undefined
+    option
   )));
 }
 
-export async function updateSingleData(
+export async function updateSingleData<T>(
   driver: Driver,
   socket: any,
   collectionName: string,
-  id: string,
   data: any,
-  option?: Partial<StoreObj<unknown>> & { continuous?: boolean }
+  option: (Partial<StoreObj<T>> & { key: string; continuous?: boolean; })
 ): Promise<void> {
-  const collectionSuffixName = collectionName.replace(/^.+-DATA-/, "");
-  const callUpdateFunc = relationCollectionTable[collectionSuffixName] || updateSimple;
-  await callUpdateFunc(driver, socket, collectionName, id, data, option);
+  const {roomCollectionSuffix} = splitCollectionName(collectionName);
+  const callUpdateFunc = relationCollectionTable[roomCollectionSuffix] || updateSimple;
+  await callUpdateFunc(driver, socket, collectionName, data, option);
 }
 
 const resist: Resister = (driver: Driver, socket: any): void => {

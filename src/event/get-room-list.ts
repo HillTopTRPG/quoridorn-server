@@ -1,4 +1,4 @@
-import {StoreMetaData, StoreObj} from "../@types/store";
+import {StoreObj} from "../@types/store";
 import {
   ClientRoomInfo,
   GetRoomListResponse,
@@ -10,7 +10,7 @@ import {ChangeType} from "nekostore/lib/DocumentChange";
 import Unsubscribe from "nekostore/src/Unsubscribe";
 import {compareVersion} from "../utility/GitHub";
 import {RoomStore} from "../@types/data";
-import {checkViewer, getStoreObj} from "../utility/collection";
+import {checkViewer} from "../utility/collection";
 import {setEvent} from "../utility/server";
 
 
@@ -37,19 +37,18 @@ async function getRoomList(driver: Driver, socket: any, arg: RequestType): Promi
       }
     }
 
-    let roomList: (StoreObj<ClientRoomInfo> & StoreMetaData)[] | null = null;
+    let roomList: StoreObj<ClientRoomInfo>[] | null = null;
 
     if (usable) {
       const c = driver.collection<StoreObj<RoomStore>>(SYSTEM_COLLECTION.ROOM_LIST);
       roomList = (await c.orderBy("order").get()).docs
         .filter(doc => doc.exists())
         .map(doc => {
-          const roomStore: StoreObj<RoomStore> & StoreMetaData = getStoreObj<RoomStore>(doc)!;
-          if (roomStore.data) {
-            delete roomStore.data.roomPassword;
-            delete roomStore.data.roomCollectionPrefix;
+          if (doc.data && doc.data.data) {
+            delete doc.data.data.roomPassword;
+            delete doc.data.data.roomCollectionPrefix;
           }
-          return roomStore as StoreObj<ClientRoomInfo> & StoreMetaData;
+          return doc.data!;
         });
 
       // コレクションに変更があるたびに、「result-room-view」イベントをクライアントに送信する
@@ -60,14 +59,14 @@ async function getRoomList(driver: Driver, socket: any, arg: RequestType): Promi
             const changeList: RoomViewResponse[] = snapshot.docs.map(change => {
               const changeType: ChangeType = change.type;
               const data: StoreObj<RoomStore> | undefined = change.data;
-              const id: string = change.ref.id;
+              const key: string = change.data!.key;
 
               if (data && data.data) {
                 delete data.data.roomPassword;
                 delete data.data.roomCollectionPrefix;
               }
               return {
-                changeType, data, id
+                changeType, data, key
               }
             });
             socket.emit("result-room-view", null, changeList);
@@ -94,13 +93,13 @@ async function getRoomList(driver: Driver, socket: any, arg: RequestType): Promi
         if (roomList[i] && roomList[i].order === i) continue;
         roomList.splice(i, 0, {
           collection: "rooms",
+          key: "",
           ownerType: null,
           owner: null,
           order: i,
           exclusionOwner: null,
           lastExclusionOwner: null,
           permission: null,
-          id: null,
           status: null,
           createTime: null,
           updateTime: null

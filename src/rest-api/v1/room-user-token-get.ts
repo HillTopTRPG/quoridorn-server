@@ -6,10 +6,11 @@ import {StoreObj} from "../../@types/store";
 import {RoomStore, TokenStore, UserStore} from "../../@types/data";
 import {verify} from "../../utility/password";
 import DocumentSnapshot from "nekostore/lib/DocumentSnapshot";
+import {findSingle} from "../../utility/collection";
 
 // インタフェース
 const method = "get";
-const path = "/v1/rooms/:roomNo/users/:userId/token";
+const path = "/v1/rooms/:roomNo/users/:userKey/token";
 const authenticationType = "room";
 
 async function roomUserTokenGet(
@@ -24,10 +25,10 @@ async function roomUserTokenGet(
   const isAdmin = tokenInfo.type === "server";
 
   const roomNo = parseInt(req.params.roomNo || "");
-  const userId = req.params.userId;
+  const userKey = req.params.userKey;
   const authorization = req.headers.authorization!;
 
-  if (isNaN(roomNo) || !userId) {
+  if (isNaN(roomNo) || !userKey) {
     return sendError(res, path, method, 400, "");
   }
 
@@ -51,16 +52,19 @@ async function roomUserTokenGet(
   }
 
   const roomCollectionPrefix = roomInfo.data!.data!.roomCollectionPrefix;
-  const roomUserCollectionName = `${roomCollectionPrefix}-DATA-user-list`;
-  const userCollection = driver.collection<StoreObj<UserStore>>(roomUserCollectionName);
-  const userDocSnap: DocumentSnapshot<StoreObj<UserStore>> = (await userCollection.doc(userId).get());
+  const userDoc = (await findSingle<StoreObj<UserStore>>(
+    driver,
+    `${roomCollectionPrefix}-DATA-user-list`,
+    "key",
+    userKey
+  ));
 
-  if (!userDocSnap || !userDocSnap.exists()) {
+  if (!userDoc || !userDoc.exists()) {
     return sendError(res, path, method, 406, "User not found.");
   }
 
   if (!isAdmin) {
-    const hashPassword = userDocSnap.data!.data!.password;
+    const hashPassword = userDoc.data!.data!.password;
     try {
       if (!await verify(hashPassword, userPassword!, hashAlgorithm)) {
         return sendError(res, path, method, 401, "Wrong password.");
@@ -79,7 +83,7 @@ async function roomUserTokenGet(
       roomInfo.data!.order,
       roomInfo.data!.data!.roomCollectionPrefix,
       roomInfo.data!.data!.storageId,
-      userId
+      userKey
     )
   });
 }

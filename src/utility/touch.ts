@@ -1,33 +1,34 @@
 import Driver from "nekostore/lib/Driver";
 import {TouchierStore} from "../@types/data";
 import {SYSTEM_COLLECTION} from "../server";
-import DocumentChange from "nekostore/lib/DocumentChange";
 import {SystemError} from "../error/SystemError";
-import Query from "nekostore/lib/Query";
-import DocumentSnapshot from "nekostore/lib/DocumentSnapshot";
 import {StoreObj} from "../@types/store";
+import {findList, findSingle} from "./collection";
 
 export async function addTouchier(
   driver: Driver,
   socketId: string,
   collection: string,
-  id: string,
+  key: string,
   updateTime: Date | null
 ): Promise<void> {
   const c = driver.collection<TouchierStore>(SYSTEM_COLLECTION.TOUCH_LIST);
-  const doc: DocumentChange<TouchierStore> = (await c
-  .where("socketId", "==", socketId)
-  .where("collection", "==", collection)
-  .where("id", "==", id)
-  .get()).docs[0];
-  if (doc) {
+  const docList = await findList<TouchierStore>(
+    driver,
+    SYSTEM_COLLECTION.TOUCH_LIST,
+    [
+      { property: "socketId", operand: "==", value: socketId },
+      { property: "collection", operand: "==", value: collection },
+      { property: "key", operand: "==", value: key }
+    ]);
+  if (docList && docList.length) {
     // あり得ないけど一応存在チェック
-    throw new SystemError(`Touchier is Exist. collection: ${collection}, id: ${id}, socketId: ${socketId}`);
+    throw new SystemError(`Touchier is Exist. collection: ${collection}, key: ${key}, socketId: ${socketId}`);
   }
   await c.add({
     socketId,
     collection,
-    docId: id,
+    key,
     time: new Date(),
     backupUpdateTime: updateTime
   });
@@ -37,28 +38,31 @@ export async function deleteTouchier(
   driver: Driver,
   socketId: string,
   collection?: string,
-  id?: string
+  key?: string
 ): Promise<Date | null> {
-  const c = driver.collection<TouchierStore>(SYSTEM_COLLECTION.TOUCH_LIST);
-  let q: Query<TouchierStore> = c.where("socketId", "==", socketId);
+  const options: { property: string; operand: "=="; value: any }[] = [];
+  options.push({ property: "socketId", operand: "==", value: socketId });
   if (collection !== undefined)
-    q = q.where("collection", "==", collection);
-  if (id !== undefined)
-    q = q.where("docId", "==", id);
-  const docList: DocumentChange<TouchierStore>[] = (await q.get()).docs;
+    options.push({ property: "collection", operand: "==", value: collection });
+  if (key !== undefined)
+    options.push({ property: "key", operand: "==", value: key });
+
+  const docList = await findList<TouchierStore>(
+    driver,
+    SYSTEM_COLLECTION.TOUCH_LIST,
+    options
+  );
   if (!docList || !docList.length) {
-    console.warn(`deleteTouchier失敗 socket: ${socketId}, collection: ${collection}, id: ${id}`);
+    console.warn(`deleteTouchier失敗 socket: ${socketId}, collection: ${collection}, key: ${key}`);
     return null;
   }
 
   const backupUpdateTime = docList[0].data ? docList[0].data.backupUpdateTime : null;
 
-  const deleteList = async (doc: DocumentSnapshot<TouchierStore>): Promise<void> => {
-    await doc.ref.delete();
-  };
+  // 非同期処理で順次消していく
   await docList
-  .map((doc: DocumentSnapshot<TouchierStore>) => () => deleteList(doc))
-  .reduce((prev, curr) => prev.then(curr), Promise.resolve());
+    .map(doc => () => doc.ref.delete())
+    .reduce((prev, curr) => prev.then(curr), Promise.resolve());
 
   return backupUpdateTime;
 }
@@ -67,31 +71,33 @@ export async function releaseTouch(
   driver: Driver,
   socketId: string,
   collection?: string,
-  id?: string
+  key?: string
 ): Promise<void> {
-  const c = driver.collection<TouchierStore>(SYSTEM_COLLECTION.TOUCH_LIST);
-  let q: Query<TouchierStore> = c.where("socketId", "==", socketId);
+  const options: { property: string; operand: "=="; value: any }[] = [];
+  options.push({ property: "socketId", operand: "==", value: socketId });
   if (collection !== undefined)
-    q = q.where("collection", "==", collection);
-  if (id !== undefined)
-    q = q.where("id", "==", id);
-  const docList: DocumentChange<TouchierStore>[] = (await q.get()).docs;
+    options.push({ property: "collection", operand: "==", value: collection });
+  if (key !== undefined)
+    options.push({ property: "key", operand: "==", value: key });
+
+  const docList = await findList<TouchierStore>(
+    driver,
+    SYSTEM_COLLECTION.TOUCH_LIST,
+    options
+  );
+
   if (!docList || !docList.length) return;
-  docList.forEach(async doc => {
+
+  await Promise.all(docList.map(async doc => {
     if (doc.exists()) {
-      const { collection, docId } = doc.data;
-      const targetCollection = driver.collection<StoreObj<any>>(collection);
-      const target = await targetCollection.doc(docId).get();
-      if (target.exists()) {
-        if (target.data.data) {
-          await target.ref.update({
-            exclusionOwner: null
-          });
-        } else {
-          await target.ref.delete();
-        }
+      const { collection, key } = doc.data;
+      const target = await findSingle<StoreObj<any>>(driver, collection, "key", key);
+      if (target && target.exists()) {
+        target.data.data
+          ? await target.ref.update({ exclusionOwner: null })
+          : await target.ref.delete()
       }
     }
     await doc.ref.delete();
-  });
+  }));
 }

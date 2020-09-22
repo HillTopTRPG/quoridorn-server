@@ -4,10 +4,11 @@ import {sendError, setWebIfEvent} from "../../utility/server";
 import {Request, Response} from "express";
 import {StoreObj} from "../../@types/store";
 import {RoomStore, TokenStore, UserStore} from "../../@types/data";
+import {findSingle} from "../../utility/collection";
 
 // インタフェース
 const method = "get";
-const path = "/v1/rooms/:roomNo/users/:userId";
+const path = "/v1/rooms/:roomNo/users/:userKey";
 const authenticationType = "user";
 
 async function roomUserGet(
@@ -19,7 +20,7 @@ async function roomUserGet(
   const isAdmin = tokenInfo.type === "server";
   const authorizedValue = (value: any) => isAdmin ? value : undefined;
 
-  const userId = req.params.userId;
+  const userKey = req.params.userKey;
   const roomNo = parseInt(req.params.roomNo || "");
   if (isNaN(roomNo)) {
     return sendError(res, path, method, 400, "");
@@ -30,7 +31,7 @@ async function roomUserGet(
       return sendError(res, path, method, 406, "Different room.");
     }
 
-    if (tokenInfo.userId !== userId) {
+    if (tokenInfo.userKey !== userKey) {
       return sendError(res, path, method, 406, "Different user.");
     }
   }
@@ -44,11 +45,14 @@ async function roomUserGet(
   }
 
   const roomCollectionPrefix = tokenInfo.roomCollectionPrefix;
-  const roomUserCollectionName = `${roomCollectionPrefix}-DATA-user-list`;
-  const userCollection = driver.collection<StoreObj<UserStore>>(roomUserCollectionName);
-  const userDocSnap = (await userCollection.doc(userId).get());
+  const userDoc = (await findSingle<StoreObj<UserStore>>(
+    driver,
+    `${roomCollectionPrefix}-DATA-user-list`,
+    "key",
+    userKey
+  ));
 
-  if (!userDocSnap || !userDocSnap.exists()) {
+  if (!userDoc || !userDoc.exists()) {
     return sendError(res, path, method, 406, "User not found.");
   }
 
@@ -57,12 +61,12 @@ async function roomUserGet(
     result: true,
     users: {
       roomNo,
-      userId: userDocSnap.ref.id,
-      name: userDocSnap.data!.data!.name,
-      type: userDocSnap.data!.data!.type,
-      login: authorizedValue(userDocSnap.data!.data!.login),
-      createTime: authorizedValue(userDocSnap.data!.createTime),
-      updateTime: authorizedValue(userDocSnap.data!.updateTime),
+      userKey: userDoc.data.key,
+      name: userDoc.data.data!.name,
+      type: userDoc.data.data!.type,
+      login: authorizedValue(userDoc.data.data!.login),
+      createTime: authorizedValue(userDoc.data.createTime),
+      updateTime: authorizedValue(userDoc.data.updateTime),
     }
   });
 }

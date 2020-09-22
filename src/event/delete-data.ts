@@ -10,10 +10,11 @@ import {deleteSceneObjectRelation} from "../utility/data-scene-object";
 import {deleteSceneLayerRelation} from "../utility/data-scene-layer";
 import {deleteSceneRelation} from "../utility/data-scene";
 import {deleteActorRelation} from "../utility/data-actor";
+import {splitCollectionName} from "../utility/collection";
 
 // インタフェース
 const eventName = "delete-data";
-type RequestType = DeleteDataRequest;
+type RequestType = DeleteDataRequest<any>;
 type ResponseType = void;
 
 /**
@@ -37,22 +38,22 @@ async function deleteData(
   // タッチ解除
   await releaseTouchData(driver, exclusionOwner, arg, true);
 
-  const total = nestNumTotal || arg.idList.length;
+  const total = nestNumTotal || arg.optionList.length;
 
   // 直列の非同期で全部実行する
-  await arg.idList
-    .map((id: string, idx: number) => () => deleteSingleData(driver, socket, arg.collection, id, sendNotify, idx, total))
+  await arg.optionList
+    .map((option, idx) => () => deleteSingleData(driver, socket, arg.collection, option.key, sendNotify, idx, total))
     .reduce((prev, curr) => prev.then(curr), Promise.resolve());
 
   // 進捗報告(完了)
-  if (sendNotify) notifyProgress(socket, total, nestNum + arg.idList.length);
+  if (sendNotify) notifyProgress(socket, total, nestNum + arg.optionList.length);
 }
 
 export async function deleteSingleData(
   driver: Driver,
   socket: any,
   collectionName: string,
-  id: string,
+  key: string,
   sendNotify: boolean = true,
   nestNum: number = 0,
   total: number = 0
@@ -62,7 +63,7 @@ export async function deleteSingleData(
       driver: Driver,
       socket: any,
       roomCollectionPrefix: string,
-      id: string
+      key: string
     ) => Promise<void>
   } = {
     "actor-list": deleteActorRelation,
@@ -71,11 +72,11 @@ export async function deleteSingleData(
     "scene-layer-list": deleteSceneLayerRelation,
     "scene-list": deleteSceneRelation,
   };
-  const collectionSuffixName = collectionName.replace(/^.+-DATA-/, "");
-  const callAddFunc = deleteRelationCollectionMap[collectionSuffixName] || deleteSimple;
+  const {roomCollectionSuffix} = splitCollectionName(collectionName);
+  const callAddFunc = deleteRelationCollectionMap[roomCollectionSuffix] || deleteSimple;
   // 進捗報告(処理中)
   if (sendNotify) notifyProgress(socket, total, nestNum);
-  await callAddFunc(driver, socket, collectionName, id);
+  await callAddFunc(driver, socket, collectionName, key);
 }
 
 const resist: Resister = (driver: Driver, socket: any): void => {

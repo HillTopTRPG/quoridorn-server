@@ -16,35 +16,38 @@ type ResponseType = void;
 /**
  * 部屋（作成・編集・削除）キャンセル処理
  * @param driver
- * @param exclusionOwner
+ * @param socketId
  * @param arg 部屋番号
  * @param updateForce
  */
-export async function releaseTouchRoom(driver: Driver, exclusionOwner: string, arg: RequestType, updateForce?: boolean): Promise<ResponseType> {
-  const docSnap = await getRoomInfo(driver, arg.roomNo, {
-    exclusionOwner,
-  });
+export async function releaseTouchRoom(
+  driver: Driver,
+  socketId: string,
+  arg: RequestType,
+  updateForce?: boolean
+): Promise<ResponseType> {
+  const doc = await getRoomInfo(driver, arg.roomNo, { socketId });
 
   const createThrowDetail = (detail: string) => updateForce ? `Failure releaseTouchRoom. (${detail})` : detail;
 
-  if (!docSnap) throw new ApplicationError(createThrowDetail(`Already released touch or created.`), arg);
+  if (!doc) throw new ApplicationError(createThrowDetail(`Already released touch or created.`), arg);
 
-  const backupUpdateTime = await deleteTouchier(driver, exclusionOwner, SYSTEM_COLLECTION.ROOM_LIST, docSnap.ref.id);
+  const backupUpdateTime = await deleteTouchier(driver, socketId, SYSTEM_COLLECTION.ROOM_LIST, doc.data!.key);
 
-  if (updateForce || docSnap.data!.data) {
+  if (updateForce || doc.data!.data) {
     const updateInfo: Partial<StoreObj<RoomStore>> = {
       exclusionOwner: null,
       status: "touched-released",
       updateTime: backupUpdateTime
     };
     try {
-      await docSnap.ref.update(updateInfo);
+      await doc.ref.update(updateInfo);
     } catch (err) {
       throw new ApplicationError(createThrowDetail("Failure update doc."), updateInfo);
     }
   } else {
     try {
-      await docSnap.ref.delete();
+      await doc.ref.delete();
     } catch (err) {
       throw new ApplicationError(createThrowDetail("Failure delete doc."), arg);
     }

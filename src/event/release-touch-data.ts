@@ -10,7 +10,7 @@ import {procAsyncSplit} from "../utility/async";
 
 // インタフェース
 const eventName = "release-touch-data";
-type RequestType = ReleaseTouchDataRequest;
+type RequestType = ReleaseTouchDataRequest<any>;
 type ResponseType = void;
 
 /**
@@ -21,49 +21,48 @@ type ResponseType = void;
  * @param updateForce
  */
 export async function releaseTouchData(driver: Driver, exclusionOwner: string, arg: RequestType, updateForce?: boolean): Promise<ResponseType> {
-  await procAsyncSplit(arg.idList.map((id: string, idx: number) => singleReleaseTouchData(
+  await procAsyncSplit(arg.optionList.map(option => singleReleaseTouchData(
     driver,
     exclusionOwner,
     arg.collection,
-    id,
-    arg.optionList ? (arg.optionList[idx] || undefined) : undefined,
+    option,
     updateForce
   )));
 }
 
-async function singleReleaseTouchData(
+async function singleReleaseTouchData<T>(
   driver: Driver,
-  exclusionOwner: string,
+  socketId: string,
   collection: string,
-  id: string,
-  option?: Partial<StoreObj<unknown>> & { continuous?: boolean },
+  option?: Partial<StoreObj<T>> & { continuous?: boolean },
   updateForce?: boolean
 ): Promise<void> {
-  const msgArg = { collection, id, option };
-  const docSnap = await getData(driver, collection, id, { exclusionOwner });
+  const msgArg = { collection, option };
+  const doc = await getData(driver, collection, { socketId });
 
-  const createThrowDetail = (detail: string) => updateForce ? `Failure releaseTouchData. (${detail})` : detail;
+  const createThrowDetail = (detail: string) =>
+    updateForce ? `Failure releaseTouchData. (${detail})` : detail;
 
-  if (!docSnap) throw new ApplicationError(createThrowDetail("Already released touch or created."), msgArg);
+  if (!doc) throw new ApplicationError(createThrowDetail("Already released touch or created."), msgArg);
 
   // 続けて更新する場合は排他制御情報をリセットしない
   if (option && option.continuous) return;
 
-  const backupUpdateTime = await deleteTouchier(driver, exclusionOwner, collection, docSnap.ref.id);
+  const backupUpdateTime = await deleteTouchier(driver, socketId, collection, doc.data!.key);
 
-  if (updateForce || docSnap.data!.data) {
+  if (updateForce || doc.data!.data) {
     const updateInfo = {
       exclusionOwner: null,
       updateTime: backupUpdateTime
     };
     try {
-      await docSnap.ref.update(updateInfo);
+      await doc.ref.update(updateInfo);
     } catch (err) {
       throw new ApplicationError(createThrowDetail("Failure update doc."), updateInfo);
     }
   } else {
     try {
-      await docSnap.ref.delete();
+      await doc.ref.delete();
     } catch (err) {
       throw new ApplicationError(createThrowDetail("Failure delete doc."), msgArg);
     }

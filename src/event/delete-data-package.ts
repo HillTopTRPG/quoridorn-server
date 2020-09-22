@@ -9,7 +9,7 @@ import {touchCheck} from "../utility/data";
 
 // インタフェース
 const eventName = "delete-data-package";
-type RequestType = DeleteDataRequest;
+type RequestType = DeleteDataRequest<any>;
 type ResponseType = void;
 
 /**
@@ -30,21 +30,21 @@ export async function deleteDataPackage(
   nestNumTotal: number = 0
 ): Promise<ResponseType> {
   // タッチチェック
-  await procAsyncSplit(arg.idList.map((id: string) => touchCheck(
+  await procAsyncSplit(arg.optionList.map(option => touchCheck(
     driver,
     arg.collection,
-    id
+    option.key
   )));
 
-  const total = nestNumTotal || arg.idList.length;
+  const total = nestNumTotal || arg.optionList.length;
 
   // 直列の非同期で全部実行する
-  await arg.idList
-    .map((id: string, idx: number) => () => deleteSingleData(driver, socket, arg.collection, id, sendNotify, nestNum + idx, total))
+  await arg.optionList
+    .map((option, idx) => () => deleteSingleData(driver, socket, arg.collection, option.key, sendNotify, nestNum + idx, total))
     .reduce((prev, curr) => prev.then(curr), Promise.resolve());
 
   // 進捗報告(完了)
-  if (sendNotify) notifyProgress(socket, total, nestNum + arg.idList.length);
+  if (sendNotify) notifyProgress(socket, total, nestNum + arg.optionList.length);
 }
 
 const resist: Resister = (driver: Driver, socket: any): void => {

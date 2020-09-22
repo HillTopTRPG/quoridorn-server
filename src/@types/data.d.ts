@@ -1,7 +1,24 @@
-import {LoginResponse, UserType} from "./socket";
+import {LoginResponse, RoomInfoExtend, UserType} from "./socket";
 
 export type RoomStore = LoginResponse & {
   roomPassword: string;
+};
+
+type ChatTabInfo = {
+  name: string;
+  isSystem: boolean;
+  useReadAloud: boolean;
+  readAloudVolume: number;
+};
+
+/**
+ * roomDataCCのデータ定義
+ * 部屋1つに関する設定情報
+ */
+type RoomData = {
+  name: string;
+  sceneKey: string;
+  settings: RoomInfoExtend;
 };
 
 export type UserStore = {
@@ -14,7 +31,7 @@ export type UserStore = {
 
 export type TouchierStore = {
   collection: string;
-  docId: string;
+  key: string;
   socketId: string;
   time: Date;
   backupUpdateTime: Date | null;
@@ -26,31 +43,39 @@ export type TokenStore = {
   roomCollectionPrefix: string | null;
   roomNo: number | null;
   storageId: string | null;
-  userId: string | null;
+  userKey: string | null;
   expires: Date;
 }
 
 export type SocketStore = {
   socketId: string;
-  roomId: string | null;
+  roomKey: string | null;
   roomCollectionPrefix: string | null;
   storageId: string | null;
-  userId: string | null;
+  userKey: string | null;
   connectTime: Date;
 }
 
 export type SocketUserStore = {
   socketId: string;
-  userId: string;
+  userKey: string;
 }
+
+export type GroupChatTabInfo = {
+  name: string;
+  isSystem: boolean;
+  actorGroupKey: string;
+  isSecret: boolean;
+  outputChatTabKey: string | null;
+};
 
 export type ActorGroup = {
   name: string;
   isSystem: boolean;
   list: {
-    id: string;
+    key: string;
     type: "user" | "other";
-    userId: string | null;
+    userKey: string | null;
   }[];
 };
 
@@ -58,19 +83,19 @@ export type ActorStore = {
   name: string; // 名前
   type: "user" | "character";
   tag: string;
-  pieceIdList: string[]; // コマのID一覧
+  pieceKeyList: string[]; // コマのID一覧
   chatFontColorType: "owner" | "original"; // チャット文字色はオーナー（ユーザ）の色か独自の色か
   chatFontColor: string; // 独自のチャット文字色
   standImagePosition: number; // 1〜12
-  statusId: string; // ステータスへの参照
+  statusKey: string; // ステータスへの参照
 };
 
 type ActorStatusStore = {
   // actorId: string; actorIdはownerで管理
   name: string; // ステータス名
   isSystem: boolean;
-  standImageInfoId: string | null; // id
-  chatPaletteInfoId: string | null; // id
+  standImageInfoKey: string | null; // id
+  chatPaletteInfoKey: string | null; // id
 };
 
 /**
@@ -107,6 +132,11 @@ type RefProperty =
   | "actor-chat-text-color"
   | "actor-stand-image-position";
 
+// イニシアティブ表の列の定義
+type InitiativeColumnStore = {
+  resourceMasterKey: string;
+};
+
 type ResourceMasterStore = {
   label: string;
   type: ResourceType;
@@ -114,7 +144,7 @@ type ResourceMasterStore = {
   isAutoAddActor: boolean; // アクターに自動付与するかどうか
   isAutoAddMapObject: boolean; // コマに自動付与するかどうか
   icon: {
-    mediaId: string | null; // アイコンを設定するならその画像のID
+    mediaKey: string | null; // アイコンを設定するならその画像のID
     mediaTag: string | null; // アイコンを設定するならその画像のタグ
     imageDirection: Direction | null; // アイコンを設定するならその画像の表示方法
   };
@@ -129,7 +159,7 @@ type ResourceMasterStore = {
 // リソースインスタンス
 type ResourceStore = {
   // 誰のリソースかはownerで表現
-  masterId: string;
+  masterKey: string;
   type: ResourceType;
   value: string;
 };
@@ -210,7 +240,7 @@ type BackgroundSize =
 type TextureImage = {
   type: "image";
   mediaTag: string;
-  mediaId: string;
+  mediaKey: string;
   direction: Direction;
   backgroundSize: BackgroundSize;
 };
@@ -302,12 +332,45 @@ type Matrix = {
 type Address = Point & Matrix;
 
 /**
+ * マップレイヤーの種別
+ */
+type SceneLayerType =
+  | "floor-tile"
+  | "map-mask"
+  | "map-marker"
+  | "dice-symbol"
+  | "card"
+  | "character"
+  | "other";
+
+/**
+ * sceneLayerCCのデータ定義
+ * マップレイヤー1層の情報
+ */
+type SceneLayer = {
+  type: SceneLayerType;
+  defaultOrder: number; // マップ設定をいじらなければこのオーダー順に従う(= z-index)
+  isSystem: boolean; // システムレイヤーは削除させない
+  name?: string; // ユーザが追加するレイヤーのみこのフィールドを使う
+};
+
+/**
+ * sceneAndLayerCCのデータ定義
+ * マップとレイヤーの紐付き1本単位の情報
+ */
+type SceneAndLayer = {
+  sceneKey: string;
+  layerKey: string;
+  isUse: boolean;
+};
+
+/**
  * sceneAndObjectCCのデータ定義
  * マップとオブジェクトの紐付き1本単位の情報
  */
 type SceneAndObject = {
-  sceneId: string;
-  objectId: string;
+  sceneKey: string;
+  objectKey: string;
   // startTimeStatus: "" | "normal" | string; // マップに同期切替した際に設定されるステータス（キャラクターのみ）
   // startTimePlace: "" | Place; // マップに同期切替した際に設定される場所
   isOriginalAddress: boolean; // マップ独自の座標を持つかどうか
@@ -320,11 +383,11 @@ type ChatPaletteStore = {
   paletteText: string;
   chatFontColorType: "owner" | "original"; // チャット文字色はオーナーの色か独自の色か
   chatFontColor: string; // 独自のチャット文字色
-  actorId: string | null;
-  sceneObjectId: string | null;
-  targetId: string | null;
-  outputTabId: string | null;
-  statusId: string | null;
+  actorKey: string | null;
+  sceneObjectKey: string | null;
+  targetKey: string | null;
+  outputTabKey: string | null;
+  statusKey: string | null;
   system: string | null;
   isSecret: boolean;
 };
@@ -336,9 +399,9 @@ export type DiceType = {
 };
 
 export type DiceAndPips = {
-  diceTypeId: string;
+  diceTypeKey: string;
   pips: string;
-  mediaId: string;
+  mediaKey: string;
 };
 
 type SceneObjectType =
@@ -354,19 +417,19 @@ type SceneObject = Address & {
   type: SceneObjectType;
   tag: string;
   name: string;
-  actorId: string | null; // id
+  actorKey: string | null; // id
   rows: number;
   columns: number;
   isHideBorder: boolean;
   isHideHighlight: boolean;
   isLock: boolean;
   place: Place;
-  layerId: string;
+  layerKey: string;
   textures: Texture[];
   textureIndex: number;
   angle: number;
   url: string; // character
-  subTypeId: string; // サイコロの種類など
+  subTypeKey: string; // サイコロの種類など
   subTypeValue: string; // 出目など
   isHideSubType: boolean; // 出目を隠すかどうか
 };

@@ -3,12 +3,12 @@ import Driver from "nekostore/lib/Driver";
 import {SocketStore} from "../@types/data";
 import {setEvent} from "../utility/server";
 import {getSocketDocSnap} from "../utility/collection";
-import {StoreMetaData, StoreObj} from "../@types/store";
+import {StoreObj} from "../@types/store";
 import {addDirect} from "./add-direct";
 
 // インタフェース
 const eventName = "import-data";
-type RequestType = (StoreObj<any> & StoreMetaData)[];
+type RequestType = StoreObj<any>[];
 type ResponseType = void;
 
 /**
@@ -22,25 +22,22 @@ async function importData(driver: Driver, socket: any, arg: RequestType): Promis
   const socketData: SocketStore = snap.data!;
   const roomCollectionPrefix = socketData.roomCollectionPrefix;
 
-  const list: (StoreObj<any> & StoreMetaData)[] = arg;
+  const list: StoreObj<any>[] = arg;
 
-  const listTable: { [collection: string]: (StoreObj<any> & StoreMetaData)[] } = {};
+  // const listTable: { [collection: string]: StoreObj<any>[] } = {};
   const listMap: {
     [collection: string]: {
       dataList: any[];
       optionList: Partial<StoreObj<any>>[];
-      idList: string[];
     }
   } = {};
   const total = list.length;
 
   arg.forEach(a => {
-    const tableList = listTable[a.collection];
-    if (tableList) {
-      tableList.push(a);
-      listMap[a.collection].idList.push(a.id!);
-      listMap[a.collection].dataList.push(a.data);
-      listMap[a.collection].optionList.push({
+    const listMapElm = listMap[a.collection];
+    if (listMapElm) {
+      listMapElm.dataList.push(a.data);
+      listMapElm.optionList.push({
         collection: a.collection,
         ownerType: a.ownerType,
         owner: a.owner,
@@ -48,30 +45,28 @@ async function importData(driver: Driver, socket: any, arg: RequestType): Promis
         permission: a.permission
       });
     } else {
-      listTable[a.collection] = [a];
       listMap[a.collection] = {
         dataList: [a.data!],
         optionList: [{
+          key: a.key,
           collection: a.collection,
           ownerType: a.ownerType,
           owner: a.owner,
           order: a.order,
           permission: a.permission
-        }],
-        idList: [a.id!]
+        }]
       }
     }
   });
 
   await Object.keys(listMap)
     .map(collection => {
-      const {dataList, optionList, idList} = listMap[collection];
+      const {dataList, optionList} = listMap[collection];
       return async () => {
-        await addDirect(driver, socket, {
+        await addDirect<any>(driver, socket, {
           collection: `${roomCollectionPrefix}-DATA-${collection}`,
           dataList,
-          optionList,
-          idList
+          optionList
         })
       };
     })

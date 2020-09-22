@@ -2,6 +2,7 @@ import CollectionReference from "nekostore/src/CollectionReference";
 
 export type StoreObj<T> = {
   collection: string;
+  key: string;
   ownerType: string | null;
   owner: string | null;
   order: number;
@@ -18,9 +19,11 @@ export type StoreMetaData = {
   id: string | null;
 };
 
+export type StoreUseData<T> = StoreObj<T> & StoreMetaData;
+
 export type PermissionNode = {
   type: "group" | "actor" | "owner";
-  id?: string;
+  key?: string;
 };
 
 export type PermissionRule = {
@@ -35,7 +38,7 @@ export type Permission = {
 };
 
 type GetDataOption<T> = {
-  exclusionOwner?: string;
-  id?: string;
+  socketId?: string;
+  key?: string;
   collectionReference?: CollectionReference<StoreObj<T>>;
 };

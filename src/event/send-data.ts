@@ -3,7 +3,7 @@ import Driver from "nekostore/lib/Driver";
 import {SendDataRequest} from "../@types/socket";
 import {SocketStore} from "../@types/data";
 import {setEvent} from "../utility/server";
-import {getSocketDocSnap} from "../utility/collection";
+import {findList, getSocketDocSnap} from "../utility/collection";
 
 // インタフェース
 const eventName = "send-data";
@@ -21,24 +21,22 @@ async function sendData(driver: Driver, socket: any, io: any, arg: RequestType):
   const socketIdList: string[] = [];
   const socketDocSnap = (await getSocketDocSnap(driver, socket.id));
 
-  const takeUserSocketId = async (userId: string): Promise<void> => {
-    const socketDocSnapList = (await driver.collection<SocketStore>(SYSTEM_COLLECTION.SOCKET_LIST)
-      .where("userId", "==", userId)
-      .get())
-      .docs
-      .filter(doc => doc && doc.exists());
-
-    // 見つからない場合はログアウトしている可能性があるので特にエラーにしない
-
-    socketDocSnapList.forEach(sds => {
-      // 絶対ないはずだが、他の部屋の人には送信しない。
-      if (sds.data!.roomId !== socketDocSnap.data!.roomId) return;
-      socketIdList.push(sds.data!.socketId);
-    });
+  const takeUserSocketKey = async (userKey: string): Promise<void> => {
+    const socketDocList = await findList<SocketStore>(
+      driver,
+      SYSTEM_COLLECTION.SOCKET_LIST,
+      [
+        { property: "userKey", operand: "==", value: userKey },
+        { property: "roomKey", operand: "==", value: socketDocSnap.data!.roomKey },
+      ]
+    );
+    socketIdList.push(
+      ...socketDocList!.map(doc => doc.data!.socketId)
+    );
   };
 
   // 全ての検索が終わるまで待つ
-  await Promise.all(arg.targetList.map(target => takeUserSocketId(target)));
+  await Promise.all(arg.targetList.map(userKey => takeUserSocketKey(userKey)));
 
   socketIdList.forEach(socketId => {
     io.to(socketId).emit('send-data', null, arg);

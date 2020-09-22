@@ -10,7 +10,7 @@ import {procAsyncSplit} from "../utility/async";
 
 // インタフェース
 const eventName = "touch-data-modify";
-type RequestType = TouchModifyDataRequest;
+type RequestType = TouchModifyDataRequest<any>;
 type ResponseType = string[];
 
 /**
@@ -20,36 +20,36 @@ type ResponseType = string[];
  * @param arg
  */
 export async function touchDataModify(driver: Driver, exclusionOwner: string, arg: RequestType): Promise<ResponseType> {
-  const resultIdList: string[] = [];
+  const resultKeyList: string[] = [];
 
-  await procAsyncSplit(arg.idList.map((id: string) => singleTouchDataModify(
+  await procAsyncSplit(arg.optionList.map(option => singleTouchDataModify(
     driver,
     exclusionOwner,
     arg.collection,
-    resultIdList,
-    id
+    resultKeyList,
+    option.key
   )));
 
-  return resultIdList;
+  return resultKeyList;
 }
 
 async function singleTouchDataModify(
   driver: Driver,
   exclusionOwner: string,
   collection: string,
-  resultIdList: string[],
-  id: string
+  resultKeyList: string[],
+  key: string
 ): Promise<void> {
-  const msgArg = { collection, id };
-  const docSnap = await getData(driver, collection, id);
+  const msgArg = { collection, key };
+  const doc = await getData(driver, collection, { key });
 
   // No such check.
-  if (!docSnap || !docSnap.exists()) throw new ApplicationError(`No such.`, msgArg);
+  if (!doc || !doc.exists()) throw new ApplicationError(`No such.`, msgArg);
 
   // Already check.
-  if (docSnap.data.exclusionOwner) throw new ApplicationError(`Already touched.`, msgArg);
+  if (doc.data.exclusionOwner) throw new ApplicationError(`Already touched.`, msgArg);
 
-  const updateTime = docSnap.data.updateTime;
+  const updateTime = doc.data.updateTime;
 
   const updateInfo: Partial<StoreObj<any>> = {
     exclusionOwner,
@@ -58,14 +58,14 @@ async function singleTouchDataModify(
     updateTime: new Date()
   };
   try {
-    await docSnap.ref.update(updateInfo);
+    await doc.ref.update(updateInfo);
   } catch (err) {
     throw new ApplicationError(`Failure update doc.`, updateInfo);
   }
 
-  await addTouchier(driver, exclusionOwner, collection, docSnap.ref.id, updateTime);
+  await addTouchier(driver, exclusionOwner, collection, key, updateTime);
 
-  resultIdList.push(docSnap.ref.id);
+  resultKeyList.push(key);
 }
 
 const resist: Resister = (driver: Driver, socket: any): void => {

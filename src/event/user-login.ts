@@ -2,15 +2,14 @@ import {PERMISSION_DEFAULT, hashAlgorithm, Resister, SYSTEM_COLLECTION} from "..
 import {SystemError} from "../error/SystemError";
 import {verify} from "../utility/password";
 import Driver from "nekostore/lib/Driver";
-import DocumentSnapshot from "nekostore/lib/DocumentSnapshot";
 import {UserLoginRequest, UserLoginResponse, UserType} from "../@types/socket";
 import {StoreObj} from "../@types/store";
 import {ApplicationError} from "../error/ApplicationError";
-import DocumentChange from "nekostore/lib/DocumentChange";
 import {ActorGroup, RoomStore, SocketStore, SocketUserStore, UserStore} from "../@types/data";
-import {getSocketDocSnap, resistCollectionName} from "../utility/collection";
+import {findSingle, getSocketDocSnap, resistCollectionName} from "../utility/collection";
 import {setEvent} from "../utility/server";
 import {addUser} from "../utility/data-user";
+import uuid = require("uuid");
 
 // インタフェース
 const eventName = "user-login";
@@ -24,30 +23,33 @@ type ResponseType = UserLoginResponse;
  * @param arg
  */
 async function userLogin(driver: Driver, socket: any, arg: RequestType): Promise<ResponseType> {
-  const exclusionOwner: string = socket.id;
+  const socketId: string = socket.id;
 
   // 部屋一覧の更新
-  const socketDocSnap = (await getSocketDocSnap(driver, exclusionOwner));
+  const socketDocSnap = (await getSocketDocSnap(driver, socketId));
 
   // Not yet check.
-  const roomId = socketDocSnap.data!.roomId;
-  if (!roomId) throw new ApplicationError(`Not yet login.`, arg);
+  const roomKey = socketDocSnap.data!.roomKey;
+  if (!roomKey) throw new ApplicationError(`Not yet login.`, arg);
+  
+  const roomDoc = await findSingle<StoreObj<RoomStore>>(
+    driver, 
+    SYSTEM_COLLECTION.ROOM_LIST, 
+    "key", 
+    roomKey
+  );
 
-  const roomDocSnap: DocumentSnapshot<StoreObj<RoomStore>> =
-    await driver.collection<StoreObj<RoomStore>>(SYSTEM_COLLECTION.ROOM_LIST).doc(roomId).get();
-
-  if (!roomDocSnap || !roomDocSnap.exists() || !roomDocSnap.data.data)
-    throw new ApplicationError(`No such room.`, { roomId });
+  if (!roomDoc || !roomDoc.exists() || !roomDoc.data.data)
+    throw new ApplicationError(`No such room.`, { roomKey });
 
   // ユーザコレクションの取得とユーザ情報更新
-  const roomCollectionPrefix = roomDocSnap.data.data.roomCollectionPrefix;
-  const roomUserCollectionName = `${roomCollectionPrefix}-DATA-user-list`;
-  const userCollection = driver.collection<StoreObj<UserStore>>(roomUserCollectionName);
-  const userDocSnap: DocumentChange<StoreObj<UserStore>> =
-    (await userCollection
-      .where("data.name", "==", arg.name)
-      .get()).docs
-      .filter(doc => doc.exists())[0];
+  const roomCollectionPrefix = roomDoc.data.data.roomCollectionPrefix;
+  const userDoc = await findSingle<StoreObj<UserStore>>(
+    driver,
+    `${roomCollectionPrefix}-DATA-user-list`,
+    "data.name",
+    arg.name
+  );
 
   let addRoomMember: boolean = true;
 
@@ -57,7 +59,7 @@ async function userLogin(driver: Driver, socket: any, arg: RequestType): Promise
 
   let userLoginResponse: UserLoginResponse;
 
-  if (!userDocSnap || !userDocSnap.exists()) {
+  if (!userDoc || !userDoc.exists()) {
     // ユーザが存在しない場合
     userLoginResponse = await addUser(
       driver,
@@ -69,11 +71,11 @@ async function userLogin(driver: Driver, socket: any, arg: RequestType): Promise
     );
   } else {
     // ユーザが存在した場合
-    const userData = userDocSnap.data.data!;
-    const userId = userDocSnap.ref.id;
+    const userData = userDoc.data.data!;
+    const userKey = userDoc.data.key;
 
     userLoginResponse = {
-      userId,
+      userKey,
       token: userData.token
     };
     let verifyResult;
@@ -92,34 +94,38 @@ async function userLogin(driver: Driver, socket: any, arg: RequestType): Promise
         if (type === "PL") return "Players";
         return type === "GM" ? "GameMasters" : "Visitors";
       };
-      const oldGroupName = getGroupName(userData.type);
-      const newGroupName = getGroupName(arg.type);
       userData.type = arg.type;
 
       const actorGroupCollectionName = `${roomCollectionPrefix}-DATA-actor-group-list`;
-      const actorGroupCollection = driver.collection<StoreObj<ActorGroup>>(actorGroupCollectionName);
 
-      // 元のグループから削除
-      const oldGroupDoc = (await actorGroupCollection.where("data.name", "==", oldGroupName).get()).docs[0];
-      const oldGroupData: ActorGroup = oldGroupDoc.data!.data!;
-      const index = oldGroupData.list.findIndex(g => g.userId === userId);
-      const actorId = oldGroupData.list[index].id;
-        oldGroupData.list.splice(index, 1);
-      await oldGroupDoc.ref.update({
-        data: oldGroupData
-      });
+      const oldGroupDoc = await findSingle<StoreObj<ActorGroup>>(
+        driver,
+        actorGroupCollectionName,
+        "data.name",
+        getGroupName(userData.type)
+      );
+      const newGroupDoc = await findSingle<StoreObj<ActorGroup>>(
+        driver,
+        actorGroupCollectionName,
+        "data.name",
+        getGroupName(arg.type)
+      );
+      if (oldGroupDoc && newGroupDoc) {
+        // 元のグループから削除
+        const oldGroupData: ActorGroup = oldGroupDoc.data!.data!;
+        const idx = oldGroupData.list.findIndex(g => g.userKey === userKey);
+        const elm = oldGroupData.list.splice(idx, 1)[0];
+        await oldGroupDoc.ref.update({
+          data: oldGroupData
+        });
 
-      // 新しいグループに追加
-      const newGroupDoc = (await actorGroupCollection.where("data.name", "==", newGroupName).get()).docs[0];
-      const newGroupData: ActorGroup = newGroupDoc.data!.data!;
-      newGroupData.list.push({
-        id: actorId,
-        type: "user",
-        userId
-      });
-      await newGroupDoc.ref.update({
-        data: newGroupData
-      });
+        // 新しいグループに追加
+        const newGroupData: ActorGroup = newGroupDoc.data!.data!;
+        newGroupData.list.push(elm);
+        await newGroupDoc.ref.update({
+          data: newGroupData
+        });
+      }
     }
 
     // 人数更新
@@ -131,13 +137,13 @@ async function userLogin(driver: Driver, socket: any, arg: RequestType): Promise
       updateTime: new Date()
     };
     try {
-      await userDocSnap.ref.update(updateUserInfo);
+      await userDoc.ref.update(updateUserInfo);
     } catch (err) {
       throw new ApplicationError(`Failure update login doc.`, updateUserInfo);
     }
 
     const updateSocketInfo: Partial<SocketStore> = {
-      userId: userDocSnap.ref.id
+      userKey: userDoc.data.key
     };
     try {
       await socketDocSnap.ref.update(updateSocketInfo);
@@ -146,7 +152,7 @@ async function userLogin(driver: Driver, socket: any, arg: RequestType): Promise
     }
   }
 
-  const roomData = roomDocSnap.data.data;
+  const roomData = roomDoc.data.data;
   if (addRoomMember) {
     // ログインできたので部屋の入室人数を更新
     roomData.memberNum++;
@@ -155,18 +161,19 @@ async function userLogin(driver: Driver, socket: any, arg: RequestType): Promise
       data: roomData
     };
     try {
-      await roomDocSnap.ref.update(updateRoomInfo);
+      await roomDoc.ref.update(updateRoomInfo);
     } catch (err) {
       throw new ApplicationError(`Failure update room doc.`, updateRoomInfo);
     }
   }
 
-  const userId = userLoginResponse.userId;
+  const userKey = userLoginResponse.userKey;
   // 部屋データとして追加
   const roomSocketUserCollectionName = `${roomCollectionPrefix}-DATA-socket-user-list`;
   const socketUserCollection = driver.collection<StoreObj<SocketUserStore>>(roomSocketUserCollectionName);
   await socketUserCollection.add({
     collection: "socket-user-list",
+    key: uuid.v4(),
     ownerType: null,
     owner: null,
     order: 0,
@@ -177,8 +184,8 @@ async function userLogin(driver: Driver, socket: any, arg: RequestType): Promise
     updateTime: null,
     permission: PERMISSION_DEFAULT,
     data: {
-      socketId: exclusionOwner,
-      userId
+      socketId,
+      userKey
     }
   });
 

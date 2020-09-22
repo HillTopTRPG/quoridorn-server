@@ -16,36 +16,36 @@ type ResponseType = void;
 /**
  * 部屋（編集・削除）着手リクエスト
  * @param driver
- * @param exclusionOwner
+ * @param socketId
  * @param arg 部屋番号
  */
-export async function touchRoomModify(driver: Driver, exclusionOwner: string, arg: RequestType): Promise<ResponseType> {
-  const docSnap = await getRoomInfo(driver, arg.roomNo);
+export async function touchRoomModify(driver: Driver, socketId: string, arg: RequestType): Promise<ResponseType> {
+  const doc = await getRoomInfo(driver, arg.roomNo);
 
-  if (!await checkViewer(driver, exclusionOwner))
-    throw new ApplicationError(`Unsupported user.`, { socketId: exclusionOwner });
+  if (!await checkViewer(driver, socketId))
+    throw new ApplicationError(`Unsupported user.`, { socketId });
 
   // No such check.
-  if (!docSnap || !docSnap.exists()) throw new ApplicationError(`No such.`, arg);
+  if (!doc || !doc.exists()) throw new ApplicationError(`No such.`, arg);
 
   // Already check.
-  if (docSnap.data.exclusionOwner) throw new ApplicationError(`Already touched.`, arg);
+  if (doc.data.exclusionOwner) throw new ApplicationError(`Already touched.`, arg);
 
-  const updateTime = docSnap.data.updateTime;
+  const updateTime = doc.data.updateTime;
 
   const updateInfo: Partial<StoreObj<RoomStore>> = {
-    exclusionOwner,
-    lastExclusionOwner: exclusionOwner,
+    exclusionOwner: socketId,
+    lastExclusionOwner: socketId,
     status: "modify-touched",
     updateTime: new Date()
   };
   try {
-    await docSnap.ref.update(updateInfo);
+    await doc.ref.update(updateInfo);
   } catch (err) {
     throw new ApplicationError(`Failure update doc.`, updateInfo);
   }
 
-  await addTouchier(driver, exclusionOwner, SYSTEM_COLLECTION.ROOM_LIST, docSnap.ref.id, updateTime);
+  await addTouchier(driver, socketId, SYSTEM_COLLECTION.ROOM_LIST, doc.data.key, updateTime);
 }
 
 const resist: Resister = (driver: Driver, socket: any): void => {

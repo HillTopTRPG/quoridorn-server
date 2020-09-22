@@ -52,7 +52,7 @@ async function roomUsersGet(
     result: true,
     users: userDocList.map(u => ({
       roomNo,
-      userId: u.ref.id,
+      userKey: u.data!.key,
       name: u.data!.data!.name,
       type: u.data!.data!.type,
       login: authorizedValue(u.data!.data!.login),

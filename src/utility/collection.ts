@@ -1,33 +1,27 @@
 import DocumentSnapshot from "nekostore/lib/DocumentSnapshot";
-import {GetDataOption, StoreMetaData, StoreObj} from "../@types/store";
+import {GetDataOption, StoreObj, StoreUseData} from "../@types/store";
 import Driver from "nekostore/lib/Driver";
 import {RoomStore, SocketStore} from "../@types/data";
 import {SYSTEM_COLLECTION} from "../server";
-import {SystemError} from "../error/SystemError";
 import {ApplicationError} from "../error/ApplicationError";
 import CollectionReference from "nekostore/src/CollectionReference";
+import Query from "nekostore/lib/Query";
+import DocumentChange from "nekostore/src/DocumentChange";
 
-
-export function getStoreObj<T>(
-  doc: DocumentSnapshot<StoreObj<T>>
-): (StoreObj<T> & StoreMetaData) | null {
-  if (doc.exists()) {
-    const data: StoreObj<T> = doc.data;
-    return {
-      ...data,
-      id: doc.ref.id,
-    };
-  } else {
-    return null;
-  }
+export function splitCollectionName(collectionName: string): { roomCollectionPrefix: string; roomCollectionSuffix: string } {
+  const splitted = collectionName.split("-DATA-");
+  return {
+    roomCollectionPrefix: splitted[0],
+    roomCollectionSuffix: splitted[1] || ""
+  };
 }
 
-export async function resistCollectionName(driver: Driver, collection: string) {
-  const roomCollectionPrefix = collection.replace(/-DATA-.+$/, "");
+export async function resistCollectionName(driver: Driver, collectionName: string) {
+  const { roomCollectionPrefix } = splitCollectionName(collectionName);
   const collectionListCollectionName = `${roomCollectionPrefix}-DATA-collection-list`;
   const cnCC = driver.collection<{ name: string }>(collectionListCollectionName);
-  if ((await cnCC.where("name", "==", collection).get()).docs.length) return;
-  await cnCC.add({ name: collection });
+  if ((await cnCC.where("name", "==", collectionName).get()).docs.length) return;
+  await cnCC.add({ name: collectionName });
 }
 
 /**
@@ -40,89 +34,138 @@ export async function getRoomInfo(
   driver: Driver,
   roomNo: number,
   option: GetDataOption<RoomStore> = {}
-): Promise<DocumentSnapshot<StoreObj<RoomStore>> | null> {
-  const collectionReference = option.collectionReference || driver.collection<StoreObj<RoomStore>>(SYSTEM_COLLECTION.ROOM_LIST);
-  const roomDocList = (await collectionReference.where("order", "==", roomNo).get()).docs;
+): Promise<DocumentChange<StoreObj<RoomStore>> | null> {
+  const doc = await findSingle<StoreObj<RoomStore>>(
+    driver,
+    SYSTEM_COLLECTION.ROOM_LIST,
+    "order",
+    roomNo
+  );
 
-  if (!roomDocList.length) return null;
-
-  // 部屋情報が複数件取得できてしまった場合
-  // 仕様上考慮しなくていいとされてきたuuidが重複してしまった本当の想定外エラー
-  if (roomDocList.length > 1)
-    throw new SystemError(`Duplicate room info. Please report to server administrator. room-no=${roomNo}`);
+  if (!doc) return null;
 
   // 排他チェック
-  if (option.exclusionOwner !== undefined) {
-    const data = roomDocList[0].data!;
+  if (option.socketId !== undefined) {
+    const data = doc.data!;
     if (!data.exclusionOwner)
       throw new ApplicationError(
         `Failure getRoomInfo. (Target roomInfo document has not exclusionOwner.)`,
         { roomNo }
       );
-    if (data.exclusionOwner !== option.exclusionOwner)
+    if (data.exclusionOwner !== option.socketId)
       throw new ApplicationError(
         `Failure getRoomInfo. (Already touched.)`,
         { roomNo }
       );
   }
 
-  // idチェック
-  if (option.id !== undefined && option.id !== roomDocList[0].ref.id) {
+  // keyチェック
+  if (option.key !== undefined && option.key !== doc.data!.key) {
     throw new ApplicationError(
-      `Failure getRoomInfo. (Request id is not match stored id.)`,
-      { roomNo, "storeId": roomDocList[0].ref.id, requestId: option.id }
+      `Failure getRoomInfo. (Request key is not match stored key.)`,
+      { roomNo, "storeId": doc.data!.key, requestId: option.key }
     );
   }
 
-  return roomDocList[0];
+  return doc;
+}
+
+/*****************************************************************************
+ * データを複数件検索する
+ * @param driver Driver
+ * @param collectionName コレクション名
+ * @param options 検索条件
+ */
+export async function findList<T>(
+  driver: Driver,
+  collectionName: string,
+  options: { property: string; operand: "=="; value: any }[] = []
+): Promise<DocumentChange<T>[] | null> {
+  let c: Query<T> = driver.collection<T>(collectionName);
+  options.forEach(o => {
+    c = c.where(o.property, o.operand, o.value);
+  });
+  const docs = (await c.get()).docs;
+  if (!docs) return null;
+  return docs.filter(item => item && item.exists());
+}
+
+/*****************************************************************************
+ * データを１件取得する
+ * @param driver Driver
+ * @param collectionName コレクション名
+ * @param property 検索プロパティ
+ * @param value 検索値
+ */
+export async function findSingle<T>(
+  driver: Driver,
+  collectionName: string,
+  property: string,
+  value: any
+): Promise<DocumentChange<T> | null> {
+  const list = await findList<T>(
+    driver,
+    collectionName,
+    [{ property, operand: "==", value}]
+  );
+  return list ? list[0] : null;
 }
 
 /**
  * コレクションから特定の情報を取得する
  * @param driver
- * @param collection
- * @param id
+ * @param collectionName
  * @param option
  */
-export async function getData(
+export async function getData<T>(
   driver: Driver,
-  collection: string,
-  id: string,
-  option: GetDataOption<any> = {}
-): Promise<DocumentSnapshot<StoreObj<any>> | null> {
-  const collectionReference = option.collectionReference || driver.collection<StoreObj<any>>(collection);
-  const docSnap = (await collectionReference.doc(id).get());
+  collectionName: string,
+  option: GetDataOption<T> = {}
+): Promise<DocumentSnapshot<StoreObj<T>> | null> {
+  const docSnap = await findSingle<StoreObj<T>>(
+    driver,
+    collectionName,
+    "key",
+    option.key
+  );
 
   if (!docSnap || !docSnap.exists()) return null;
 
   // 排他チェック
-  if (option.exclusionOwner !== undefined) {
+  if (option.socketId !== undefined) {
     const data = docSnap.data;
     if (!data.exclusionOwner)
       throw new ApplicationError(
         `Failure getData. (Target data document has not exclusionOwner.)`,
-        { collection, id }
+        { collectionName, key: option.key }
       );
-    if (data.exclusionOwner !== option.exclusionOwner)
+    if (data.exclusionOwner !== option.socketId)
       throw new ApplicationError(
         `Failure getData. (Already touched.)`,
-        { collection, id }
+        { collectionName, key: option.key }
       );
   }
   return docSnap;
 }
 
-export async function checkViewer(driver: Driver, exclusionOwner: string): Promise<boolean> {
-  const viewerInfo = (await getSocketDocSnap(driver, exclusionOwner)).data!;
-  return !(viewerInfo && viewerInfo.roomId && viewerInfo.userId);
+export async function checkViewer(
+  driver: Driver,
+  socketId: string
+): Promise<boolean> {
+  const viewerInfo = (await getSocketDocSnap(driver, socketId)).data!;
+  return !(viewerInfo && viewerInfo.roomKey && viewerInfo.userKey);
 }
 
-export async function getSocketDocSnap(driver: Driver, socketId: string): Promise<DocumentSnapshot<SocketStore>> {
-  const socketDocSnap = (await driver.collection<SocketStore>(SYSTEM_COLLECTION.SOCKET_LIST)
-    .where("socketId", "==", socketId)
-    .get())
-    .docs
-    .filter(doc => doc && doc.exists())[0];
+export async function getSocketDocSnap(
+  driver: Driver,
+  socketId: string
+): Promise<DocumentSnapshot<SocketStore>> {
+  const socketDocSnap = await findSingle<SocketStore>(
+    driver,
+    SYSTEM_COLLECTION.SOCKET_LIST,
+    "socketId",
+    socketId
+  );
 
   // No such socket check.
   if (!socketDocSnap) throw new ApplicationError(`No such socket.`, { socketId });
@@ -149,10 +192,10 @@ export async function getMaxOrder<T>(driver: Driver, collectionName: string): Pr
 export async function getOwner(driver: Driver, socketId: string, owner: string | null | undefined): Promise<string | null> {
   if (owner !== undefined) return owner;
   const socketDocSnap = (await getSocketDocSnap(driver, socketId));
-  const userId = socketDocSnap.data!.userId;
+  const userKey = socketDocSnap.data!.userKey;
 
   // No such user check.
-  if (!userId) throw new ApplicationError(`No such user.`, { socketId });
+  if (!userKey) throw new ApplicationError(`No such user.`, { socketId });
 
-  return userId;
+  return userKey;
 }

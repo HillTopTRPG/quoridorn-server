@@ -50,7 +50,7 @@ import {accessLog} from "./utility/logger";
 import {RoomStore, SocketStore, SocketUserStore, TokenStore, TouchierStore, UserStore} from "./@types/data";
 import * as Minio from "minio";
 import {releaseTouch} from "./utility/touch";
-import {getSocketDocSnap} from "./utility/collection";
+import {findList, findSingle, getSocketDocSnap} from "./utility/collection";
 import {Request, Response, NextFunction} from "express";
 const co = require("co");
 const cors = require('cors');
@@ -185,10 +185,10 @@ async function getStore(setting: ServerSetting): Promise<{store: Store, db?: Db}
 async function addSocketList(driver: Driver, socketId: string): Promise<void> {
   await driver.collection<SocketStore>(SYSTEM_COLLECTION.SOCKET_LIST).add({
     socketId,
-    roomId: null,
+    roomKey: null,
     roomCollectionPrefix: null,
     storageId: null,
-    userId: null,
+    userKey: null,
     connectTime: new Date()
   });
 }
@@ -197,45 +197,46 @@ async function logout(driver: Driver, socketId: string): Promise<void> {
   const snap = (await getSocketDocSnap(driver, socketId));
 
   const socketData: SocketStore = snap.data!;
-  if (socketData.roomId && socketData.userId) {
-    const roomDocSnap = await driver.collection<StoreObj<RoomStore>>(SYSTEM_COLLECTION.ROOM_LIST)
-      .doc(socketData.roomId)
-      .get();
-    if (!roomDocSnap || !roomDocSnap.exists())
-      throw new ApplicationError(`No such room. room-id=${socketData.roomId}`);
-    const roomData = roomDocSnap.data.data!;
+  if (socketData.roomKey && socketData.userKey) {
+    const roomDoc = await findSingle<StoreObj<RoomStore>>(
+      driver,
+      SYSTEM_COLLECTION.ROOM_LIST,
+      "key",
+      socketData.roomKey
+    );
+    if (!roomDoc || !roomDoc.exists())
+      throw new ApplicationError(`No such room. room-key=${socketData.roomKey}`);
+    const roomData = roomDoc.data.data!;
 
     // ログアウト処理
-    const roomUserCollectionName = `${roomData.roomCollectionPrefix}-DATA-user-list`;
-    const userDocSnap = await driver.collection<StoreObj<UserStore>>(roomUserCollectionName)
-      .doc(socketData.userId)
-      .get();
-    if (!userDocSnap || !userDocSnap.exists())
-      throw new ApplicationError(`No such user. user-id=${socketData.userId}`);
-    const userData = userDocSnap.data.data!;
+    const userDoc = await findSingle<StoreObj<UserStore>>(
+      driver,
+      `${roomData.roomCollectionPrefix}-DATA-user-list`,
+      "key",
+      socketData.userKey
+    );
+    if (!userDoc || !userDoc.exists())
+      throw new ApplicationError(`No such user. user-key=${socketData.userKey}`);
+    const userData = userDoc.data.data!;
     userData.login--;
-    await userDocSnap.ref.update({
-      data: userData
-    });
+    await userDoc.ref.update({ data: userData });
 
     if (userData.login === 0) {
       roomData.memberNum--;
-      await roomDocSnap.ref.update({
-        data: roomData
-      });
+      await roomDoc.ref.update({ data: roomData });
     }
 
-    const roomSocketUserCollectionName = `${roomData.roomCollectionPrefix}-DATA-socket-user-list`;
-    const socketUserDocSnap = (await driver.collection<StoreObj<SocketUserStore>>(roomSocketUserCollectionName)
-      .where("data.socketId", "==", socketId)
-      .get())
-      .docs
-      .filter(doc => doc && doc.exists())[0];
+    const socketUserDoc = await findSingle<StoreObj<SocketUserStore>>(
+      driver,
+      `${roomData.roomCollectionPrefix}-DATA-socket-user-list`,
+      "data.socketId",
+      socketId
+    );
 
-    if (!socketUserDocSnap)
-      throw new ApplicationError(`No such user. user-id=${socketData.userId}`);
+    if (!socketUserDoc)
+      throw new ApplicationError(`No such user. user-key=${socketData.userKey}`);
 
-    await socketUserDocSnap.ref.delete();
+    await socketUserDoc.ref.delete();
   }
   await snap.ref.delete();
 }
@@ -382,13 +383,14 @@ async function main(): Promise<void> {
     setInterval(async () => {
       console.log("-- TOKEN REFRESH --");
       const now = new Date();
-      const c = driver.collection<TokenStore>(SYSTEM_COLLECTION.TOKEN_LIST);
-      (await c.get()).docs
-        .filter(d => d.exists() && d.data!.expires.getTime() < now.getTime())
-        .forEach(d => {
-          console.log(`Expired: ${d.data!.token}`);
-          d.ref.delete().then();
-        });
+      await Promise.all(
+        (await findList<TokenStore>(driver, SYSTEM_COLLECTION.TOKEN_LIST))!
+          .filter(doc => doc.data!.expires.getTime() < now.getTime())
+          .map(doc => {
+            console.log(`Expired: ${doc.data!.token}`);
+            return doc.ref.delete();
+          })
+      );
     }, 1000 * 60 * 5); // 5分
 
   } catch (err) {

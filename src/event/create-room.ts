@@ -31,17 +31,17 @@ async function createRoom(driver: Driver, exclusionOwner: string, arg: RequestTy
   }, true);
 
   // 部屋一覧の更新
-  const docSnap: DocumentSnapshot<StoreObj<RoomStore>> | null = await getRoomInfo(
+  const doc: DocumentSnapshot<StoreObj<RoomStore>> | null = await getRoomInfo(
     driver,
     arg.roomNo,
-    { id: arg.roomId }
+    { key: arg.roomKey }
   );
 
   // Untouched check.
-  if (!docSnap || !docSnap.exists()) throw new ApplicationError(`Untouched room.`, arg);
+  if (!doc || !doc.exists()) throw new ApplicationError(`Untouched room.`, arg);
 
   // Already check.
-  if (docSnap.data.data) throw new ApplicationError(`Already created room.`, arg);
+  if (doc.data.data) throw new ApplicationError(`Already created room.`, arg);
 
   const roomCreatePassword = serverSetting.roomCreatePassword || "";
   if (
@@ -49,7 +49,7 @@ async function createRoom(driver: Driver, exclusionOwner: string, arg: RequestTy
     roomCreatePassword && roomCreatePassword !== arg.roomCreatePassword
   ) {
     try {
-      await docSnap.ref.delete();
+      await doc.ref.delete();
     } catch (e) {
       // Nothing.
     }
@@ -61,7 +61,7 @@ async function createRoom(driver: Driver, exclusionOwner: string, arg: RequestTy
     arg.roomPassword = await hash(arg.roomPassword, hashAlgorithm);
   } catch (err) {
     try {
-      await docSnap.ref.delete();
+      await doc.ref.delete();
     } catch (e) {
       // Nothing.
     }
@@ -87,10 +87,10 @@ async function createRoom(driver: Driver, exclusionOwner: string, arg: RequestTy
     updateTime: new Date()
   };
   try {
-    await docSnap.ref.update(updateRoomInfo);
+    await doc.ref.update(updateRoomInfo);
   } catch (err) {
     try {
-      await docSnap.ref.delete();
+      await doc.ref.delete();
     } catch (e) {
       // Nothing.
     }
@@ -98,12 +98,12 @@ async function createRoom(driver: Driver, exclusionOwner: string, arg: RequestTy
   }
 
   // Socket情報の更新
-  const updateSocketInfo: Partial<SocketStore> = { roomId: arg.roomId, roomCollectionPrefix, storageId };
+  const updateSocketInfo: Partial<SocketStore> = { roomKey: arg.roomKey, roomCollectionPrefix, storageId };
   try {
     await socketDocSnap.ref.update(updateSocketInfo);
   } catch (err) {
     try {
-      await docSnap.ref.delete();
+      await doc.ref.delete();
     } catch (e) {
       // Nothing.
     }
@@ -114,9 +114,11 @@ async function createRoom(driver: Driver, exclusionOwner: string, arg: RequestTy
   const actorGroupCCName = `${roomCollectionPrefix}-DATA-actor-group-list`;
   const actorGroupCC = driver.collection<StoreObj<ActorGroup>>(actorGroupCCName);
 
+  const key = uuid.v4();
   const addGroup = async (name: string, order: number) => {
     await actorGroupCC.add({
       collection: "actor-group-list",
+      key,
       ownerType: null,
       owner: null,
       order,
@@ -142,7 +144,7 @@ async function createRoom(driver: Driver, exclusionOwner: string, arg: RequestTy
     await addGroup("Visitors", 4);
   } catch (err) {
     try {
-      await docSnap.ref.delete();
+      await doc.ref.delete();
     } catch (e) {
       // Nothing.
     }

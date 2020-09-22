@@ -1,10 +1,9 @@
 import Driver from "nekostore/lib/Driver";
-import {StoreObj} from "../@types/store";
+import {StoreObj, StoreUseData} from "../@types/store";
 import {addDirect} from "../event/add-direct";
-import {getData, resistCollectionName} from "./collection";
-import {ResourceMasterStore, SceneAndObject, SceneObject} from "../@types/data";
+import {findList, getData, resistCollectionName, splitCollectionName} from "./collection";
+import {ActorStore, ResourceMasterStore, ResourceStore, SceneAndObject, SceneObject} from "../@types/data";
 import {addActorRelation} from "./data-actor";
-import DocumentReference from "nekostore/src/DocumentReference";
 import {addSimple, deleteSimple, getDataForDelete, multipleTouchCheck, touchCheck} from "./data";
 import DocumentSnapshot from "nekostore/lib/DocumentSnapshot";
 import {updateDataPackage} from "../event/update-data-package";
@@ -15,25 +14,24 @@ export async function addSceneObjectRelation(
   socket: any,
   collectionName: string,
   sceneObject: SceneObject,
-  option?: Partial<StoreObj<SceneObject>>,
-  id?: string
-): Promise<DocumentReference<StoreObj<SceneObject>>> {
-  const roomCollectionPrefix = collectionName.replace(/-DATA-.+$/, "");
-  const docRef = await addSimple(driver, socket, collectionName, sceneObject, option, id);
-  const sceneObjectId = docRef.id;
+  option?: Partial<StoreUseData<SceneObject>>
+): Promise<DocumentSnapshot<StoreObj<SceneObject>>> {
+  const {roomCollectionPrefix} = splitCollectionName(collectionName);
+  const doc = await addSimple<SceneObject>(driver, socket, collectionName, sceneObject, option);
+  const sceneObjectKey = doc.data!.key;
 
   // シーンオブジェクトの追加
   const sceneListCCName = `${roomCollectionPrefix}-DATA-scene-list`;
-  const sceneListCC = driver.collection<SceneObject>(sceneListCCName);
   // 現存する各シーンすべてに今回登録したシーンオブジェクトを紐づかせる
-  const sceneAndObjectList: SceneAndObject[] = (await sceneListCC.get()).docs.map(doc => ({
-    sceneId: doc.ref.id,
-    objectId: sceneObjectId,
-    isOriginalAddress: false,
-    originalAddress: null,
-    entering: "normal"
-  }));
-  await addDirect(driver, socket, {
+  const sceneAndObjectList =
+    (await findList<StoreObj<SceneObject>>(driver, sceneListCCName))!.map(doc => ({
+      sceneKey: doc.data!.key,
+      objectKey: sceneObjectKey,
+      isOriginalAddress: false,
+      originalAddress: null,
+      entering: "normal"
+    }));
+  await addDirect<SceneAndObject>(driver, socket, {
     collection: `${roomCollectionPrefix}-DATA-scene-and-object-list`,
     dataList: sceneAndObjectList
   }, false);
@@ -42,10 +40,10 @@ export async function addSceneObjectRelation(
     // キャラクターコマの追加
 
     // アクターの追加の場合
-    if (!sceneObject.actorId) {
+    if (!sceneObject.actorKey) {
       // 併せてActorの登録も行う
       const actorCCName = `${roomCollectionPrefix}-DATA-actor-list`;
-      sceneObject.actorId = (await addActorRelation(
+      sceneObject.actorKey = (await addActorRelation(
         driver,
         socket,
         actorCCName,
@@ -55,10 +53,10 @@ export async function addSceneObjectRelation(
           chatFontColorType: "owner",
           chatFontColor: "#000000",
           standImagePosition: 1,
-          pieceIdList: [sceneObjectId]
+          pieceKeyList: [sceneObjectKey]
         }
-      )).id;
-      await docRef.update({
+      )).data!.key;
+      await doc.ref.update({
         data: sceneObject
       });
 
@@ -66,49 +64,51 @@ export async function addSceneObjectRelation(
       await resistCollectionName(driver, actorCCName);
     } else {
       // 既存Actorにコマを追加するパターン
-      const actorDocSnap = await getData(
+      const actorDoc = await getData<ActorStore>(
         driver,
         `${roomCollectionPrefix}-DATA-actor-list`,
-        sceneObject.actorId,
-        {}
+        { key: sceneObject.actorKey }
       );
-      if (actorDocSnap && actorDocSnap.exists()) {
-        (actorDocSnap.data.data.pieceIdList as string[]).push(sceneObjectId);
-        await actorDocSnap.ref.update(actorDocSnap.data.data);
+      if (actorDoc && actorDoc.exists()) {
+        (actorDoc.data.data!.pieceKeyList as string[]).push(sceneObjectKey);
+        await actorDoc.ref.update(actorDoc.data);
       }
     }
 
     // リソースの自動追加
     const resourceMasterCCName = `${roomCollectionPrefix}-DATA-resource-master-list`;
-    const resourceMasterCC = driver.collection<StoreObj<ResourceMasterStore>>(resourceMasterCCName);
-    const resourceMasterDocList = (await resourceMasterCC.where("data.isAutoAddMapObject", "==", true).get()).docs;
+    const resourceMasterDocList = (await findList<StoreObj<ResourceMasterStore>>(
+      driver,
+      resourceMasterCCName,
+      [{ property: "data.isAutoAddMapObject", operand: "==", value: true }]
+    ))!;
 
     // リソースインスタンスを追加
-    await addDirect(driver, socket, {
+    await addDirect<ResourceStore>(driver, socket, {
       collection: `${roomCollectionPrefix}-DATA-resource-list`,
       dataList: resourceMasterDocList.map(rmDoc => ({
-        masterId: rmDoc.ref.id,
+        masterKey: rmDoc.data!.key,
         type: rmDoc.data!.data!.type,
         value: rmDoc.data!.data!.defaultValue
       })),
       optionList: resourceMasterDocList.map(() => ({
         ownerType: "scene-object",
-        owner: sceneObjectId,
+        owner: sceneObjectKey,
         order: -1
       }))
     }, false);
   }
 
-  return docRef;
+  return doc;
 }
 
 export async function deleteSceneObjectRelation(
   driver: Driver,
   socket: any,
   collectionName: string,
-  id: string
+  key: string
 ): Promise<void> {
-  const docSnap: DocumentSnapshot<StoreObj<SceneObject>> = await getDataForDelete(driver, collectionName, id);
+  const docSnap: DocumentSnapshot<StoreObj<SceneObject>> = await getDataForDelete(driver, collectionName, key);
   const sceneObject = docSnap.data!;
   const roomCollectionPrefix = collectionName.replace(/-DATA-.+$/, "");
 
@@ -119,13 +119,13 @@ export async function deleteSceneObjectRelation(
     case "map-marker":
       // memoが削除できる状態かをチェック
       const memoCCName = `${roomCollectionPrefix}-DATA-memo-list`;
-      const memoDocChangeList = await multipleTouchCheck(driver, memoCCName, "owner", id);
+      const memoDocChangeList = await multipleTouchCheck(driver, memoCCName, "owner", key);
 
       // memoの削除
       if (memoDocChangeList.length) {
         await deleteDataPackage(driver, socket, {
           collection: memoCCName,
-          idList: memoDocChangeList.map(mdc => mdc.ref.id)
+          optionList: memoDocChangeList.map(m => ({ key: m.data!.key }))
         }, false);
       }
       break;
@@ -135,22 +135,22 @@ export async function deleteSceneObjectRelation(
   if (sceneObject.data!.type === "character") {
     // リソースが削除できる状態かをチェック
     const resourceCCName = `${roomCollectionPrefix}-DATA-resource-list`;
-    const resourceDocChangeList = await multipleTouchCheck(driver, resourceCCName, "owner", id);
+    const resourceDocChangeList = await multipleTouchCheck(driver, resourceCCName, "owner", key);
 
     // SceneAndObjectが削除できる状態かをチェック
     const sceneAndObjectCCName = `${roomCollectionPrefix}-DATA-scene-and-object-list`;
-    const sceneAndObjectDocChangeList = await multipleTouchCheck(driver, sceneAndObjectCCName, "data.objectId", id);
+    const sceneAndObjectDocChangeList = await multipleTouchCheck(driver, sceneAndObjectCCName, "data.objectKey", key);
 
     // アクターが削除できる状態かをチェック
-    const actorId = sceneObject.data!.actorId!;
+    const actorKey = sceneObject.data!.actorKey!;
     const actorListCollectionName = `${roomCollectionPrefix}-DATA-actor-list`;
-    const actorDocSnap = await touchCheck(driver, actorListCollectionName, actorId);
+    const actorDoc = await touchCheck<ActorStore>(driver, actorListCollectionName, actorKey);
 
     // リソースの削除
     if (resourceDocChangeList.length) {
       await deleteDataPackage(driver, socket, {
         collection: resourceCCName,
-        idList: resourceDocChangeList.map(rdc => rdc.ref.id)
+        optionList: resourceDocChangeList.map(r => ({ key: r.data!.key }))
       }, false);
     }
 
@@ -158,28 +158,28 @@ export async function deleteSceneObjectRelation(
     if (sceneAndObjectDocChangeList.length) {
       await deleteDataPackage(driver, socket, {
         collection: sceneAndObjectCCName,
-        idList: sceneAndObjectDocChangeList.map(rdc => rdc.ref.id)
+        optionList: sceneAndObjectDocChangeList.map(sao => ({ key: sao.data!.key }))
       }, false);
     }
 
     // アクターの更新／削除
-    const pieceIdList: string[] = actorDocSnap.data!.data.pieceIdList;
-    const idx = pieceIdList.findIndex(pid => pid === id);
-    pieceIdList.splice(idx, 1);
+    const pieceKeyList: string[] = actorDoc.data!.data!.pieceKeyList;
+    const idx = pieceKeyList.findIndex(k => k === key);
+    pieceKeyList.splice(idx, 1);
 
-    if (pieceIdList.length) {
+    if (pieceKeyList.length) {
       await updateDataPackage(driver, socket, {
         collection: actorListCollectionName,
-        idList: [actorId],
-        dataList: [actorDocSnap.data]
+        dataList: [actorDoc.data],
+        optionList: [{ key: actorKey }]
       });
     } else {
       await deleteDataPackage(driver, socket, {
         collection: actorListCollectionName,
-        idList: [actorId]
+        optionList: [{ key: actorKey }]
       }, false);
     }
   }
 
-  await deleteSimple<SceneObject>(driver, socket, collectionName, id);
+  await deleteSimple<SceneObject>(driver, socket, collectionName, key);
 }

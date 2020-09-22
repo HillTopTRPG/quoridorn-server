@@ -2,18 +2,18 @@ import Driver from "nekostore/lib/Driver";
 import DocumentSnapshot from "nekostore/lib/DocumentSnapshot";
 import {StoreObj} from "../@types/store";
 import {ApplicationError} from "../error/ApplicationError";
-import DocumentReference from "nekostore/src/DocumentReference";
 import {PERMISSION_DEFAULT} from "../server";
-import {getData, getMaxOrder, getOwner} from "./collection";
+import {findList, getData, getMaxOrder, getOwner} from "./collection";
 import DocumentChange from "nekostore/src/DocumentChange";
+import uuid from "uuid";
 
-export async function touchCheck(
+export async function touchCheck<T>(
   driver: Driver,
   collectionName: string,
-  id: string
-): Promise<DocumentSnapshot<StoreObj<any>>> {
-  const msgArg = { collectionName, id };
-  const docSnap = await getData(driver, collectionName, id);
+  key: string
+): Promise<DocumentSnapshot<StoreObj<T>>> {
+  const msgArg = { collectionName, key };
+  const docSnap = await getData<T>(driver, collectionName, { key });
 
   // No such check.
   if (!docSnap || !docSnap.exists()) throw new ApplicationError(`No such.`, msgArg);
@@ -24,18 +24,16 @@ export async function touchCheck(
   return docSnap;
 }
 
-export async function multipleTouchCheck(driver: Driver, collectionName: string, whereStr: string, id: string): Promise<DocumentChange<StoreObj<any>>[]> {
-  const collection = driver.collection<StoreObj<any>>(collectionName);
-  const docChangeList = (await collection.where(whereStr, "==", id).get()).docs;
-  const noSuchDocChangeList = docChangeList.filter(rdc => !rdc || !rdc.exists());
-  const touchedDocChangeList = docChangeList.filter(rdc => rdc && rdc.exists() && rdc.data.exclusionOwner);
-  if (noSuchDocChangeList.length) {
-    throw new ApplicationError(`No such.`, { collectionName, idList: noSuchDocChangeList.map(nr => nr.ref.id) });
+export async function multipleTouchCheck(driver: Driver, collectionName: string, whereStr: string, value: string): Promise<DocumentChange<StoreObj<any>>[]> {
+  const docs = (await findList<StoreObj<any>>(driver, collectionName, [{ property: whereStr, operand: "==", value }]))!;
+  if (docs.length) {
+    throw new ApplicationError(`No such.`, { collectionName, keyList: docs.map(doc => doc.data!.key) });
   }
-  if (touchedDocChangeList.length) {
-    throw new ApplicationError(`Already touched.`, { collectionName, idList: touchedDocChangeList.map(nr => nr.ref.id) });
+  const lockingDocs = docs.filter(d => d.data!.exclusionOwner);
+  if (lockingDocs.length) {
+    throw new ApplicationError(`Already touched.`, { collectionName, keyList: lockingDocs.map(doc => doc.data!.key ) });
   }
-  return docChangeList;
+  return docs;
 }
 
 export async function addSimple<T>(
@@ -43,9 +41,8 @@ export async function addSimple<T>(
   socket: any,
   collectionName: string,
   data: T,
-  option?: Partial<StoreObj<T>>,
-  id?: string
-): Promise<DocumentReference<StoreObj<T>>> {
+  option?: Partial<StoreObj<T>>
+): Promise<DocumentSnapshot<StoreObj<T>>> {
   const { c, maxOrder } = await getMaxOrder<T>(driver, collectionName);
   const exclusionOwner = socket.id;
 
@@ -55,9 +52,11 @@ export async function addSimple<T>(
   const order = option && option.order !== undefined ? option.order : maxOrder + 1;
   const now = new Date();
   const permission = option && option.permission || PERMISSION_DEFAULT;
+  const key = (option ? option.key : null) || uuid.v4();
 
   const addInfo: StoreObj<T> = {
     collection: collectionSuffixName,
+    key,
     ownerType,
     owner,
     order,
@@ -70,44 +69,38 @@ export async function addSimple<T>(
     data
   };
 
-  if (id) {
-    try {
-      const docRef = c.doc(id);
-      await docRef.set(addInfo);
-      return docRef;
-    } catch (err) {
-      throw new ApplicationError(`Failure add doc.`, addInfo);
-    }
-  } else {
-    try {
-      return await c.add(addInfo);
-    } catch (err) {
-      throw new ApplicationError(`Failure add doc.`, addInfo);
-    }
+  try {
+    return await (await c.add(addInfo)).get();
+  } catch (err) {
+    throw new ApplicationError(`Failure add doc.`, addInfo);
   }
 }
 
-export async function getDataForDelete(driver: Driver, collectionName: string, id: string): Promise<DocumentSnapshot<StoreObj<any>>> {
-  const msgArg = { collectionName, id };
-  const docSnap: DocumentSnapshot<StoreObj<any>> | null = await getData(driver, collectionName, id);
-  if (!docSnap) throw new ApplicationError(`Untouched data.`, msgArg);
-  const data = docSnap.data;
+export async function getDataForDelete(
+  driver: Driver,
+  collectionName: string,
+  key: string
+): Promise<DocumentSnapshot<StoreObj<any>>> {
+  const msgArg = { collectionName, key };
+  const doc = await getData(driver, collectionName, { key });
+  if (!doc) throw new ApplicationError(`Untouched data.`, msgArg);
+  const data = doc.data;
   if (!data || !data.data) throw new ApplicationError(`Already deleted.`, msgArg);
-  return docSnap;
+  return doc;
 }
 
 export async function deleteSimple<T>(
   driver: Driver,
   _: any,
   collectionName: string,
-  id: string
+  key: string
 ): Promise<StoreObj<T>> {
-  const msgArg = { collectionName, id };
-  const docSnap: DocumentSnapshot<StoreObj<any>> = await getDataForDelete(driver, collectionName, id);
-  const data = docSnap.data!;
+  const msgArg = { collectionName, key };
+  const doc: DocumentSnapshot<StoreObj<any>> = await getDataForDelete(driver, collectionName, key);
+  const data = doc.data!;
 
   try {
-    await docSnap.ref.delete();
+    await doc.ref.delete();
   } catch (err) {
     throw new ApplicationError(`Failure delete doc.`, msgArg);
   }
@@ -115,19 +108,19 @@ export async function deleteSimple<T>(
   return data;
 }
 
-export async function updateSimple(
+export async function updateSimple<T>(
   driver: Driver,
   _: any,
   collection: string,
-  id: string,
-  data: any,
-  option?: Partial<StoreObj<unknown>> & { continuous?: boolean }
+  data: T,
+  option: (Partial<StoreObj<T>> & { key: string; continuous?: boolean; })
 ): Promise<void> {
-  const msgArg = { collection, id, option };
-  const docSnap = await getData(driver, collection, id);
+  const msgArg = { collection, option };
+  const doc = await getData(driver, collection, { key: option.key });
 
   // No such check.
-  if (!docSnap || !docSnap.exists() || !docSnap.data.data) throw new ApplicationError(`No such data.`, msgArg);
+  if (!doc || !doc.exists() || !doc.data.data)
+    throw new ApplicationError(`No such data.`, msgArg);
 
   const updateInfo: Partial<StoreObj<any>> = {
     data,
@@ -135,13 +128,13 @@ export async function updateSimple(
     updateTime: new Date()
   };
   if (option) {
-    if (option.permission) updateInfo.permission = option.permission;
+    if (option.permission !== undefined) updateInfo.permission = option.permission;
     if (option.order !== undefined) updateInfo.order = option.order || 0;
-    if (option.owner) updateInfo.owner = option.owner;
-    if (option.ownerType) updateInfo.ownerType = option.ownerType;
+    if (option.owner !== undefined) updateInfo.owner = option.owner;
+    if (option.ownerType !== undefined) updateInfo.ownerType = option.ownerType;
   }
   try {
-    await docSnap.ref.update(updateInfo);
+    await doc.ref.update(updateInfo);
   } catch (err) {
     throw new ApplicationError(`Failure update doc.`, updateInfo);
   }

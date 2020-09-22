@@ -121,7 +121,7 @@ paths:
       security:
         - token_auth: []
 
-  /v1/rooms/{roomNo}/users/{userId}/token:
+  /v1/rooms/{roomNo}/users/{userKey}/token:
     get:
       tags:
         - token
@@ -156,7 +156,7 @@ paths:
           required: true
           type: integer
           minimum: 0
-        - name: userId
+        - name: userKey
           in: path
           description: ユーザーID
           required: true
@@ -417,7 +417,7 @@ paths:
       security:
         - token_auth: []
 
-  /v1/rooms/{roomNo}/users/{userId}:
+  /v1/rooms/{roomNo}/users/{userKey}:
     get:
       tags:
         - users
@@ -442,7 +442,7 @@ paths:
             [標準ユーザー] Bearer {ユーザー情報アクセス用トークン}<br>
             [サーバー管理者ユーザー] Bearer {サーバー管理者用トークン}<br>
             <br>
-            ユーザー情報アクセス用トークン: `/v1/rooms/{roomNo}/users/{userId}/token`で発行しておいたもの<br>
+            ユーザー情報アクセス用トークン: `/v1/rooms/{roomNo}/users/{userKey}/token`で発行しておいたもの<br>
             サーバー管理者用トークン: `/v1/token`で発行しておいたもの<br>
             <br>
             設定値の例)<br>
@@ -454,7 +454,7 @@ paths:
           required: true
           type: integer
           minimum: 0
-        - name: userId
+        - name: userKey
           in: path
           description: ユーザーID
           required: true
@@ -595,7 +595,7 @@ paths:
               result:
                 type: boolean
                 default: true
-              chatId:
+              chatKey:
                 type: string
                 format: uuid
         '400':
@@ -668,14 +668,14 @@ definitions:
     type: object
     required:
       - roomNo
-      - userId
+      - userKey
       - name
       - type
     properties:
       roomNo:
         type: integer
         description: 部屋番号
-      userId:
+      userKey:
         type: string
         format: uuid
         description: ユーザーID
@@ -703,10 +703,10 @@ definitions:
   ChatPostRequestBody:
     type: object
     required:
-      - userId
+      - userKey>
       - text
     properties:
-      userId:
+      userKey:
         type: string
         format: uuid
       text:

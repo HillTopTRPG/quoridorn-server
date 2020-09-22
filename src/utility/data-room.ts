@@ -1,19 +1,20 @@
 import Driver from "nekostore/lib/Driver";
-import {RoomStore} from "../@types/data";
+import {MediaInfo, RoomStore} from "../@types/data";
 import {StoreObj} from "../@types/store";
 import {accessUrl, bucket, s3Client} from "../server";
 import DocumentSnapshot from "nekostore/lib/DocumentSnapshot";
 import {ApplicationError} from "../error/ApplicationError";
+import {findList} from "./collection";
 
 export async function doDeleteRoom(
   driver: Driver,
   db: any,
-  docSnap: DocumentSnapshot<StoreObj<RoomStore>>
+  doc: DocumentSnapshot<StoreObj<RoomStore>>
 ): Promise<void> {
-  const data = docSnap.data!.data;
+  const data = doc.data!.data;
 
   try {
-    await docSnap.ref.delete();
+    await doc.ref.delete();
   } catch (err) {
     throw new ApplicationError(`Failure delete doc.`);
   }
@@ -24,10 +25,8 @@ export async function doDeleteRoom(
   const roomCollectionPrefix = data.roomCollectionPrefix;
 
   // メディアコレクションからメディアストレージの削除
-  const mediaCCName = `${roomCollectionPrefix}-DATA-media-list`;
-  const mediaCC = driver.collection<StoreObj<{ url: string }>>(mediaCCName);
-  const deleteUrlList = (await mediaCC.get()).docs.map(d => d.data!.data!.url)
-    .map(url => url.replace(accessUrl, ""))
+  const deleteUrlList = (await findList<StoreObj<MediaInfo>>(driver, `${roomCollectionPrefix}-DATA-media-list`))!
+    .map(doc => doc.data!.data!.url.replace(accessUrl, ""))
     .filter(url => url.startsWith(storageId));
   await s3Client!.removeObjects(bucket, deleteUrlList);
 
@@ -40,10 +39,8 @@ export async function doDeleteRoom(
       });
     };
     const collectionNameCollectionName = `${roomCollectionPrefix}-DATA-collection-list`;
-    const cnCC = driver.collection<{ name: string }>(collectionNameCollectionName);
-    (await cnCC.get()).docs.map(d => d.data!.name).forEach(name => {
-      deleteCollection(name);
-    });
+    (await findList<{ name: string }>(driver, collectionNameCollectionName))!
+      .forEach(doc => deleteCollection(doc.data!.name));
     deleteCollection(collectionNameCollectionName);
   }
 }

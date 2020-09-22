@@ -1,21 +1,33 @@
 import {ChangeType} from "nekostore/lib/DocumentChange";
-import {StoreMetaData, StoreObj} from "./store";
+import {StoreObj, StoreUseData} from "./store";
 import {TargetVersion} from "../utility/GitHub";
 import {CutInDeclareInfo, MediaInfo, Scene, UrlType} from "./data";
 
+type WindowSetting =
+  | "not-use" // 使えなくします
+  | "free" // 特に指定はありません
+  | "init-view" // 入室時に表示します
+  | "always-open"; // 常に開いています。閉じることはできません。
+
+type WindowSettings = {
+  chat: WindowSetting;
+  resource: WindowSetting;
+  initiative: WindowSetting;
+  chatPalette: WindowSetting;
+  counterRemocon: WindowSetting;
+};
+
 export type RoomInfoExtend = {
-  visitable: boolean;
-  chatWindow: boolean;
-  dice: boolean;
-  initiativeWindow: boolean;
-  resourceWindow: boolean;
-  chatPaletteWindow: boolean;
-  counterRemocon: boolean;
-  standImage: boolean;
-  cutIn: boolean;
-  drawMapAddress: boolean;
-  drawMapGrid: boolean;
-  autoFitMapCell: boolean;
+  visitable: boolean; // 見学許可
+  isFitGrid: boolean; // マップオブジェクトをセルに自動調整するか
+  isViewDice: boolean; // ダイスを表示するか
+  isViewCutIn: boolean; // カットインを表示するか
+  isDrawGridId: boolean; // マップ座標を表示するか
+  mapRotatable: boolean; // マップを回転させるか
+  isDrawGridLine: boolean; // マップ罫線を表示するか
+  isShowStandImage: boolean; // 立ち絵を表示するか,
+  isShowRotateMarker: boolean; // マップオブジェクトの回転マーカーを表示するか
+  windowSettings: WindowSettings;
 };
 
 export type BaseRoomInfo = {
@@ -26,7 +38,7 @@ export type BaseRoomInfo = {
 };
 
 export type RoomLoginInfo = {
-  roomId: string;
+  roomKey: string;
   roomNo: number;
   roomPassword: string;
 };
@@ -42,7 +54,7 @@ export type UserLoginRequest = {
 };
 
 export type UserLoginResponse = {
-  userId: string;
+  userKey: string;
   token: string;
 }
 
@@ -66,14 +78,14 @@ export type Message = {
   termsOfUse: string;
 };
 export type GetRoomListResponse = {
-  roomList: (StoreObj<ClientRoomInfo> & StoreMetaData)[] | null,
+  roomList: StoreObj<ClientRoomInfo>[] | null;
   message: Message;
   isNeedRoomCreatePassword: boolean;
 };
 
 export type RoomViewResponse = {
   changeType: ChangeType;
-  id: string;
+  key: string;
   data?: StoreObj<ClientRoomInfo>;
 };
 
@@ -88,31 +100,24 @@ export type GetVersionResponse = {
   targetClient: TargetVersion;
 };
 
-export type TouchDataRequest = {
+export type TouchDataRequest<T> = {
   collection: string;
-  idList?: string[];
-  optionList?: Partial<StoreObj<unknown>>[];
+  optionList: (Partial<StoreObj<T>> & { key: string; continuous?: boolean; })[];
 };
 export type DeleteFileRequest = {
   urlList: string[];
 };
-export type TouchModifyDataRequest = TouchDataRequest & {
-  idList: string[];
-};
-export type ReleaseTouchDataRequest = TouchModifyDataRequest & {
-  optionList?: (Partial<StoreObj<unknown>> & { continuous?: boolean })[];
-};
+export type TouchModifyDataRequest<T> = TouchDataRequest<T>;
+export type ReleaseTouchDataRequest<T> = TouchModifyDataRequest<T>;
 
-export type AddDirectRequest = {
+export type AddDirectRequest<T> = {
   collection: string;
-  dataList: any[];
-  optionList?: Partial<StoreObj<unknown>>[];
-  idList?: string[];
+  dataList: T[];
+  optionList?: Partial<StoreUseData<T>>[];
 };
-export type DeleteDataRequest = TouchModifyDataRequest;
-export type UpdateDataRequest = TouchModifyDataRequest & {
-  dataList: any[];
-  optionList?: (Partial<StoreObj<unknown>> & { continuous?: boolean })[];
+export type DeleteDataRequest<T> = TouchModifyDataRequest<T>;
+export type UpdateDataRequest<T> = TouchModifyDataRequest<T> & {
+  dataList: T[];
 };
 
 export type SendDataRequest = {
@@ -135,7 +140,7 @@ export type UploadMediaRequest = {
 };
 
 export type UploadMediaResponse = {
-  docId: string;
+  key: string;
   rawPath: string;
   url: string;
   name: string;
@@ -153,7 +158,7 @@ type DiceMaterial = { [P: string]: DiceInfo[] };
 type LikeStore = {
   char: string;
   isThrowLinkage: boolean;
-  linkageResourceId: string | null;
+  linkageResourceKey: string | null;
 };
 
 type AddRoomPresetDataRequest = {

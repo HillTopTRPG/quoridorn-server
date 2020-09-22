@@ -1,38 +1,37 @@
 import Driver from "nekostore/lib/Driver";
-import {ActorStore, ResourceMasterStore, ResourceStore} from "../@types/data";
-import {StoreObj} from "../@types/store";
+import {ActorStore, InitiativeColumnStore, ResourceMasterStore, ResourceStore, SceneObject} from "../@types/data";
+import {StoreObj, StoreUseData} from "../@types/store";
 import DocumentChange from "nekostore/lib/DocumentChange";
 import {addDirect} from "../event/add-direct";
-import {resistCollectionName} from "./collection";
+import {findList, findSingle, resistCollectionName, splitCollectionName} from "./collection";
 import {procAsyncSplit} from "./async";
-import DocumentReference from "nekostore/src/DocumentReference";
 import {addSimple, deleteSimple, updateSimple} from "./data";
+import DocumentSnapshot from "nekostore/lib/DocumentSnapshot";
 
 export async function addResourceMasterRelation(
   driver: Driver,
   socket: any,
   collectionName: string,
   resourceMaster: ResourceMasterStore,
-  option?: Partial<StoreObj<ResourceMasterStore>>,
-  id?: string
-): Promise<DocumentReference<StoreObj<any>>> {
+  option?: Partial<StoreUseData<ResourceMasterStore>>
+): Promise<DocumentSnapshot<StoreObj<any>>> {
   const roomCollectionPrefix = collectionName.replace(/-DATA-.+$/, "");
   // まずはリソース定義を追加
-  const docRef = await addSimple(driver, socket, collectionName, resourceMaster, option, id);
-  const resourceMasterId = docRef.id;
+  const doc = await addSimple(driver, socket, collectionName, resourceMaster, option);
+  const resourceMasterKey = doc.data!.key;
 
-  const addResources = async (idList: string[], ownerType: string) => {
+  const addResources = async (keyList: string[], ownerType: string) => {
     // リソースインスタンスを追加
-    await addDirect(driver, socket, {
+    await addDirect<ResourceStore>(driver, socket, {
       collection: `${roomCollectionPrefix}-DATA-resource-list`,
-      dataList: idList.map(() => ({
-        masterId: resourceMasterId,
+      dataList: keyList.map(() => ({
+        masterKey: resourceMasterKey,
         type: resourceMaster.type,
         value: resourceMaster.defaultValue
       })),
-      optionList: idList.map(id => ({
+      optionList: keyList.map(key => ({
         ownerType,
-        owner: id,
+        owner: key,
         order: -1
       }))
     }, false);
@@ -42,20 +41,22 @@ export async function addResourceMasterRelation(
   if (resourceMaster.isAutoAddActor) {
     // アクター一覧を取得
     const actorCCName = `${roomCollectionPrefix}-DATA-actor-list`;
-    const actorCC = driver.collection<StoreObj<ActorStore>>(actorCCName);
-    const idList = (await actorCC.get()).docs.map(doc => doc.ref.id);
-    await addResources(idList, "actor");
+    const keyList = (await findList<StoreObj<ActorStore>>(driver, actorCCName))!.map(
+      doc => doc.data!.key
+    );
+    await addResources(keyList, "actor");
   }
 
   // 自動付与（コマ）なら、リソース連携
   if (resourceMaster.isAutoAddMapObject) {
     // アクター一覧を取得
     const sceneObjectCCName = `${roomCollectionPrefix}-DATA-scene-object-list`;
-    const sceneObjectCC = driver.collection<StoreObj<any>>(sceneObjectCCName);
-    const idList = (await sceneObjectCC.get()).docs
-      .filter(doc => doc.data!.data!.type === "character")
-      .map(doc => doc.ref.id);
-    await addResources(idList, "scene-object");
+    const keyList = (await findList<StoreObj<SceneObject>>(
+      driver,
+      sceneObjectCCName,
+      [{ property: "data.type", operand: "==", value: "character" }]
+    ))!.map(doc => doc.data!.key);
+    await addResources(keyList, "scene-object");
   }
 
   if (resourceMaster.isAutoAddActor || resourceMaster.isAutoAddMapObject) {
@@ -65,41 +66,43 @@ export async function addResourceMasterRelation(
       driver,
       socket,
       initiativeColumnCollectionName,
-      { resourceMasterId },
+      { resourceMasterKey },
       { ownerType: null, owner: null }
     );
     await resistCollectionName(driver, initiativeColumnCollectionName);
   }
 
-  return docRef;
+  return doc;
 }
 
 export async function deleteResourceMasterRelation(
   driver: Driver,
   socket: any,
   collectionName: string,
-  id: string
+  key: string
 ): Promise<void> {
-  const roomCollectionPrefix = collectionName.replace(/-DATA-.+$/, "");
+  const {roomCollectionPrefix} = splitCollectionName(collectionName);
 
   // イニシアティブ表の列を強制的に削除
-  const initiativeColumnCC = driver.collection<any>(`${roomCollectionPrefix}-DATA-initiative-column-list`);
   await procAsyncSplit(
-    (await initiativeColumnCC.where("data.resourceMasterId", "==", id).get())
-      .docs
-      .map(doc => doc.ref.delete())
+    (await findList<StoreObj<InitiativeColumnStore>>(
+      driver,
+      `${roomCollectionPrefix}-DATA-initiative-column-list`,
+      [{ property: "data.resourceMasterKey", operand: "==", value: key }])
+    )!.map(doc => doc.ref.delete())
   );
 
   // リソースを強制的に削除
-  const resourceCC = driver.collection<any>(`${roomCollectionPrefix}-DATA-resource-list`);
   await procAsyncSplit(
-    (await resourceCC.where("data.masterId", "==", id).get())
-      .docs
-      .map(doc => doc.ref.delete())
+    (await findList<StoreObj<ResourceStore>>(
+        driver,
+        `${roomCollectionPrefix}-DATA-resource-list`,
+        [{ property: "data.masterKey", operand: "==", value: key }])
+    )!.map(doc => doc.ref.delete())
   );
 
   // 最後に本体を削除
-  await deleteSimple(driver, socket, collectionName, id);
+  await deleteSimple(driver, socket, collectionName, key);
 }
 
 /**
@@ -107,18 +110,18 @@ export async function deleteResourceMasterRelation(
  * @param driver
  * @param socket
  * @param collectionName
- * @param docId
  * @param docData
+ * @param option
  */
 export async function updateResourceMasterRelation(
   driver: Driver,
   socket: any,
   collectionName: string,
-  docId: string,
-  docData: ResourceMasterStore
+  docData: ResourceMasterStore,
+  option: (Partial<StoreObj<ResourceMasterStore>> & { key: string; continuous?: boolean; })
 ): Promise<void> {
-  await updateSimple(driver, socket, collectionName, docId, docData);
-  const roomCollectionPrefix = collectionName.replace(/-DATA-.+$/, "");
+  await updateSimple(driver, socket, collectionName, docData, option);
+  const {roomCollectionPrefix} = splitCollectionName(collectionName);
 
   const isAutoAddActor = docData.isAutoAddActor;
   const isAutoAddMapObject = docData.isAutoAddMapObject;
@@ -126,8 +129,11 @@ export async function updateResourceMasterRelation(
   const defaultValue = docData.defaultValue;
 
   const resourceCCName = `${roomCollectionPrefix}-DATA-resource-list`;
-  const resourceCC = driver.collection<StoreObj<ResourceStore>>(resourceCCName);
-  const resourceDocs = (await resourceCC.where("data.masterId", "==", docId).get()).docs;
+  const resourceDocs = (await findList<StoreObj<ResourceStore>>(
+    driver,
+    resourceCCName,
+    [{ property: "data.masterKey", operand: "==", value: option.key }]
+  ))!;
 
   /*
    * 種類が変更されたらリソースの値をデフォルト値に更新する
@@ -148,55 +154,54 @@ export async function updateResourceMasterRelation(
   /*
    * 必要なリソースを追加（フラグの変更によるリソースの削除は行わない）
    */
-  const optionList: Partial<StoreObj<unknown>>[] = [];
+  const optionList: Partial<StoreObj<ResourceStore>>[] = [];
 
   if (isAutoAddActor) {
-    const actorCCName = `${roomCollectionPrefix}-DATA-actor-list`;
-    const actorCC = driver.collection<StoreObj<ActorStore>>(actorCCName);
-    (await actorCC.get()).docs
+    (await findList<StoreObj<ActorStore>>(driver, `${roomCollectionPrefix}-DATA-actor-list`))!
       .filter(actorDoc =>
-        !resourceDocs.find(
-          rDoc => rDoc.data!.ownerType === "actor" && rDoc.data!.owner === actorDoc.ref.id
+        !resourceDocs.some(
+          rDoc => rDoc.data!.ownerType === "actor" && rDoc.data!.owner === actorDoc.data!.key
         )
       )
       .forEach(actorDoc => {
         optionList.push({
           ownerType: "actor",
-          owner: actorDoc.ref.id,
+          owner: actorDoc.data!.key,
           order: -1
         });
       });
   }
 
   if (isAutoAddMapObject) {
-    const sceneObjectCCName = `${roomCollectionPrefix}-DATA-scene-object-list`;
-    const sceneObjectCC = driver.collection<StoreObj<any>>(sceneObjectCCName);
-    (await sceneObjectCC.get()).docs
+    (await findList<StoreObj<SceneObject>>(driver, `${roomCollectionPrefix}-DATA-scene-object-list`))!
       .filter(sceneObjectDoc =>
-        !resourceDocs.find(
-          rDoc => rDoc.data!.ownerType === "scene-object" && rDoc.data!.owner === sceneObjectDoc.ref.id
+        !resourceDocs.some(
+          rDoc => rDoc.data!.ownerType === "scene-object" && rDoc.data!.owner === sceneObjectDoc.data!.key
         )
       )
       .forEach(sceneObjectDoc => {
         optionList.push({
           ownerType: "scene-object",
-          owner: sceneObjectDoc.ref.id,
+          owner: sceneObjectDoc.data!.key,
           order: -1
         });
       });
   }
 
-  const initiativeColumnCCName = `${roomCollectionPrefix}-DATA-initiative-column-list`;
-  const initiativeColumnCC = driver.collection<StoreObj<any>>(initiativeColumnCCName);
-  const initiativeColumnDoc = (await initiativeColumnCC.where("data.resourceMasterId", "==", docId).get()).docs[0];
+  const initiativeColumnDoc = (await findSingle<StoreObj<InitiativeColumnStore>>(
+    driver,
+    `${roomCollectionPrefix}-DATA-initiative-column-list`,
+    "data.resourceMasterKey",
+    option.key
+  ))!;
 
   if (isAutoAddActor || isAutoAddMapObject) {
     // リソースインスタンスを追加
     if (optionList.length) {
-      await addDirect(driver, socket, {
+      await addDirect<ResourceStore>(driver, socket, {
         collection: `${roomCollectionPrefix}-DATA-resource-list`,
         dataList: optionList.map(() => ({
-          masterId: docId,
+          masterKey: option.key,
           type: docData.type,
           value: docData.defaultValue
         })),
@@ -206,11 +211,9 @@ export async function updateResourceMasterRelation(
 
     // イニシアティブ表の表示に追加
     if (!initiativeColumnDoc || !initiativeColumnDoc.exists()) {
-      await addDirect(driver, socket, {
+      await addDirect<InitiativeColumnStore>(driver, socket, {
         collection: `${roomCollectionPrefix}-DATA-initiative-column-list`,
-        dataList: [{
-          resourceMasterId: docId
-        }],
+        dataList: [{ resourceMasterKey: option.key }],
         optionList: [{
           ownerType: null,
           owner: null
