@@ -2,7 +2,7 @@ import Driver from "nekostore/lib/Driver";
 import {StoreObj, StoreUseData} from "../@types/store";
 import {addDirect} from "../event/add-direct";
 import {findList, getData, resistCollectionName, splitCollectionName} from "./collection";
-import {ActorStore, ResourceMasterStore, ResourceStore, SceneAndObject, SceneObject} from "../@types/data";
+import {ActorStore, ResourceMasterStore, ResourceStore, SceneAndObject, SceneLayer, SceneObject} from "../@types/data";
 import {addActorRelation} from "./data-actor";
 import {addSimple, deleteSimple, getDataForDelete, multipleTouchCheck, touchCheck} from "./data";
 import DocumentSnapshot from "nekostore/lib/DocumentSnapshot";
@@ -13,11 +13,27 @@ export async function addSceneObjectRelation(
   driver: Driver,
   socket: any,
   collectionName: string,
-  sceneObject: SceneObject,
-  option?: Partial<StoreUseData<SceneObject>>
-): Promise<DocumentSnapshot<StoreObj<SceneObject>>> {
+  data: Partial<StoreUseData<SceneObject>> & { data: SceneObject }
+): Promise<DocumentSnapshot<StoreObj<SceneObject>> | null> {
   const {roomCollectionPrefix} = splitCollectionName(collectionName);
-  const doc = await addSimple<SceneObject>(driver, socket, collectionName, sceneObject, option);
+
+  const sceneObject = data.data;
+
+  // データ整合性調整
+  const layerList = (await findList<StoreObj<SceneLayer>>(
+    driver,
+    `${roomCollectionPrefix}-DATA-scene-layer-list`
+  ))!;
+  const layer = layerList.find(l => l.data!.key === sceneObject.layerKey);
+  if (!layer) {
+    const addLayer = layerList.find(l => l.data!.data!.type.toString() === sceneObject.type);
+    if (addLayer) sceneObject.layerKey = addLayer.data!.key;
+    else sceneObject.layerKey = layerList[0]!.data!.key;
+  }
+
+  // 追加
+  const doc = await addSimple<SceneObject>(driver, socket, collectionName, data);
+  if (!doc) return null;
   const sceneObjectKey = doc.data!.key;
 
   // シーンオブジェクトの追加
@@ -25,15 +41,17 @@ export async function addSceneObjectRelation(
   // 現存する各シーンすべてに今回登録したシーンオブジェクトを紐づかせる
   const sceneAndObjectList =
     (await findList<StoreObj<SceneObject>>(driver, sceneListCCName))!.map(doc => ({
-      sceneKey: doc.data!.key,
-      objectKey: sceneObjectKey,
-      isOriginalAddress: false,
-      originalAddress: null,
-      entering: "normal"
+      data: {
+        sceneKey: doc.data!.key,
+        objectKey: sceneObjectKey,
+        isOriginalAddress: false,
+        originalAddress: null,
+        entering: "normal"
+      }
     }));
   await addDirect<SceneAndObject>(driver, socket, {
     collection: `${roomCollectionPrefix}-DATA-scene-and-object-list`,
-    dataList: sceneAndObjectList
+    list: sceneAndObjectList
   }, false);
 
   if (sceneObject.type === "character") {
@@ -48,14 +66,18 @@ export async function addSceneObjectRelation(
         socket,
         actorCCName,
         {
-          name: sceneObject.name,
-          type: "character",
-          chatFontColorType: "owner",
-          chatFontColor: "#000000",
-          standImagePosition: 1,
-          pieceKeyList: [sceneObjectKey]
+          data: {
+            name: sceneObject.name,
+            type: "character",
+            chatFontColorType: "owner",
+            chatFontColor: "#000000",
+            standImagePosition: 1,
+            pieceKeyList: [sceneObjectKey],
+            tag: "",
+            statusKey: ""
+          }
         }
-      )).data!.key;
+      ))!.data!.key;
       await doc.ref.update({
         data: sceneObject
       });
@@ -86,15 +108,15 @@ export async function addSceneObjectRelation(
     // リソースインスタンスを追加
     await addDirect<ResourceStore>(driver, socket, {
       collection: `${roomCollectionPrefix}-DATA-resource-list`,
-      dataList: resourceMasterDocList.map(rmDoc => ({
-        masterKey: rmDoc.data!.key,
-        type: rmDoc.data!.data!.type,
-        value: rmDoc.data!.data!.defaultValue
-      })),
-      optionList: resourceMasterDocList.map(() => ({
+      list: resourceMasterDocList.map(rmDoc => ({
         ownerType: "scene-object",
         owner: sceneObjectKey,
-        order: -1
+        order: -1,
+        data: {
+          masterKey: rmDoc.data!.key,
+          type: rmDoc.data!.data!.type,
+          value: rmDoc.data!.data!.defaultValue
+        }
       }))
     }, false);
   }
@@ -125,7 +147,7 @@ export async function deleteSceneObjectRelation(
       if (memoDocChangeList.length) {
         await deleteDataPackage(driver, socket, {
           collection: memoCCName,
-          optionList: memoDocChangeList.map(m => ({ key: m.data!.key }))
+          list: memoDocChangeList.map(m => ({ key: m.data!.key }))
         }, false);
       }
       break;
@@ -150,7 +172,7 @@ export async function deleteSceneObjectRelation(
     if (resourceDocChangeList.length) {
       await deleteDataPackage(driver, socket, {
         collection: resourceCCName,
-        optionList: resourceDocChangeList.map(r => ({ key: r.data!.key }))
+        list: resourceDocChangeList.map(r => ({ key: r.data!.key }))
       }, false);
     }
 
@@ -158,7 +180,7 @@ export async function deleteSceneObjectRelation(
     if (sceneAndObjectDocChangeList.length) {
       await deleteDataPackage(driver, socket, {
         collection: sceneAndObjectCCName,
-        optionList: sceneAndObjectDocChangeList.map(sao => ({ key: sao.data!.key }))
+        list: sceneAndObjectDocChangeList.map(sao => ({ key: sao.data!.key }))
       }, false);
     }
 
@@ -170,13 +192,15 @@ export async function deleteSceneObjectRelation(
     if (pieceKeyList.length) {
       await updateDataPackage(driver, socket, {
         collection: actorListCollectionName,
-        dataList: [actorDoc.data],
-        optionList: [{ key: actorKey }]
+        list: [{
+          key: actorKey,
+          data: actorDoc.data
+        }]
       });
     } else {
       await deleteDataPackage(driver, socket, {
         collection: actorListCollectionName,
-        optionList: [{ key: actorKey }]
+        list: [{ key: actorKey }]
       }, false);
     }
   }

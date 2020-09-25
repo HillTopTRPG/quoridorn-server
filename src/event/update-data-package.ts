@@ -19,19 +19,18 @@ type ResponseType = void;
  */
 export async function updateDataPackage(driver: Driver, socket: any, arg: RequestType): Promise<ResponseType> {
   // タッチチェック
-  await procAsyncSplit(arg.optionList.map(option => touchCheck(
+  await procAsyncSplit(arg.list.map(data=> touchCheck(
     driver,
     arg.collection,
-    option.key
+    data.key
   )));
 
   // データ更新
-  await procAsyncSplit(arg.optionList.map((option, idx) => updateSingleData(
+  await procAsyncSplit(arg.list.map(data => updateSingleData(
     driver,
     socket,
     arg.collection,
-    arg.dataList[idx],
-    option
+    data
   )));
 }
 

@@ -1,10 +1,10 @@
-import {StoreObj, StoreUseData} from "../@types/store";
+import {StoreObj} from "../@types/store";
 import {Resister} from "../server";
 import Driver from "nekostore/lib/Driver";
 import {AddDirectRequest} from "../@types/socket";
 import {addActorRelation} from "../utility/data-actor";
 import {addUserRelation} from "../utility/data-user";
-import {resistCollectionName} from "../utility/collection";
+import {resistCollectionName, splitCollectionName} from "../utility/collection";
 import {setEvent} from "../utility/server";
 import {addResourceMasterRelation} from "../utility/data-resource-master";
 import {addSceneRelation} from "../utility/data-scene";
@@ -24,9 +24,8 @@ export function getAddRelationCollectionMap(): {
     driver: Driver,
     socket: any,
     collectionName: string,
-    data: any,
-    option?: Partial<StoreUseData<any>>
-  ) => Promise<DocumentSnapshot<StoreObj<any>>>
+    data: Partial<StoreObj<any>> & { data: any }
+  ) => Promise<DocumentSnapshot<StoreObj<any>> | null>
 } {
   return {
     "resource-master-list": addResourceMasterRelation,
@@ -58,35 +57,36 @@ export async function addDirect<T>(
   const addRelationCollectionMap = getAddRelationCollectionMap();
 
   const keyList: string[] = [];
-  const total = nestNumTotal || arg.dataList.length;
+  const total = nestNumTotal || arg.list.length;
 
-  const collectionSuffixName = arg.collection.replace(/^.+-DATA-/, "");
-  const callAddFunc = addRelationCollectionMap[collectionSuffixName] || addSimple;
+  const { roomCollectionSuffix } = splitCollectionName(arg.collection);
+  const callAddFunc = addRelationCollectionMap[roomCollectionSuffix] || addSimple;
 
-  const addSingleData = async (data: any, idx: number): Promise<void> => {
+  const addSingleData = async (data: Partial<StoreObj<T>> & { data: T }, idx: number): Promise<void> => {
     // 進捗報告(処理中)
     if (sendNotify) notifyProgress(socket, total, nestNum + idx);
 
     // データを追加し、idをリストに追加
-    keyList.push((await callAddFunc(
+    const doc = await callAddFunc(
       driver,
       socket,
       arg.collection,
-      data,
-      arg.optionList ? arg.optionList[idx] : undefined
-    )).data!.key);
+      data
+    );
+    if (!doc) return;
+    keyList.push(doc.data!.key);
   };
 
   // collectionの記録
   await resistCollectionName(driver, arg.collection);
 
   // 直列の非同期で全部実行する
-  await arg.dataList
-    .map((data: any, idx: number) => () => addSingleData(data, idx))
+  await arg.list
+    .map((data, idx) => () => addSingleData(data, idx))
     .reduce((prev, curr) => prev.then(curr), Promise.resolve());
 
   // 進捗報告(完了)
-  if (sendNotify) notifyProgress(socket, total, nestNum + arg.dataList.length);
+  if (sendNotify) notifyProgress(socket, total, nestNum + arg.list.length);
 
   return keyList;
 }

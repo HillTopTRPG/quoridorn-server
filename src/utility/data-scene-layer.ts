@@ -1,34 +1,43 @@
 import Driver from "nekostore/lib/Driver";
 import {addDirect} from "../event/add-direct";
-import {StoreObj, StoreUseData} from "../@types/store";
+import {StoreObj} from "../@types/store";
 import {addSimple, deleteSimple, multipleTouchCheck} from "./data";
 import {deleteDataPackage} from "../event/delete-data-package";
 import {findList, splitCollectionName} from "./collection";
-import {SceneAndLayer, SceneObject} from "../@types/data";
+import {Scene, SceneAndLayer, SceneLayer} from "../@types/data";
 import DocumentSnapshot from "nekostore/lib/DocumentSnapshot";
 
 export async function addSceneLayerRelation(
   driver: Driver,
   socket: any,
   collectionName: string,
-  sceneLayer: any,
-  option?: Partial<StoreUseData<any>>
-): Promise<DocumentSnapshot<StoreObj<any>>> {
+  data: Partial<StoreObj<SceneLayer>> & { data: SceneLayer }
+): Promise<DocumentSnapshot<StoreObj<any>> | null> {
   const {roomCollectionPrefix} = splitCollectionName(collectionName);
-  const doc = await addSimple(driver, socket, collectionName, sceneLayer, option);
-  const sceneLayerKey = doc.data!.key;
+
+  // データ整合性調整
+  const sceneList = (await findList<StoreObj<Scene>>(
+    driver,
+    `${roomCollectionPrefix}-DATA-scene-list`
+  ))!;
+
+  // 追加
+  const doc = await addSimple(driver, socket, collectionName, data);
+  if (!doc) return null;
 
   // シーンオブジェクトの追加
   // 現存する各シーンすべてに今回登録したシーンオブジェクトを紐づかせる
 
-  const sceneAndLayerList = (await findList<StoreObj<SceneObject>>(driver, `${roomCollectionPrefix}-DATA-scene-list`))!.map(doc => ({
-    sceneKey: doc.data!.key,
-    layerKey: sceneLayerKey,
-    isUse: true
+  const sceneAndLayerList = sceneList.map(scene => ({
+    data: {
+      sceneKey: scene.data!.key,
+      layerKey: doc.data!.key,
+      isUse: true
+    }
   }));
   await addDirect<SceneAndLayer>(driver, socket, {
     collection: `${roomCollectionPrefix}-DATA-scene-and-layer-list`,
-    dataList: sceneAndLayerList
+    list: sceneAndLayerList
   }, false);
 
   return doc;
@@ -49,7 +58,7 @@ export async function deleteSceneLayerRelation(
   // SceneAndObjectの削除
   await deleteDataPackage(driver, socket, {
     collection: sceneAndLayerCCName,
-    optionList: sceneAndLayerDocChangeList.map(sal => ({ key: sal.data!.key }))
+    list: sceneAndLayerDocChangeList.map(sal => ({ key: sal.data!.key }))
   }, false);
 
   await deleteSimple<any>(driver, socket, collectionName, key);

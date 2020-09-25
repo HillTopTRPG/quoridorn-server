@@ -38,15 +38,15 @@ async function deleteData(
   // タッチ解除
   await releaseTouchData(driver, exclusionOwner, arg, true);
 
-  const total = nestNumTotal || arg.optionList.length;
+  const total = nestNumTotal || arg.list.length;
 
   // 直列の非同期で全部実行する
-  await arg.optionList
-    .map((option, idx) => () => deleteSingleData(driver, socket, arg.collection, option.key, sendNotify, idx, total))
+  await arg.list
+    .map((data, idx) => () => deleteSingleData(driver, socket, arg.collection, data.key, sendNotify, idx, total))
     .reduce((prev, curr) => prev.then(curr), Promise.resolve());
 
   // 進捗報告(完了)
-  if (sendNotify) notifyProgress(socket, total, nestNum + arg.optionList.length);
+  if (sendNotify) notifyProgress(socket, total, nestNum + arg.list.length);
 }
 
 export async function deleteSingleData(

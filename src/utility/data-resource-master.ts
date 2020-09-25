@@ -1,6 +1,6 @@
 import Driver from "nekostore/lib/Driver";
 import {ActorStore, InitiativeColumnStore, ResourceMasterStore, ResourceStore, SceneObject} from "../@types/data";
-import {StoreObj, StoreUseData} from "../@types/store";
+import {StoreObj} from "../@types/store";
 import DocumentChange from "nekostore/lib/DocumentChange";
 import {addDirect} from "../event/add-direct";
 import {findList, findSingle, resistCollectionName, splitCollectionName} from "./collection";
@@ -12,27 +12,29 @@ export async function addResourceMasterRelation(
   driver: Driver,
   socket: any,
   collectionName: string,
-  resourceMaster: ResourceMasterStore,
-  option?: Partial<StoreUseData<ResourceMasterStore>>
-): Promise<DocumentSnapshot<StoreObj<any>>> {
+  data: Partial<StoreObj<ResourceMasterStore>> & { data: ResourceMasterStore }
+): Promise<DocumentSnapshot<StoreObj<any>> | null> {
   const roomCollectionPrefix = collectionName.replace(/-DATA-.+$/, "");
   // まずはリソース定義を追加
-  const doc = await addSimple(driver, socket, collectionName, resourceMaster, option);
+  const doc = await addSimple(driver, socket, collectionName, data);
+  if (!doc) return null;
   const resourceMasterKey = doc.data!.key;
+
+  const resourceMaster =  data.data;
 
   const addResources = async (keyList: string[], ownerType: string) => {
     // リソースインスタンスを追加
     await addDirect<ResourceStore>(driver, socket, {
       collection: `${roomCollectionPrefix}-DATA-resource-list`,
-      dataList: keyList.map(() => ({
-        masterKey: resourceMasterKey,
-        type: resourceMaster.type,
-        value: resourceMaster.defaultValue
-      })),
-      optionList: keyList.map(key => ({
+      list: keyList.map(key => ({
         ownerType,
         owner: key,
-        order: -1
+        order: -1,
+        data: {
+          masterKey: resourceMasterKey,
+          type: resourceMaster.type,
+          value: resourceMaster.defaultValue
+        }
       }))
     }, false);
   };
@@ -66,8 +68,7 @@ export async function addResourceMasterRelation(
       driver,
       socket,
       initiativeColumnCollectionName,
-      { resourceMasterKey },
-      { ownerType: null, owner: null }
+      { ownerType: null, owner: null, data: { resourceMasterKey } }
     );
     await resistCollectionName(driver, initiativeColumnCollectionName);
   }
@@ -110,29 +111,29 @@ export async function deleteResourceMasterRelation(
  * @param driver
  * @param socket
  * @param collectionName
- * @param docData
- * @param option
+ * @param data
  */
 export async function updateResourceMasterRelation(
   driver: Driver,
   socket: any,
   collectionName: string,
-  docData: ResourceMasterStore,
-  option: (Partial<StoreObj<ResourceMasterStore>> & { key: string; continuous?: boolean; })
+  data: (Partial<StoreObj<ResourceMasterStore>> & { key: string; continuous?: boolean; })
 ): Promise<void> {
-  await updateSimple(driver, socket, collectionName, docData, option);
+  await updateSimple(driver, socket, collectionName, data);
   const {roomCollectionPrefix} = splitCollectionName(collectionName);
 
-  const isAutoAddActor = docData.isAutoAddActor;
-  const isAutoAddMapObject = docData.isAutoAddMapObject;
-  const type = docData.type;
-  const defaultValue = docData.defaultValue;
+  if (!data.data) return;
+
+  const isAutoAddActor = data.data.isAutoAddActor;
+  const isAutoAddMapObject = data.data.isAutoAddMapObject;
+  const type = data.data.type;
+  const defaultValue = data.data.defaultValue;
 
   const resourceCCName = `${roomCollectionPrefix}-DATA-resource-list`;
   const resourceDocs = (await findList<StoreObj<ResourceStore>>(
     driver,
     resourceCCName,
-    [{ property: "data.masterKey", operand: "==", value: option.key }]
+    [{ property: "data.masterKey", operand: "==", value: data.key }]
   ))!;
 
   /*
@@ -154,7 +155,7 @@ export async function updateResourceMasterRelation(
   /*
    * 必要なリソースを追加（フラグの変更によるリソースの削除は行わない）
    */
-  const optionList: Partial<StoreObj<ResourceStore>>[] = [];
+  const list: (Partial<StoreObj<ResourceStore>> & { data: ResourceStore })[] = [];
 
   if (isAutoAddActor) {
     (await findList<StoreObj<ActorStore>>(driver, `${roomCollectionPrefix}-DATA-actor-list`))!
@@ -164,10 +165,15 @@ export async function updateResourceMasterRelation(
         )
       )
       .forEach(actorDoc => {
-        optionList.push({
+        list.push({
           ownerType: "actor",
           owner: actorDoc.data!.key,
-          order: -1
+          order: -1,
+          data: {
+            masterKey: data.key,
+            type: data.data!.type,
+            value: data.data!.defaultValue
+          }
         });
       });
   }
@@ -180,10 +186,15 @@ export async function updateResourceMasterRelation(
         )
       )
       .forEach(sceneObjectDoc => {
-        optionList.push({
+        list.push({
           ownerType: "scene-object",
           owner: sceneObjectDoc.data!.key,
-          order: -1
+          order: -1,
+          data: {
+            masterKey: data.key,
+            type: data.data!.type,
+            value: data.data!.defaultValue
+          }
         });
       });
   }
@@ -192,33 +203,38 @@ export async function updateResourceMasterRelation(
     driver,
     `${roomCollectionPrefix}-DATA-initiative-column-list`,
     "data.resourceMasterKey",
-    option.key
+    data.key
   ))!;
 
   if (isAutoAddActor || isAutoAddMapObject) {
     // リソースインスタンスを追加
-    if (optionList.length) {
-      await addDirect<ResourceStore>(driver, socket, {
-        collection: `${roomCollectionPrefix}-DATA-resource-list`,
-        dataList: optionList.map(() => ({
-          masterKey: option.key,
-          type: docData.type,
-          value: docData.defaultValue
-        })),
-        optionList
-      }, false);
+    if (list.length) {
+      await addDirect<ResourceStore>(
+        driver,
+        socket,
+        {
+          collection: `${roomCollectionPrefix}-DATA-resource-list`,
+          list
+        },
+        false
+      )
     }
 
     // イニシアティブ表の表示に追加
     if (!initiativeColumnDoc || !initiativeColumnDoc.exists()) {
-      await addDirect<InitiativeColumnStore>(driver, socket, {
-        collection: `${roomCollectionPrefix}-DATA-initiative-column-list`,
-        dataList: [{ resourceMasterKey: option.key }],
-        optionList: [{
-          ownerType: null,
-          owner: null
-        }]
-      }, false);
+      await addDirect<InitiativeColumnStore>(
+        driver,
+        socket,
+        {
+          collection: `${roomCollectionPrefix}-DATA-initiative-column-list`,
+          list: [{
+            ownerType: null,
+            owner: null,
+            data: { resourceMasterKey: data.key }
+          }]
+        },
+        false
+      );
     }
   } else {
     if (initiativeColumnDoc && initiativeColumnDoc.exists()) {

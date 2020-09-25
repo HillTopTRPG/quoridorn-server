@@ -21,11 +21,11 @@ type ResponseType = void;
  * @param updateForce
  */
 export async function releaseTouchData(driver: Driver, exclusionOwner: string, arg: RequestType, updateForce?: boolean): Promise<ResponseType> {
-  await procAsyncSplit(arg.optionList.map(option => singleReleaseTouchData(
+  await procAsyncSplit(arg.list.map(data => singleReleaseTouchData(
     driver,
     exclusionOwner,
     arg.collection,
-    option,
+    data,
     updateForce
   )));
 }
@@ -34,11 +34,11 @@ async function singleReleaseTouchData<T>(
   driver: Driver,
   socketId: string,
   collection: string,
-  option?: Partial<StoreObj<T>> & { continuous?: boolean },
+  data: Partial<StoreObj<T>> & { key: string; continuous?: boolean },
   updateForce?: boolean
 ): Promise<void> {
-  const msgArg = { collection, option };
-  const doc = await getData(driver, collection, { socketId });
+  const msgArg = { collection, data };
+  const doc = await getData(driver, collection, { key: data.key });
 
   const createThrowDetail = (detail: string) =>
     updateForce ? `Failure releaseTouchData. (${detail})` : detail;
@@ -46,7 +46,7 @@ async function singleReleaseTouchData<T>(
   if (!doc) throw new ApplicationError(createThrowDetail("Already released touch or created."), msgArg);
 
   // 続けて更新する場合は排他制御情報をリセットしない
-  if (option && option.continuous) return;
+  if (data.continuous) return;
 
   const backupUpdateTime = await deleteTouchier(driver, socketId, collection, doc.data!.key);
 

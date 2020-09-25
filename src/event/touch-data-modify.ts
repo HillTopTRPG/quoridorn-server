@@ -22,7 +22,7 @@ type ResponseType = string[];
 export async function touchDataModify(driver: Driver, exclusionOwner: string, arg: RequestType): Promise<ResponseType> {
   const resultKeyList: string[] = [];
 
-  await procAsyncSplit(arg.optionList.map(option => singleTouchDataModify(
+  await procAsyncSplit(arg.list.map(option => singleTouchDataModify(
     driver,
     exclusionOwner,
     arg.collection,

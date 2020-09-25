@@ -19,7 +19,6 @@ const relationCollectionTable: {
     driver: Driver,
     socket: any,
     collection: string,
-    data: any,
     option: (Partial<StoreObj<any>> & { key: string; continuous?: boolean; })
   ) => Promise<void>
 } = {
@@ -40,12 +39,11 @@ export async function updateData(
   // タッチ解除
   await releaseTouchData(driver, socket.id, arg, true);
 
-  await procAsyncSplit(arg.optionList.map((option, idx) => updateSingleData(
+  await procAsyncSplit(arg.list.map(data => updateSingleData(
     driver,
     socket,
     arg.collection,
-    arg.dataList[idx],
-    option
+    data
   )));
 }
 
@@ -53,12 +51,11 @@ export async function updateSingleData<T>(
   driver: Driver,
   socket: any,
   collectionName: string,
-  data: any,
-  option: (Partial<StoreObj<T>> & { key: string; continuous?: boolean; })
+  data: (Partial<StoreObj<T>> & { key: string; continuous?: boolean; })
 ): Promise<void> {
   const {roomCollectionSuffix} = splitCollectionName(collectionName);
   const callUpdateFunc = relationCollectionTable[roomCollectionSuffix] || updateSimple;
-  await callUpdateFunc(driver, socket, collectionName, data, option);
+  await callUpdateFunc(driver, socket, collectionName, data);
 }
 
 const resist: Resister = (driver: Driver, socket: any): void => {

@@ -3,7 +3,7 @@ import DocumentSnapshot from "nekostore/lib/DocumentSnapshot";
 import {StoreObj} from "../@types/store";
 import {ApplicationError} from "../error/ApplicationError";
 import {PERMISSION_DEFAULT} from "../server";
-import {findList, getData, getMaxOrder, getOwner} from "./collection";
+import {findList, findSingle, getData, getMaxOrder, getOwner, splitCollectionName} from "./collection";
 import DocumentChange from "nekostore/src/DocumentChange";
 import uuid from "uuid";
 
@@ -40,22 +40,25 @@ export async function addSimple<T>(
   driver: Driver,
   socket: any,
   collectionName: string,
-  data: T,
-  option?: Partial<StoreObj<T>>
-): Promise<DocumentSnapshot<StoreObj<T>>> {
+  data: Partial<StoreObj<T>> & { data: T }
+): Promise<DocumentSnapshot<StoreObj<T>> | null> {
   const { c, maxOrder } = await getMaxOrder<T>(driver, collectionName);
   const exclusionOwner = socket.id;
 
-  const collectionSuffixName = collectionName.replace(/^.+-DATA-/, "");
-  const ownerType = option && option.ownerType !== undefined ? option.ownerType : "user";
-  const owner = await getOwner(driver, exclusionOwner, option ? option.owner : undefined);
-  const order = option && option.order !== undefined ? option.order : maxOrder + 1;
+  if (data.key !== undefined) {
+    if (await findSingle(driver, collectionName, "key", data.key)) return null;
+  }
+
+  const { roomCollectionSuffix } = splitCollectionName(collectionName);
+  const ownerType = data.ownerType !== undefined ? data.ownerType : "user";
+  const owner = await getOwner(driver, exclusionOwner, data.owner);
+  const order = data.order !== undefined ? data.order : maxOrder + 1;
   const now = new Date();
-  const permission = option && option.permission || PERMISSION_DEFAULT;
-  const key = (option ? option.key : null) || uuid.v4();
+  const permission = data.permission || PERMISSION_DEFAULT;
+  const key = data.key !== undefined ? data.key : uuid.v4();
 
   const addInfo: StoreObj<T> = {
-    collection: collectionSuffixName,
+    collection: roomCollectionSuffix,
     key,
     ownerType,
     owner,
@@ -66,7 +69,7 @@ export async function addSimple<T>(
     createTime: now,
     updateTime: now,
     permission,
-    data
+    data: data.data
   };
 
   try {
@@ -112,27 +115,24 @@ export async function updateSimple<T>(
   driver: Driver,
   _: any,
   collection: string,
-  data: T,
-  option: (Partial<StoreObj<T>> & { key: string; continuous?: boolean; })
+  data: (Partial<StoreObj<T>> & { key: string; continuous?: boolean; })
 ): Promise<void> {
-  const msgArg = { collection, option };
-  const doc = await getData(driver, collection, { key: option.key });
+  const msgArg = { collection, data };
+  const doc = await getData(driver, collection, { key: data.key });
 
   // No such check.
   if (!doc || !doc.exists() || !doc.data.data)
     throw new ApplicationError(`No such data.`, msgArg);
 
   const updateInfo: Partial<StoreObj<any>> = {
-    data,
     status: "modified",
     updateTime: new Date()
   };
-  if (option) {
-    if (option.permission !== undefined) updateInfo.permission = option.permission;
-    if (option.order !== undefined) updateInfo.order = option.order || 0;
-    if (option.owner !== undefined) updateInfo.owner = option.owner;
-    if (option.ownerType !== undefined) updateInfo.ownerType = option.ownerType;
-  }
+  if (data.permission !== undefined) updateInfo.permission = data.permission;
+  if (data.order !== undefined) updateInfo.order = data.order || 0;
+  if (data.owner !== undefined) updateInfo.owner = data.owner;
+  if (data.ownerType !== undefined) updateInfo.ownerType = data.ownerType;
+  if (data.data !== undefined) updateInfo.data = data.data;
   try {
     await doc.ref.update(updateInfo);
   } catch (err) {

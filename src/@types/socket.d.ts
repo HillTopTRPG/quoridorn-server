@@ -85,8 +85,8 @@ export type GetRoomListResponse = {
 
 export type RoomViewResponse = {
   changeType: ChangeType;
-  key: string;
   data?: StoreObj<ClientRoomInfo>;
+  id: string;
 };
 
 export type LoginResponse = ClientRoomInfo & {
@@ -102,22 +102,21 @@ export type GetVersionResponse = {
 
 export type TouchDataRequest<T> = {
   collection: string;
-  optionList: (Partial<StoreObj<T>> & { key: string; continuous?: boolean; })[];
+  list: (Partial<StoreObj<T>> & { key: string; continuous?: boolean; })[];
 };
 export type DeleteFileRequest = {
   urlList: string[];
 };
 export type TouchModifyDataRequest<T> = TouchDataRequest<T>;
-export type ReleaseTouchDataRequest<T> = TouchModifyDataRequest<T>;
+export type ReleaseTouchDataRequest<T> = TouchDataRequest<T>;
 
 export type AddDirectRequest<T> = {
   collection: string;
-  dataList: T[];
-  optionList?: Partial<StoreUseData<T>>[];
+  list: (Partial<StoreObj<T>> & { data: T })[];
 };
-export type DeleteDataRequest<T> = TouchModifyDataRequest<T>;
-export type UpdateDataRequest<T> = TouchModifyDataRequest<T> & {
-  dataList: T[];
+export type DeleteDataRequest<T> = TouchDataRequest<T>;
+export type UpdateDataRequest<T> = TouchDataRequest<T> & {
+  list: (Partial<StoreObj<T>> & { key: string, continuous?: boolean })[];
 };
 
 export type SendDataRequest = {

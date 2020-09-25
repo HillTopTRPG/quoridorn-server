@@ -37,7 +37,7 @@ async function getRoomList(driver: Driver, socket: any, arg: RequestType): Promi
       }
     }
 
-    let roomList: StoreObj<ClientRoomInfo>[] | null = null;
+    let roomList: (StoreObj<ClientRoomInfo> & { id: string; })[] | null = null;
 
     if (usable) {
       const c = driver.collection<StoreObj<RoomStore>>(SYSTEM_COLLECTION.ROOM_LIST);
@@ -48,7 +48,10 @@ async function getRoomList(driver: Driver, socket: any, arg: RequestType): Promi
             delete doc.data.data.roomPassword;
             delete doc.data.data.roomCollectionPrefix;
           }
-          return doc.data!;
+          return {
+            ...doc.data!,
+            id: doc.ref.id
+          };
         });
 
       // コレクションに変更があるたびに、「result-room-view」イベントをクライアントに送信する
@@ -59,14 +62,14 @@ async function getRoomList(driver: Driver, socket: any, arg: RequestType): Promi
             const changeList: RoomViewResponse[] = snapshot.docs.map(change => {
               const changeType: ChangeType = change.type;
               const data: StoreObj<RoomStore> | undefined = change.data;
-              const key: string = change.data!.key;
+              const id: string = change.ref.id;
 
               if (data && data.data) {
                 delete data.data.roomPassword;
                 delete data.data.roomCollectionPrefix;
               }
               return {
-                changeType, data, key
+                changeType, data, id
               }
             });
             socket.emit("result-room-view", null, changeList);
@@ -92,6 +95,7 @@ async function getRoomList(driver: Driver, socket: any, arg: RequestType): Promi
       for (let i = 0; i < serverSetting.roomNum; i++) {
         if (roomList[i] && roomList[i].order === i) continue;
         roomList.splice(i, 0, {
+          id: "",
           collection: "rooms",
           key: "",
           ownerType: null,

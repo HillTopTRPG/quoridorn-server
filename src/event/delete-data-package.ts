@@ -30,21 +30,21 @@ export async function deleteDataPackage(
   nestNumTotal: number = 0
 ): Promise<ResponseType> {
   // タッチチェック
-  await procAsyncSplit(arg.optionList.map(option => touchCheck(
+  await procAsyncSplit(arg.list.map(data => touchCheck(
     driver,
     arg.collection,
-    option.key
+    data.key
   )));
 
-  const total = nestNumTotal || arg.optionList.length;
+  const total = nestNumTotal || arg.list.length;
 
   // 直列の非同期で全部実行する
-  await arg.optionList
-    .map((option, idx) => () => deleteSingleData(driver, socket, arg.collection, option.key, sendNotify, nestNum + idx, total))
+  await arg.list
+    .map((data, idx) => () => deleteSingleData(driver, socket, arg.collection, data.key, sendNotify, nestNum + idx, total))
     .reduce((prev, curr) => prev.then(curr), Promise.resolve());
 
   // 進捗報告(完了)
-  if (sendNotify) notifyProgress(socket, total, nestNum + arg.optionList.length);
+  if (sendNotify) notifyProgress(socket, total, nestNum + arg.list.length);
 }
 
 const resist: Resister = (driver: Driver, socket: any): void => {

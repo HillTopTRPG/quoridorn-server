@@ -1,7 +1,7 @@
 import Driver from "nekostore/lib/Driver";
 import {ActorStatusStore, ActorStore, ResourceMasterStore, ResourceStore} from "../@types/data";
 import {addDirect} from "../event/add-direct";
-import {StoreObj, StoreUseData} from "../@types/store";
+import {StoreObj} from "../@types/store";
 import {getOwner, resistCollectionName, splitCollectionName} from "./collection";
 import {addSimple, deleteSimple} from "./data";
 import {addActorGroup, deleteActorGroup} from "./data-actor-group";
@@ -12,54 +12,36 @@ export async function addActorRelation(
   driver: Driver,
   socket: any,
   collectionName: string,
-  actorInfoPartial: Partial<ActorStore>,
-  option?: Partial<StoreUseData<ActorStore>>
-): Promise<DocumentSnapshot<StoreObj<any>>> {
+  data: Partial<StoreObj<ActorStore>> & { data: ActorStore }
+): Promise<DocumentSnapshot<StoreObj<any>> | null> {
   const {roomCollectionPrefix} = splitCollectionName(collectionName);
-  const actorInfo: ActorStore = {
-    name: "",
-    type: "user",
-    tag: "",
-    pieceKeyList: [],
-    chatFontColorType: "original",
-    chatFontColor: "#000000",
-    standImagePosition: 1,
-    statusKey: ""
-  };
 
-  const doc = await addSimple(driver, socket, collectionName, actorInfo, option);
+  const doc = await addSimple(driver, socket, collectionName, data);
+  if (!doc) return null;
+
   const actorKey = doc.data!.key;
 
   // アクターグループ「All」に追加
-  const owner = await getOwner(driver, socket.id, option ? option.owner : undefined);
+  const owner = await getOwner(driver, socket.id, data.owner || undefined);
   await addActorGroup(driver, roomCollectionPrefix, "All", actorKey, "other", owner);
 
   // ステータスを自動追加
   const statusCollectionName = `${roomCollectionPrefix}-DATA-status-list`;
-  actorInfoPartial.statusKey = (await addSimple<ActorStatusStore>(
+  data.data.statusKey = (await addSimple<ActorStatusStore>(
     driver,
     socket,
     statusCollectionName,
-    { name: "◆", isSystem: true, standImageInfoKey: null, chatPaletteInfoKey: null },
-    { ownerType: "actor", owner: actorKey }
-  )).data!.key;
+    {
+      ownerType: "actor",
+      owner: actorKey,
+      data: { name: "◆", isSystem: true, standImageInfoKey: null, chatPaletteInfoKey: null }
+    }
+  ))!.data!.key;
   await resistCollectionName(driver, statusCollectionName);
-
-  const copyParam = <T extends keyof ActorStore>(param: T) => {
-    if (actorInfoPartial[param] !== undefined)
-      actorInfo[param] = actorInfoPartial[param] as ActorStore[T];
-  };
-  copyParam("name");
-  copyParam("type");
-  copyParam("chatFontColorType");
-  copyParam("chatFontColor");
-  copyParam("standImagePosition");
-  copyParam("statusKey");
-  copyParam("pieceKeyList");
 
   await doc.ref.update({
     status: "modified",
-    data: actorInfo,
+    data: data.data,
     updateTime: new Date()
   });
 
@@ -71,15 +53,15 @@ export async function addActorRelation(
   // リソースインスタンスを追加
   await addDirect<ResourceStore>(driver, socket, {
     collection: `${roomCollectionPrefix}-DATA-resource-list`,
-    dataList: resourceMasterDocList.map(rmDoc => ({
-      masterKey: rmDoc.data!.key,
-      type: rmDoc.data!.data!.type,
-      value: rmDoc.data!.data!.defaultValue
-    })),
-    optionList: resourceMasterDocList.map(() => ({
+    list: resourceMasterDocList.map(rmDoc => ({
       ownerType: "actor",
       owner: actorKey,
-      order: -1
+      order: -1,
+      data: {
+        masterKey: rmDoc.data!.key,
+        type: rmDoc.data!.data!.type,
+        value: rmDoc.data!.data!.defaultValue
+      }
     }))
   }, false);
 

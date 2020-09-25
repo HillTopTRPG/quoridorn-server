@@ -2,11 +2,11 @@ import Driver from "nekostore/lib/Driver";
 import {UserLoginResponse, UserType} from "../@types/socket";
 import {hash} from "./password";
 import {hashAlgorithm, PERMISSION_OWNER} from "../server";
-import {getSocketDocSnap} from "./collection";
+import {getSocketDocSnap, resistCollectionName} from "./collection";
 import {addActorGroup} from "./data-actor-group";
 import {addActorRelation} from "./data-actor";
 import uuid = require("uuid");
-import {StoreObj, StoreUseData} from "../@types/store";
+import {StoreObj} from "../@types/store";
 import {ChatPaletteStore, UserStore} from "../@types/data";
 import {addDirect} from "../event/add-direct";
 import {addSimple} from "./data";
@@ -28,8 +28,12 @@ export async function addUser(
 
   const userKey = (await addDirect(driver, socket, {
     collection: userListCCName,
-    dataList: [{ name, password, token, type, login: 1 }],
-    optionList: [{ ownerType: null, owner: null, order: -1 }]
+    list: [{
+      ownerType: null,
+      owner: null,
+      order: -1,
+      data: {name, password, token, type, login: 1 }
+    }]
   }, false))[0];
 
   return {
@@ -42,11 +46,11 @@ export async function addUserRelation(
   driver: Driver,
   socket: any,
   collectionName: string,
-  user: UserStore,
-  option?: Partial<StoreUseData<UserStore>>
-): Promise<DocumentSnapshot<StoreObj<UserStore>>> {
+  data: Partial<StoreObj<any>> & { data: any }
+): Promise<DocumentSnapshot<StoreObj<UserStore>> | null> {
   const roomCollectionPrefix = collectionName.replace(/-DATA-.+$/, "");
-  const docRef = await addSimple<UserStore>(driver, socket, collectionName, user, option);
+  const docRef = await addSimple<UserStore>(driver, socket, collectionName, data);
+  if (!docRef) return null;
   const userKey = docRef.data!.key;
 
   const socketDocSnap = (await getSocketDocSnap(driver, socket.id));
@@ -55,18 +59,27 @@ export async function addUserRelation(
     userKey
   });
 
+  const user = data.data;
+
+  const actorCollectionName = `${roomCollectionPrefix}-DATA-actor-list`;
   const actorKey: string = (await addActorRelation(
     driver,
     socket,
-    `${roomCollectionPrefix}-DATA-actor-list`,
+    actorCollectionName,
     {
-      name: user.name,
-      type: "user",
-      chatFontColorType: "original",
-      chatFontColor: "#000000",
-      standImagePosition: 1
+      data: {
+        name: user.name,
+        type: "user",
+        chatFontColorType: "original",
+        chatFontColor: "#000000",
+        standImagePosition: 1,
+        pieceKeyList: [],
+        statusKey: "",
+        tag: ""
+      }
     }
-  )).data!.key;
+  ))!.data!.key;
+  await resistCollectionName(driver, actorCollectionName);
 
   const fixedAddActorGroup = async (groupName: string) => {
     await addActorGroup(driver, roomCollectionPrefix, groupName, actorKey, "user", userKey);
@@ -99,11 +112,11 @@ export async function addUserRelation(
   ];
   await addDirect(driver, socket, {
     collection: `${roomCollectionPrefix}-DATA-chat-palette-list`,
-    dataList: chatPaletteList,
-    optionList: chatPaletteList.map(() => ({
+    list: chatPaletteList.map(cp => ({
       ownerType: "user",
       owner: userKey,
-      permission: PERMISSION_OWNER
+      permission: PERMISSION_OWNER,
+      data: cp
     }))
   }, false);
 

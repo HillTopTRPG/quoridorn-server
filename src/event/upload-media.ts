@@ -69,8 +69,10 @@ async function uploadMedia(driver: Driver, socket: any, arg: RequestType): Promi
   const mediaListCCName = `${roomCollectionPrefix}-DATA-media-list`;
   const keyList: string[] = await addDirect(driver, socket, {
     collection: mediaListCCName,
-    dataList: mediaList,
-    optionList: mediaList.map(() => arg.option)
+    list: mediaList.map(data => ({
+      ...arg.option,
+      data
+    }))
   }, true, uploadMediaInfoList.length, total);
 
   // 進捗報告

@@ -80,14 +80,18 @@ async function addRoomPresetData(driver: Driver, socket: any, arg: RequestType):
       defaultValue: "0"
     }
   ];
-  const diceTypeList: DiceType[] = [];
+  const diceTypeList: (Partial<StoreObj<DiceType>> & { data: DiceType })[] = [];
   let pipsNum: number = 0;
   Object.keys(arg.diceMaterial).forEach(faceNum => {
     arg.diceMaterial[faceNum].forEach(diceType => {
       diceTypeList.push({
-        faceNum,
-        subType: diceType.type || "",
-        label: diceType.label || ""
+        ownerType: null,
+        owner: null,
+        data: {
+          faceNum,
+          subType: diceType.type || "",
+          label: diceType.label || ""
+        }
       });
       pipsNum += Object.keys(diceType.pips).length;
     });
@@ -108,30 +112,32 @@ async function addRoomPresetData(driver: Driver, socket: any, arg: RequestType):
    */
   const diceTypeKeyList = await addDirect<DiceType>(driver, socket, {
     collection: `${roomCollectionPrefix}-DATA-dice-type-list`,
-    dataList: diceTypeList,
-    optionList: diceTypeList.map(() => ({ ownerType: null, owner: null }))
+    list: diceTypeList
   }, true, current, total);
   current += diceTypeList.length;
 
   /* --------------------------------------------------
    * ダイス目のプリセットデータ投入
    */
-  const diceAndPipsList: DiceAndPips[] = [];
+  const diceAndPipsList: (Partial<StoreObj<DiceAndPips>> & { data: DiceAndPips })[] = [];
   let diceTypeIdx: number = 0;
   Object.keys(arg.diceMaterial).forEach(faceNum => {
     arg.diceMaterial[faceNum].forEach(diceType => {
       const diceTypeKey = diceTypeKeyList[diceTypeIdx++];
       diceAndPipsList.push(...Object.keys(diceType.pips).map(pips => ({
-        diceTypeKey,
-        pips,
-        mediaKey: diceType.pips[pips]
+        ownerType: null,
+        owner: null,
+        data: {
+          diceTypeKey,
+          pips,
+          mediaKey: diceType.pips[pips]
+        }
       })));
     });
   });
   await addDirect<DiceAndPips>(driver, socket, {
     collection: `${roomCollectionPrefix}-DATA-dice-and-pips-list`,
-    dataList: diceAndPipsList,
-    optionList: diceAndPipsList.map(() => ({ ownerType: null, owner: null }))
+    list: diceAndPipsList
   }, true, current, total);
   current += diceAndPipsList.length;
 
@@ -140,8 +146,7 @@ async function addRoomPresetData(driver: Driver, socket: any, arg: RequestType):
    */
   await addDirect<CutInDeclareInfo>(driver, socket, {
     collection: `${roomCollectionPrefix}-DATA-cut-in-list`,
-    dataList: arg.cutInDataList,
-    optionList: arg.cutInDataList.map(() => ({ ownerType: null, owner: null }))
+    list: arg.cutInDataList.map(data => ({ ownerType: null, owner: null, data }))
   }, true, current, total);
   current += arg.cutInDataList.length;
 
@@ -151,8 +156,7 @@ async function addRoomPresetData(driver: Driver, socket: any, arg: RequestType):
   const sceneData = arg.sceneData;
   const sceneKeyList = await addDirect<Scene>(driver, socket, {
     collection: `${roomCollectionPrefix}-DATA-scene-list`,
-    dataList: [sceneData],
-    optionList: [{ ownerType: null, owner: null }]
+    list: [{ ownerType: null, owner: null, data: sceneData }]
   }, true, current, total);
   current += 1;
 
@@ -161,8 +165,7 @@ async function addRoomPresetData(driver: Driver, socket: any, arg: RequestType):
    */
   await addDirect<SceneLayer>(driver, socket, {
     collection: `${roomCollectionPrefix}-DATA-scene-layer-list`,
-    dataList: sceneLayerList,
-    optionList: sceneLayerList.map(() => ({ ownerType: null, owner: null }))
+    list: sceneLayerList.map(data => ({ ownerType: null, owner: null, data }))
   }, true, current, total);
   current += sceneLayerList.length;
 
@@ -171,12 +174,15 @@ async function addRoomPresetData(driver: Driver, socket: any, arg: RequestType):
    */
   await addDirect<RoomData>(driver, socket, {
     collection: `${roomCollectionPrefix}-DATA-room-data`,
-    dataList: [{
-      sceneKey: sceneKeyList[0],
-      settings: arg.roomExtendInfo,
-      name: arg.roomName
-    }],
-    optionList: [{ ownerType: null, owner: null }]
+    list: [{
+      ownerType: null,
+      owner: null,
+      data: {
+        sceneKey: sceneKeyList[0],
+        settings: arg.roomExtendInfo,
+        name: arg.roomName
+      }
+    }]
   }, true, current, total);
   current += 1;
 
@@ -203,20 +209,18 @@ async function addRoomPresetData(driver: Driver, socket: any, arg: RequestType):
   };
   await addDirect<ChatTabInfo>(driver, socket, {
     collection: `${roomCollectionPrefix}-DATA-chat-tab-list`,
-    dataList: [
-      {
-        name: arg.language.mainChatTabName,
-        isSystem: true,
-        useReadAloud: true,
-        readAloudVolume: 0.5
-      }
-    ],
-    optionList: [
+    list: [
       {
         permission: {
           view: { type: "none", list: [] },
           edit: { type: "allow", list: [gameMastersPermission] },
           chmod: { type: "allow", list: [gameMastersPermission] }
+        },
+        data: {
+          name: arg.language.mainChatTabName,
+          isSystem: true,
+          useReadAloud: true,
+          readAloudVolume: 0.5
         }
       }
     ]
@@ -228,16 +232,19 @@ async function addRoomPresetData(driver: Driver, socket: any, arg: RequestType):
    */
   await addDirect<GroupChatTabInfo>(driver, socket, {
     collection: `${roomCollectionPrefix}-DATA-group-chat-tab-list`,
-    dataList: [
+    list: [
       {
-        name: arg.language.allGroupChatTabName,
-        isSystem: true,
-        actorGroupKey: await getActorGroupKey("All"),
-        isSecret: false,
-        outputChatTabKey: null
+        ownerType: null,
+        owner: null,
+        data: {
+          name: arg.language.allGroupChatTabName,
+          isSystem: true,
+          actorGroupKey: await getActorGroupKey("All"),
+          isSecret: false,
+          outputChatTabKey: null
+        }
       }
-    ],
-    optionList: [{ ownerType: null, owner: null }]
+    ]
   }, true, current, total);
   current += 1;
 
@@ -246,8 +253,7 @@ async function addRoomPresetData(driver: Driver, socket: any, arg: RequestType):
    */
   await addDirect<ResourceMasterStore>(driver, socket, {
     collection: `${roomCollectionPrefix}-DATA-resource-master-list`,
-    dataList: resourceMasterList,
-    optionList: resourceMasterList.map(() => ({ owner: null, ownerType: null }))
+    list: resourceMasterList.map(data => ({ owner: null, ownerType: null, data }))
   }, true, current, total);
   current += resourceMasterList.length;
 
@@ -256,8 +262,7 @@ async function addRoomPresetData(driver: Driver, socket: any, arg: RequestType):
    */
   await addDirect<LikeStore>(driver, socket, {
     collection: `${roomCollectionPrefix}-DATA-like-list`,
-    dataList: arg.likeList,
-    optionList: arg.likeList.map(() => ({ owner: null, ownerType: null }))
+    list: arg.likeList.map(data => ({ owner: null, ownerType: null, data }))
   }, true, current, total);
 }
 
