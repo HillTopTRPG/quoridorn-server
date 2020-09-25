@@ -13,7 +13,7 @@ export async function addActorRelation(
   socket: any,
   collectionName: string,
   data: Partial<StoreObj<ActorStore>> & { data: ActorStore }
-): Promise<DocumentSnapshot<StoreObj<any>> | null> {
+): Promise<DocumentSnapshot<StoreObj<ActorStore>> | null> {
   const {roomCollectionPrefix} = splitCollectionName(collectionName);
 
   const doc = await addSimple(driver, socket, collectionName, data);
@@ -89,7 +89,7 @@ export async function deleteActorRelation(
   );
 
   // リソースを強制的に削除
-  const resourceCC = driver.collection<any>(`${roomCollectionPrefix}-DATA-resource-list`);
+  const resourceCC = driver.collection<ResourceStore>(`${roomCollectionPrefix}-DATA-resource-list`);
   await procAsyncSplit(
     (await resourceCC.where("owner", "==", id).get())
     .docs

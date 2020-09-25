@@ -12,7 +12,7 @@ export async function addSceneLayerRelation(
   socket: any,
   collectionName: string,
   data: Partial<StoreObj<SceneLayer>> & { data: SceneLayer }
-): Promise<DocumentSnapshot<StoreObj<any>> | null> {
+): Promise<DocumentSnapshot<StoreObj<SceneLayer>> | null> {
   const {roomCollectionPrefix} = splitCollectionName(collectionName);
 
   // データ整合性調整

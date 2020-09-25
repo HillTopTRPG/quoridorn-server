@@ -2,7 +2,7 @@ import Driver from "nekostore/lib/Driver";
 import {UserLoginResponse, UserType} from "../@types/socket";
 import {hash} from "./password";
 import {hashAlgorithm, PERMISSION_OWNER} from "../server";
-import {getSocketDocSnap, resistCollectionName} from "./collection";
+import {findSingle, getSocketDocSnap, resistCollectionName} from "./collection";
 import {addActorGroup} from "./data-actor-group";
 import {addActorRelation} from "./data-actor";
 import uuid = require("uuid");
@@ -46,9 +46,24 @@ export async function addUserRelation(
   driver: Driver,
   socket: any,
   collectionName: string,
-  data: Partial<StoreObj<any>> & { data: any }
+  data: Partial<StoreObj<UserStore>> & { data: UserStore }
 ): Promise<DocumentSnapshot<StoreObj<UserStore>> | null> {
   const roomCollectionPrefix = collectionName.replace(/-DATA-.+$/, "");
+  const user = data.data;
+
+  // データ整合性調整
+  if (!user.login) user.login = 0;
+  if (!user.token) user.token = uuid.v4();
+
+  const duplicateUser = await findSingle<StoreObj<UserStore>>(
+    driver,
+    collectionName,
+    "data.name",
+    user.name
+  );
+  if (duplicateUser) return null;
+
+  // 追加
   const docRef = await addSimple<UserStore>(driver, socket, collectionName, data);
   if (!docRef) return null;
   const userKey = docRef.data!.key;
@@ -58,8 +73,6 @@ export async function addUserRelation(
   await socketDocSnap.ref.update({
     userKey
   });
-
-  const user = data.data;
 
   const actorCollectionName = `${roomCollectionPrefix}-DATA-actor-list`;
   const actorKey: string = (await addActorRelation(
