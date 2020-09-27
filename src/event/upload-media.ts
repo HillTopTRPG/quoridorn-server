@@ -2,7 +2,7 @@ import {accessUrl, bucket, Resister, s3Client} from "../server";
 import Driver from "nekostore/lib/Driver";
 import {UploadMediaInfo, UploadMediaRequest, UploadMediaResponse} from "../@types/socket";
 import * as path from "path";
-import {MediaInfo, SocketStore} from "../@types/data";
+import {SocketStore} from "../@types/data";
 import {setEvent} from "../utility/server";
 import {notifyProgress} from "../utility/emit";
 import {getSocketDocSnap} from "../utility/collection";
@@ -29,7 +29,7 @@ async function uploadMedia(driver: Driver, socket: any, arg: RequestType): Promi
   const uploadMediaInfoList = arg.uploadMediaInfoList;
   const total = uploadMediaInfoList.length * 2;
 
-  const mediaList: MediaInfo[] = [];
+  const mediaList: MediaStore[] = [];
   const rawPathList: string[] = arg.uploadMediaInfoList.map(umi => umi.rawPath);
 
   const uploadFunc = async (info: UploadMediaInfo, idx: number): Promise<void> => {

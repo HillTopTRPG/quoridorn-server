@@ -1,21 +1,19 @@
 import Driver from "nekostore/lib/Driver";
-import {StoreObj} from "../@types/store";
-import {ActorGroup} from "../@types/data";
 
 export async function addActorGroup(
   driver: Driver,
   roomCollectionPrefix: string,
   groupName: string,
   key: string,
-  type: "user" | "other",
+  type: "user" | "actor",
   userKey: string | null
 ): Promise<void> {
   const actorGroupCollectionName = `${roomCollectionPrefix}-DATA-actor-group-list`;
-  const actorGroupCollection = driver.collection<StoreObj<ActorGroup>>(actorGroupCollectionName);
+  const actorGroupCollection = driver.collection<StoreData<ActorGroupStore>>(actorGroupCollectionName);
 
   const groupDoc = (await actorGroupCollection.where("data.name", "==", groupName).get()).docs[0];
-  const data: ActorGroup = groupDoc.data!.data!;
-  data.list.push({ key, type, userKey });
+  const data: ActorGroupStore = groupDoc.data!.data!;
+  data.list.push({ type, actorKey: key, userKey });
 
   await groupDoc.ref.update({ data });
 }
@@ -24,14 +22,14 @@ export async function deleteActorGroup(
   driver: Driver,
   roomCollectionPrefix: string,
   groupName: string,
-  key: string
+  actorKey: string
 ): Promise<void> {
   const actorGroupCollectionName = `${roomCollectionPrefix}-DATA-actor-group-list`;
-  const actorGroupCollection = driver.collection<StoreObj<ActorGroup>>(actorGroupCollectionName);
+  const actorGroupCollection = driver.collection<StoreData<ActorGroupStore>>(actorGroupCollectionName);
 
   const groupDoc = (await actorGroupCollection.where("data.name", "==", groupName).get()).docs[0];
-  const data: ActorGroup = groupDoc.data!.data!;
-  const idx = data.list.findIndex(l => l.key === key);
+  const data: ActorGroupStore = groupDoc.data!.data!;
+  const idx = data.list.findIndex(l => l.actorKey === actorKey);
   data.list.splice(idx, 1);
 
   await groupDoc.ref.update({ data });

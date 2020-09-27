@@ -1,4 +1,3 @@
-import {StoreObj} from "../@types/store";
 import {DeleteRoomRequest} from "../@types/socket";
 import {hashAlgorithm, Resister} from "../server";
 import {verify} from "../utility/password";
@@ -34,7 +33,7 @@ async function deleteRoom(driver: Driver, socket: any, arg: RequestType, db?: Db
   }, true);
 
   // 部屋一覧の更新
-  const docSnap: DocumentSnapshot<StoreObj<RoomStore>> | null = await getRoomInfo(
+  const docSnap: DocumentSnapshot<StoreData<RoomStore>> | null = await getRoomInfo(
     driver,
     arg.roomNo,
     { key: arg.roomKey }

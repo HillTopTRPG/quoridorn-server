@@ -2,7 +2,6 @@ import {SYSTEM_COLLECTION, WebIfResister} from "../../server";
 import Driver from "nekostore/lib/Driver";
 import {sendError, setWebIfEvent} from "../../utility/server";
 import {Request, Response} from "express";
-import {StoreObj} from "../../@types/store";
 import {RoomStore} from "../../@types/data";
 import {doDeleteRoom} from "../../utility/data-room";
 
@@ -22,7 +21,7 @@ async function roomDelete(
     return sendError(res, path, method, 400, "");
   }
 
-  const c = driver.collection<StoreObj<RoomStore>>(SYSTEM_COLLECTION.ROOM_LIST);
+  const c = driver.collection<StoreData<RoomStore>>(SYSTEM_COLLECTION.ROOM_LIST);
   const docSnap = (await c.where("order", "==", roomNo).get()).docs
     .filter(doc => doc.exists())[0];
 

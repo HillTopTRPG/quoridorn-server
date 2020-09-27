@@ -1,4 +1,3 @@
-import {StoreObj} from "../@types/store";
 import {CreateRoomRequest} from "../@types/socket";
 import {PERMISSION_DEFAULT, hashAlgorithm, Resister, serverSetting} from "../server";
 import {hash} from "../utility/password";
@@ -7,7 +6,7 @@ import Driver from "nekostore/lib/Driver";
 import DocumentSnapshot from "nekostore/lib/DocumentSnapshot";
 import {ApplicationError} from "../error/ApplicationError";
 import {releaseTouchRoom} from "./release-touch-room";
-import {ActorGroup, RoomStore, SocketStore} from "../@types/data";
+import {RoomStore, SocketStore} from "../@types/data";
 import {getRoomInfo, getSocketDocSnap, resistCollectionName} from "../utility/collection";
 import {setEvent} from "../utility/server";
 
@@ -31,7 +30,7 @@ async function createRoom(driver: Driver, exclusionOwner: string, arg: RequestTy
   }, true);
 
   // 部屋一覧の更新
-  const doc: DocumentSnapshot<StoreObj<RoomStore>> | null = await getRoomInfo(
+  const doc: DocumentSnapshot<StoreData<RoomStore>> | null = await getRoomInfo(
     driver,
     arg.roomNo,
     { key: arg.roomKey }
@@ -81,7 +80,7 @@ async function createRoom(driver: Driver, exclusionOwner: string, arg: RequestTy
     storageId
   };
 
-  const updateRoomInfo: Partial<StoreObj<RoomStore>> = {
+  const updateRoomInfo: Partial<StoreData<RoomStore>> = {
     data: storeData,
     status: "added",
     updateTime: new Date()
@@ -112,7 +111,7 @@ async function createRoom(driver: Driver, exclusionOwner: string, arg: RequestTy
 
   // 部屋に付随する情報の生成
   const actorGroupCCName = `${roomCollectionPrefix}-DATA-actor-group-list`;
-  const actorGroupCC = driver.collection<StoreObj<ActorGroup>>(actorGroupCCName);
+  const actorGroupCC = driver.collection<StoreData<ActorGroupStore>>(actorGroupCCName);
 
   const key = uuid.v4();
   const addGroup = async (name: string, order: number) => {
@@ -128,6 +127,7 @@ async function createRoom(driver: Driver, exclusionOwner: string, arg: RequestTy
       status: "added",
       createTime: new Date(),
       updateTime: null,
+      refList: [],
       data: {
         name,
         isSystem: true,

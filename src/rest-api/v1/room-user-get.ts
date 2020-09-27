@@ -2,8 +2,7 @@ import {SYSTEM_COLLECTION, WebIfResister} from "../../server";
 import Driver from "nekostore/lib/Driver";
 import {sendError, setWebIfEvent} from "../../utility/server";
 import {Request, Response} from "express";
-import {StoreObj} from "../../@types/store";
-import {RoomStore, TokenStore, UserStore} from "../../@types/data";
+import {RoomStore, TokenStore} from "../../@types/data";
 import {findSingle} from "../../utility/collection";
 
 // インタフェース
@@ -36,7 +35,7 @@ async function roomUserGet(
     }
   }
 
-  const c = driver.collection<StoreObj<RoomStore>>(SYSTEM_COLLECTION.ROOM_LIST);
+  const c = driver.collection<StoreData<RoomStore>>(SYSTEM_COLLECTION.ROOM_LIST);
   const roomInfo = (await c.where("order", "==", roomNo).get()).docs
     .filter(doc => doc.exists())[0];
 
@@ -45,7 +44,7 @@ async function roomUserGet(
   }
 
   const roomCollectionPrefix = tokenInfo.roomCollectionPrefix;
-  const userDoc = (await findSingle<StoreObj<UserStore>>(
+  const userDoc = (await findSingle<StoreData<UserStore>>(
     driver,
     `${roomCollectionPrefix}-DATA-user-list`,
     "key",

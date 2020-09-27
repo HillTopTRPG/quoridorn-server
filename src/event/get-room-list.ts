@@ -1,4 +1,3 @@
-import {StoreObj} from "../@types/store";
 import {
   ClientRoomInfo,
   GetRoomListResponse,
@@ -37,10 +36,10 @@ async function getRoomList(driver: Driver, socket: any, arg: RequestType): Promi
       }
     }
 
-    let roomList: (StoreObj<ClientRoomInfo> & { id: string; })[] | null = null;
+    let roomList: (StoreData<ClientRoomInfo> & { id: string; })[] | null = null;
 
     if (usable) {
-      const c = driver.collection<StoreObj<RoomStore>>(SYSTEM_COLLECTION.ROOM_LIST);
+      const c = driver.collection<StoreData<RoomStore>>(SYSTEM_COLLECTION.ROOM_LIST);
       roomList = (await c.orderBy("order").get()).docs
         .filter(doc => doc.exists())
         .map(doc => {
@@ -61,7 +60,7 @@ async function getRoomList(driver: Driver, socket: any, arg: RequestType): Promi
           if (await checkViewer(driver, socket.id)) {
             const changeList: RoomViewResponse[] = snapshot.docs.map(change => {
               const changeType: ChangeType = change.type;
-              const data: StoreObj<RoomStore> | undefined = change.data;
+              const data: StoreData<RoomStore> | undefined = change.data;
               const id: string = change.ref.id;
 
               if (data && data.data) {
@@ -105,8 +104,9 @@ async function getRoomList(driver: Driver, socket: any, arg: RequestType): Promi
           lastExclusionOwner: null,
           permission: null,
           status: null,
-          createTime: null,
-          updateTime: null
+          createTime: new Date(),
+          updateTime: null,
+          refList: []
         });
       }
     }

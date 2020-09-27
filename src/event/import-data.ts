@@ -3,12 +3,11 @@ import Driver from "nekostore/lib/Driver";
 import {SocketStore} from "../@types/data";
 import {setEvent} from "../utility/server";
 import {getSocketDocSnap} from "../utility/collection";
-import {StoreObj} from "../@types/store";
 import {addDirect} from "./add-direct";
 
 // インタフェース
 const eventName = "import-data";
-type RequestType = StoreObj<any>[];
+type RequestType = StoreData<any>[];
 type ResponseType = void;
 
 /**
@@ -23,7 +22,7 @@ async function importData(driver: Driver, socket: any, arg: RequestType): Promis
   const roomCollectionPrefix = socketData.roomCollectionPrefix;
 
   const listMap: {
-    [collection: string]: (Partial<StoreObj<any>> & { data: any })[]
+    [collection: string]: (Partial<StoreData<any>> & { data: any })[]
   } = {};
 
   arg.forEach(a => {

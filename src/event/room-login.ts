@@ -4,7 +4,6 @@ import {verify} from "../utility/password";
 import Driver from "nekostore/lib/Driver";
 import DocumentSnapshot from "nekostore/lib/DocumentSnapshot";
 import {RoomLoginRequest} from "../@types/socket";
-import {StoreObj} from "../@types/store";
 import {ApplicationError} from "../error/ApplicationError";
 import {releaseTouchRoom} from "./release-touch-room";
 import {RoomStore, SocketStore} from "../@types/data";
@@ -31,7 +30,7 @@ async function roomLogin(driver: Driver, exclusionOwner: string, arg: RequestTyp
   }, true);
 
   // 部屋一覧の更新
-  const docSnap: DocumentSnapshot<StoreObj<RoomStore>> | null = await getRoomInfo(
+  const docSnap: DocumentSnapshot<StoreData<RoomStore>> | null = await getRoomInfo(
     driver,
     arg.roomNo,
     { key: arg.roomKey }

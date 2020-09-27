@@ -1,6 +1,5 @@
 import Driver from "nekostore/lib/Driver";
-import {MediaInfo, RoomStore} from "../@types/data";
-import {StoreObj} from "../@types/store";
+import {RoomStore} from "../@types/data";
 import {accessUrl, bucket, s3Client} from "../server";
 import DocumentSnapshot from "nekostore/lib/DocumentSnapshot";
 import {ApplicationError} from "../error/ApplicationError";
@@ -9,7 +8,7 @@ import {findList} from "./collection";
 export async function doDeleteRoom(
   driver: Driver,
   db: any,
-  doc: DocumentSnapshot<StoreObj<RoomStore>>
+  doc: DocumentSnapshot<StoreData<RoomStore>>
 ): Promise<void> {
   const data = doc.data!.data;
 
@@ -25,7 +24,7 @@ export async function doDeleteRoom(
   const roomCollectionPrefix = data.roomCollectionPrefix;
 
   // メディアコレクションからメディアストレージの削除
-  const deleteUrlList = (await findList<StoreObj<MediaInfo>>(driver, `${roomCollectionPrefix}-DATA-media-list`))!
+  const deleteUrlList = (await findList<StoreData<MediaStore>>(driver, `${roomCollectionPrefix}-DATA-media-list`))!
     .map(doc => doc.data!.data!.url.replace(accessUrl, ""))
     .filter(url => url.startsWith(storageId));
   await s3Client!.removeObjects(bucket, deleteUrlList);

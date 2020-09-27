@@ -1,7 +1,6 @@
 import {Resister} from "../server";
 import {ApplicationError} from "../error/ApplicationError";
 import Driver from "nekostore/lib/Driver";
-import {StoreObj} from "../@types/store";
 import {TouchModifyDataRequest} from "../@types/socket";
 import {getData} from "../utility/collection";
 import {setEvent} from "../utility/server";
@@ -51,7 +50,7 @@ async function singleTouchDataModify(
 
   const updateTime = doc.data.updateTime;
 
-  const updateInfo: Partial<StoreObj<any>> = {
+  const updateInfo: Partial<StoreData<any>> = {
     exclusionOwner,
     lastExclusionOwner: exclusionOwner,
     status: "modify-touched",

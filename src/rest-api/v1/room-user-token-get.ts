@@ -2,10 +2,8 @@ import {hashAlgorithm, SYSTEM_COLLECTION, WebIfResister} from "../../server";
 import Driver from "nekostore/lib/Driver";
 import {generateToken, sendError, setWebIfEvent} from "../../utility/server";
 import {Request, Response} from "express";
-import {StoreObj} from "../../@types/store";
-import {RoomStore, TokenStore, UserStore} from "../../@types/data";
+import {RoomStore, TokenStore} from "../../@types/data";
 import {verify} from "../../utility/password";
-import DocumentSnapshot from "nekostore/lib/DocumentSnapshot";
 import {findSingle} from "../../utility/collection";
 
 // インタフェース
@@ -44,7 +42,7 @@ async function roomUserTokenGet(
     userPassword = authorization.replace(/^[^\/]+?\//, "");
   }
 
-  const roomCollection = driver.collection<StoreObj<RoomStore>>(SYSTEM_COLLECTION.ROOM_LIST);
+  const roomCollection = driver.collection<StoreData<RoomStore>>(SYSTEM_COLLECTION.ROOM_LIST);
   const roomInfo = (await roomCollection.where("order", "==", roomNo).get()).docs
     .filter(doc => doc.exists())[0];
   if (!roomInfo) {
@@ -52,7 +50,7 @@ async function roomUserTokenGet(
   }
 
   const roomCollectionPrefix = roomInfo.data!.data!.roomCollectionPrefix;
-  const userDoc = (await findSingle<StoreObj<UserStore>>(
+  const userDoc = (await findSingle<StoreData<UserStore>>(
     driver,
     `${roomCollectionPrefix}-DATA-user-list`,
     "key",

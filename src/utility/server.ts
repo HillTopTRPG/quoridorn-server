@@ -1,7 +1,6 @@
 import {UploadMediaInfo} from "../@types/socket";
 import {accessLog, accessLogForWebApi, errorLog, errorLogForWebApi} from "./logger";
 import Driver from "nekostore/lib/Driver";
-import {Permission} from "../@types/store";
 import {TokenStore} from "../@types/data";
 import {serverSetting, SYSTEM_COLLECTION} from "../server";
 import {Request, Response, NextFunction} from "express";

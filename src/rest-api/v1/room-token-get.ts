@@ -2,7 +2,6 @@ import {hashAlgorithm, SYSTEM_COLLECTION, WebIfResister} from "../../server";
 import Driver from "nekostore/lib/Driver";
 import {generateToken, sendError, setWebIfEvent} from "../../utility/server";
 import {Request, Response} from "express";
-import {StoreObj} from "../../@types/store";
 import {RoomStore, TokenStore} from "../../@types/data";
 import {verify} from "../../utility/password";
 
@@ -21,7 +20,7 @@ async function roomTokenGet(
     return sendError(res, path, method, 400, "");
   }
 
-  const c = driver.collection<StoreObj<RoomStore>>(SYSTEM_COLLECTION.ROOM_LIST);
+  const c = driver.collection<StoreData<RoomStore>>(SYSTEM_COLLECTION.ROOM_LIST);
   const roomInfo = (await c.where("order", "==", roomNo).get()).docs
     .filter(doc => doc.exists())[0];
 

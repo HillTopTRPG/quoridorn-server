@@ -2,7 +2,6 @@ import Driver from "nekostore/lib/Driver";
 import {TouchierStore} from "../@types/data";
 import {SYSTEM_COLLECTION} from "../server";
 import {SystemError} from "../error/SystemError";
-import {StoreObj} from "../@types/store";
 import {findList, findSingle} from "./collection";
 
 export async function addTouchier(
@@ -91,7 +90,7 @@ export async function releaseTouch(
   await Promise.all(docList.map(async doc => {
     if (doc.exists()) {
       const { collection, key } = doc.data;
-      const target = await findSingle<StoreObj<any>>(driver, collection, "key", key);
+      const target = await findSingle<StoreData<any>>(driver, collection, "key", key);
       if (target && target.exists()) {
         target.data.data
           ? await target.ref.update({ exclusionOwner: null })

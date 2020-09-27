@@ -1,7 +1,5 @@
 import {ChangeType} from "nekostore/lib/DocumentChange";
-import {StoreObj, StoreUseData} from "./store";
 import {TargetVersion} from "../utility/GitHub";
-import {CutInDeclareInfo, MediaInfo, Scene, UrlType} from "./data";
 
 type WindowSetting =
   | "not-use" // 使えなくします
@@ -78,14 +76,14 @@ export type Message = {
   termsOfUse: string;
 };
 export type GetRoomListResponse = {
-  roomList: StoreObj<ClientRoomInfo>[] | null;
+  roomList: StoreData<ClientRoomInfo>[] | null;
   message: Message;
   isNeedRoomCreatePassword: boolean;
 };
 
 export type RoomViewResponse = {
   changeType: ChangeType;
-  data?: StoreObj<ClientRoomInfo>;
+  data?: StoreData<ClientRoomInfo>;
   id: string;
 };
 
@@ -102,7 +100,7 @@ export type GetVersionResponse = {
 
 export type TouchDataRequest<T> = {
   collection: string;
-  list: (Partial<StoreObj<T>> & { key: string; continuous?: boolean; })[];
+  list: (Partial<StoreData<T>> & { key: string; continuous?: boolean; })[];
 };
 export type DeleteFileRequest = {
   urlList: string[];
@@ -112,11 +110,11 @@ export type ReleaseTouchDataRequest<T> = TouchDataRequest<T>;
 
 export type AddDirectRequest<T> = {
   collection: string;
-  list: (Partial<StoreObj<T>> & { data: T })[];
+  list: (Partial<StoreData<T>> & { data: T })[];
 };
 export type DeleteDataRequest<T> = TouchDataRequest<T>;
 export type UpdateDataRequest<T> = TouchDataRequest<T> & {
-  list: (Partial<StoreObj<T>> & { key: string, continuous?: boolean })[];
+  list: (Partial<StoreData<T>> & { key: string, continuous?: boolean })[];
 };
 
 export type SendDataRequest = {
@@ -124,7 +122,7 @@ export type SendDataRequest = {
   data: any;
 };
 
-export type UploadMediaInfo = MediaInfo & (
+export type UploadMediaInfo = MediaStore & (
   | { dataLocation: "direct"; }
   | {
     dataLocation: "server";
@@ -135,7 +133,7 @@ export type UploadMediaInfo = MediaInfo & (
 
 export type UploadMediaRequest = {
   uploadMediaInfoList: UploadMediaInfo[];
-  option: Partial<StoreObj<any>>;
+  option: Partial<StoreData<any>>;
 };
 
 export type UploadMediaResponse = {
@@ -163,8 +161,8 @@ type LikeStore = {
 type AddRoomPresetDataRequest = {
   roomName: string;
   roomExtendInfo: RoomInfoExtend;
-  sceneData: Scene;
-  cutInDataList: CutInDeclareInfo[];
+  sceneData: SceneStore;
+  cutInDataList: CutInStore[];
   diceMaterial: DiceMaterial,
   likeList: LikeStore[],
   language: {

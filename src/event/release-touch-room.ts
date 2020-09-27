@@ -2,7 +2,6 @@ import {Resister, SYSTEM_COLLECTION} from "../server";
 import {ApplicationError} from "../error/ApplicationError";
 import Driver from "nekostore/lib/Driver";
 import {ReleaseTouchRoomRequest} from "../@types/socket";
-import {StoreObj} from "../@types/store";
 import {RoomStore} from "../@types/data";
 import {getRoomInfo} from "../utility/collection";
 import {setEvent} from "../utility/server";
@@ -35,7 +34,7 @@ export async function releaseTouchRoom(
   const backupUpdateTime = await deleteTouchier(driver, socketId, SYSTEM_COLLECTION.ROOM_LIST, doc.data!.key);
 
   if (updateForce || doc.data!.data) {
-    const updateInfo: Partial<StoreObj<RoomStore>> = {
+    const updateInfo: Partial<StoreData<RoomStore>> = {
       exclusionOwner: null,
       status: "touched-released",
       updateTime: backupUpdateTime

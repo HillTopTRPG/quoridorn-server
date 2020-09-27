@@ -6,8 +6,6 @@ import {findSingle, getSocketDocSnap, resistCollectionName} from "./collection";
 import {addActorGroup} from "./data-actor-group";
 import {addActorRelation} from "./data-actor";
 import uuid = require("uuid");
-import {StoreObj} from "../@types/store";
-import {ChatPaletteStore, UserStore} from "../@types/data";
 import {addDirect} from "../event/add-direct";
 import {addSimple} from "./data";
 import DocumentSnapshot from "nekostore/lib/DocumentSnapshot";
@@ -26,7 +24,7 @@ export async function addUser(
 
   const token = uuid.v4();
 
-  const userKey = (await addDirect(driver, socket, {
+  const userKey = (await addDirect<UserStore>(driver, socket, {
     collection: userListCCName,
     list: [{
       ownerType: null,
@@ -46,8 +44,8 @@ export async function addUserRelation(
   driver: Driver,
   socket: any,
   collectionName: string,
-  data: Partial<StoreObj<UserStore>> & { data: UserStore }
-): Promise<DocumentSnapshot<StoreObj<UserStore>> | null> {
+  data: Partial<StoreData<UserStore>> & { data: UserStore }
+): Promise<DocumentSnapshot<StoreData<UserStore>> | null> {
   const roomCollectionPrefix = collectionName.replace(/-DATA-.+$/, "");
   const user = data.data;
 
@@ -55,7 +53,7 @@ export async function addUserRelation(
   if (!user.login) user.login = 0;
   if (!user.token) user.token = uuid.v4();
 
-  const duplicateUser = await findSingle<StoreObj<UserStore>>(
+  const duplicateUser = await findSingle<StoreData<UserStore>>(
     driver,
     collectionName,
     "data.name",
@@ -126,7 +124,7 @@ export async function addUserRelation(
   await addDirect(driver, socket, {
     collection: `${roomCollectionPrefix}-DATA-chat-palette-list`,
     list: chatPaletteList.map(cp => ({
-      ownerType: "user",
+      ownerType: "user-list",
       owner: userKey,
       permission: PERMISSION_OWNER,
       data: cp

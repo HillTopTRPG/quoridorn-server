@@ -2,7 +2,6 @@ import {Resister} from "../server";
 import {ApplicationError} from "../error/ApplicationError";
 import Driver from "nekostore/lib/Driver";
 import {ReleaseTouchDataRequest} from "../@types/socket";
-import {StoreObj} from "../@types/store";
 import {getData} from "../utility/collection";
 import {setEvent} from "../utility/server";
 import {deleteTouchier} from "../utility/touch";
@@ -34,7 +33,7 @@ async function singleReleaseTouchData<T>(
   driver: Driver,
   socketId: string,
   collection: string,
-  data: Partial<StoreObj<T>> & { key: string; continuous?: boolean },
+  data: Partial<StoreData<T>> & { key: string; continuous?: boolean },
   updateForce?: boolean
 ): Promise<void> {
   const msgArg = { collection, data };

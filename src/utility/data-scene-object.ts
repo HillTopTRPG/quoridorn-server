@@ -1,8 +1,6 @@
 import Driver from "nekostore/lib/Driver";
-import {StoreObj, StoreUseData} from "../@types/store";
 import {addDirect} from "../event/add-direct";
 import {findList, getData, resistCollectionName, splitCollectionName} from "./collection";
-import {ActorStore, ResourceMasterStore, ResourceStore, SceneAndObject, SceneLayer, SceneObject} from "../@types/data";
 import {addActorRelation} from "./data-actor";
 import {addSimple, deleteSimple, getDataForDelete, multipleTouchCheck, touchCheck} from "./data";
 import DocumentSnapshot from "nekostore/lib/DocumentSnapshot";
@@ -13,14 +11,14 @@ export async function addSceneObjectRelation(
   driver: Driver,
   socket: any,
   collectionName: string,
-  data: Partial<StoreUseData<SceneObject>> & { data: SceneObject }
-): Promise<DocumentSnapshot<StoreObj<SceneObject>> | null> {
+  data: Partial<StoreUseData<SceneObjectStore>> & { data: SceneObjectStore }
+): Promise<DocumentSnapshot<StoreData<SceneObjectStore>> | null> {
   const {roomCollectionPrefix} = splitCollectionName(collectionName);
 
   const sceneObject = data.data;
 
   // データ整合性調整
-  const layerList = (await findList<StoreObj<SceneLayer>>(
+  const layerList = (await findList<StoreData<SceneLayerStore>>(
     driver,
     `${roomCollectionPrefix}-DATA-scene-layer-list`
   ))!;
@@ -32,7 +30,7 @@ export async function addSceneObjectRelation(
   }
 
   // 追加
-  const doc = await addSimple<SceneObject>(driver, socket, collectionName, data);
+  const doc = await addSimple<SceneObjectStore>(driver, socket, collectionName, data);
   if (!doc) return null;
   const sceneObjectKey = doc.data!.key;
 
@@ -40,7 +38,9 @@ export async function addSceneObjectRelation(
   const sceneListCCName = `${roomCollectionPrefix}-DATA-scene-list`;
   // 現存する各シーンすべてに今回登録したシーンオブジェクトを紐づかせる
   const sceneAndObjectList =
-    (await findList<StoreObj<SceneObject>>(driver, sceneListCCName))!.map(doc => ({
+    (await findList<StoreData<SceneObjectStore>>(driver, sceneListCCName))!.map(doc => ({
+      ownerType: null,
+      owner: null,
       data: {
         sceneKey: doc.data!.key,
         objectKey: sceneObjectKey,
@@ -49,7 +49,7 @@ export async function addSceneObjectRelation(
         entering: "normal"
       }
     }));
-  await addDirect<SceneAndObject>(driver, socket, {
+  await addDirect<SceneAndObjectStore>(driver, socket, {
     collection: `${roomCollectionPrefix}-DATA-scene-and-object-list`,
     list: sceneAndObjectList
   }, false);
@@ -99,7 +99,7 @@ export async function addSceneObjectRelation(
 
     // リソースの自動追加
     const resourceMasterCCName = `${roomCollectionPrefix}-DATA-resource-master-list`;
-    const resourceMasterDocList = (await findList<StoreObj<ResourceMasterStore>>(
+    const resourceMasterDocList = (await findList<StoreData<ResourceMasterStore>>(
       driver,
       resourceMasterCCName,
       [{ property: "data.isAutoAddMapObject", operand: "==", value: true }]
@@ -109,11 +109,11 @@ export async function addSceneObjectRelation(
     await addDirect<ResourceStore>(driver, socket, {
       collection: `${roomCollectionPrefix}-DATA-resource-list`,
       list: resourceMasterDocList.map(rmDoc => ({
-        ownerType: "scene-object",
+        ownerType: "scene-object-list",
         owner: sceneObjectKey,
         order: -1,
         data: {
-          masterKey: rmDoc.data!.key,
+          resourceMasterKey: rmDoc.data!.key,
           type: rmDoc.data!.data!.type,
           value: rmDoc.data!.data!.defaultValue
         }
@@ -130,7 +130,7 @@ export async function deleteSceneObjectRelation(
   collectionName: string,
   key: string
 ): Promise<void> {
-  const docSnap: DocumentSnapshot<StoreObj<SceneObject>> = await getDataForDelete(driver, collectionName, key);
+  const docSnap: DocumentSnapshot<StoreData<SceneObjectStore>> = await getDataForDelete(driver, collectionName, key);
   const sceneObject = docSnap.data!;
   const roomCollectionPrefix = collectionName.replace(/-DATA-.+$/, "");
 
@@ -205,5 +205,5 @@ export async function deleteSceneObjectRelation(
     }
   }
 
-  await deleteSimple<SceneObject>(driver, socket, collectionName, key);
+  await deleteSimple<SceneObjectStore>(driver, socket, collectionName, key);
 }

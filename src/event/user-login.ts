@@ -3,9 +3,8 @@ import {SystemError} from "../error/SystemError";
 import {verify} from "../utility/password";
 import Driver from "nekostore/lib/Driver";
 import {UserLoginRequest, UserLoginResponse, UserType} from "../@types/socket";
-import {StoreObj} from "../@types/store";
 import {ApplicationError} from "../error/ApplicationError";
-import {ActorGroup, RoomStore, SocketStore, SocketUserStore, UserStore} from "../@types/data";
+import {RoomStore, SocketStore} from "../@types/data";
 import {findSingle, getSocketDocSnap, resistCollectionName} from "../utility/collection";
 import {setEvent} from "../utility/server";
 import {addUser} from "../utility/data-user";
@@ -32,7 +31,7 @@ async function userLogin(driver: Driver, socket: any, arg: RequestType): Promise
   const roomKey = socketDocSnap.data!.roomKey;
   if (!roomKey) throw new ApplicationError(`Not yet login.`, arg);
   
-  const roomDoc = await findSingle<StoreObj<RoomStore>>(
+  const roomDoc = await findSingle<StoreData<RoomStore>>(
     driver, 
     SYSTEM_COLLECTION.ROOM_LIST, 
     "key", 
@@ -44,7 +43,7 @@ async function userLogin(driver: Driver, socket: any, arg: RequestType): Promise
 
   // ユーザコレクションの取得とユーザ情報更新
   const roomCollectionPrefix = roomDoc.data.data.roomCollectionPrefix;
-  const userDoc = await findSingle<StoreObj<UserStore>>(
+  const userDoc = await findSingle<StoreData<UserStore>>(
     driver,
     `${roomCollectionPrefix}-DATA-user-list`,
     "data.name",
@@ -98,13 +97,13 @@ async function userLogin(driver: Driver, socket: any, arg: RequestType): Promise
 
       const actorGroupCollectionName = `${roomCollectionPrefix}-DATA-actor-group-list`;
 
-      const oldGroupDoc = await findSingle<StoreObj<ActorGroup>>(
+      const oldGroupDoc = await findSingle<StoreData<ActorGroupStore>>(
         driver,
         actorGroupCollectionName,
         "data.name",
         getGroupName(userData.type)
       );
-      const newGroupDoc = await findSingle<StoreObj<ActorGroup>>(
+      const newGroupDoc = await findSingle<StoreData<ActorGroupStore>>(
         driver,
         actorGroupCollectionName,
         "data.name",
@@ -112,7 +111,7 @@ async function userLogin(driver: Driver, socket: any, arg: RequestType): Promise
       );
       if (oldGroupDoc && newGroupDoc) {
         // 元のグループから削除
-        const oldGroupData: ActorGroup = oldGroupDoc.data!.data!;
+        const oldGroupData: ActorGroupStore = oldGroupDoc.data!.data!;
         const idx = oldGroupData.list.findIndex(g => g.userKey === userKey);
         const elm = oldGroupData.list.splice(idx, 1)[0];
         await oldGroupDoc.ref.update({
@@ -120,7 +119,7 @@ async function userLogin(driver: Driver, socket: any, arg: RequestType): Promise
         });
 
         // 新しいグループに追加
-        const newGroupData: ActorGroup = newGroupDoc.data!.data!;
+        const newGroupData: ActorGroupStore = newGroupDoc.data!.data!;
         newGroupData.list.push(elm);
         await newGroupDoc.ref.update({
           data: newGroupData
@@ -132,7 +131,7 @@ async function userLogin(driver: Driver, socket: any, arg: RequestType): Promise
     userData.login++;
     addRoomMember = userData.login === 1;
 
-    const updateUserInfo: Partial<StoreObj<UserStore>> = {
+    const updateUserInfo: Partial<StoreData<UserStore>> = {
       data: userData,
       updateTime: new Date()
     };
@@ -157,7 +156,7 @@ async function userLogin(driver: Driver, socket: any, arg: RequestType): Promise
     // ログインできたので部屋の入室人数を更新
     roomData.memberNum++;
 
-    const updateRoomInfo: Partial<StoreObj<RoomStore>> = {
+    const updateRoomInfo: Partial<StoreData<RoomStore>> = {
       data: roomData
     };
     try {
@@ -170,19 +169,20 @@ async function userLogin(driver: Driver, socket: any, arg: RequestType): Promise
   const userKey = userLoginResponse.userKey;
   // 部屋データとして追加
   const roomSocketUserCollectionName = `${roomCollectionPrefix}-DATA-socket-user-list`;
-  const socketUserCollection = driver.collection<StoreObj<SocketUserStore>>(roomSocketUserCollectionName);
+  const socketUserCollection = driver.collection<StoreData<SocketUserStore>>(roomSocketUserCollectionName);
   await socketUserCollection.add({
     collection: "socket-user-list",
     key: uuid.v4(),
+    order: 0,
     ownerType: null,
     owner: null,
-    order: 0,
     exclusionOwner: null,
     lastExclusionOwner: null,
+    permission: PERMISSION_DEFAULT,
     status: "modified",
     createTime: new Date(),
     updateTime: null,
-    permission: PERMISSION_DEFAULT,
+    refList: [],
     data: {
       socketId,
       userKey

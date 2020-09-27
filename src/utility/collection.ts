@@ -1,5 +1,4 @@
 import DocumentSnapshot from "nekostore/lib/DocumentSnapshot";
-import {GetDataOption, StoreObj, StoreUseData} from "../@types/store";
 import Driver from "nekostore/lib/Driver";
 import {RoomStore, SocketStore} from "../@types/data";
 import {SYSTEM_COLLECTION} from "../server";
@@ -7,6 +6,12 @@ import {ApplicationError} from "../error/ApplicationError";
 import CollectionReference from "nekostore/src/CollectionReference";
 import Query from "nekostore/lib/Query";
 import DocumentChange from "nekostore/src/DocumentChange";
+
+type GetDataOption<T> = {
+  socketId?: string;
+  key?: string;
+  collectionReference?: CollectionReference<StoreData<T>>;
+};
 
 export function splitCollectionName(collectionName: string): { roomCollectionPrefix: string; roomCollectionSuffix: string } {
   const splitted = collectionName.split("-DATA-");
@@ -17,11 +22,17 @@ export function splitCollectionName(collectionName: string): { roomCollectionPre
 }
 
 export async function resistCollectionName(driver: Driver, collectionName: string) {
-  const { roomCollectionPrefix } = splitCollectionName(collectionName);
+  const { roomCollectionPrefix, roomCollectionSuffix } = splitCollectionName(collectionName);
   const collectionListCollectionName = `${roomCollectionPrefix}-DATA-collection-list`;
-  const cnCC = driver.collection<{ name: string }>(collectionListCollectionName);
+  const cnCC = driver.collection<{
+    name: string;
+    suffix: string;
+  }>(collectionListCollectionName);
   if ((await cnCC.where("name", "==", collectionName).get()).docs.length) return;
-  await cnCC.add({ name: collectionName });
+  await cnCC.add({
+    name: collectionName,
+    suffix: roomCollectionSuffix
+  });
 }
 
 /**
@@ -34,8 +45,8 @@ export async function getRoomInfo(
   driver: Driver,
   roomNo: number,
   option: GetDataOption<RoomStore> = {}
-): Promise<DocumentChange<StoreObj<RoomStore>> | null> {
-  const doc = await findSingle<StoreObj<RoomStore>>(
+): Promise<DocumentChange<StoreData<RoomStore>> | null> {
+  const doc = await findSingle<StoreData<RoomStore>>(
     driver,
     SYSTEM_COLLECTION.ROOM_LIST,
     "order",
@@ -121,8 +132,8 @@ export async function getData<T>(
   driver: Driver,
   collectionName: string,
   option: GetDataOption<T> = {}
-): Promise<DocumentSnapshot<StoreObj<T>> | null> {
-  const docSnap = await findSingle<StoreObj<T>>(
+): Promise<DocumentSnapshot<StoreData<T>> | null> {
+  const docSnap = await findSingle<StoreData<T>>(
     driver,
     collectionName,
     "key",
@@ -173,8 +184,8 @@ export async function getSocketDocSnap(
   return socketDocSnap;
 }
 
-export async function getMaxOrder<T>(driver: Driver, collectionName: string): Promise<{ c: CollectionReference<StoreObj<T>>, maxOrder: number }> {
-  const c = driver.collection<StoreObj<T>>(collectionName);
+export async function getMaxOrder<T>(driver: Driver, collectionName: string): Promise<{ c: CollectionReference<StoreData<T>>, maxOrder: number }> {
+  const c = driver.collection<StoreData<T>>(collectionName);
 
   const docs = (await c
   .orderBy("order", "desc")

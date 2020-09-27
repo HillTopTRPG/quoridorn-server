@@ -1,4 +1,3 @@
-import {StoreObj} from "../@types/store";
 import {PERMISSION_DEFAULT, Resister, SYSTEM_COLLECTION} from "../server";
 import {ApplicationError} from "../error/ApplicationError";
 import Driver from "nekostore/lib/Driver";
@@ -21,7 +20,7 @@ type ResponseType = void;
  * @param arg 部屋番号
  */
 async function touchRoom(driver: Driver, socketId: string, arg: RequestType): Promise<ResponseType> {
-  const c = await driver.collection<StoreObj<RoomStore>>(SYSTEM_COLLECTION.ROOM_LIST);
+  const c = await driver.collection<StoreData<RoomStore>>(SYSTEM_COLLECTION.ROOM_LIST);
 
   const doc = await getRoomInfo(driver, arg.roomNo, { collectionReference: c });
 
@@ -31,7 +30,7 @@ async function touchRoom(driver: Driver, socketId: string, arg: RequestType): Pr
   if (doc) throw new ApplicationError(`Already touched or created room.`, arg);
 
   const key = uuid.v4();
-  const addInfo: StoreObj<RoomStore> = {
+  const addInfo: StoreData<RoomStore> = {
     collection: "rooms",
     key,
     ownerType: null,
@@ -42,6 +41,7 @@ async function touchRoom(driver: Driver, socketId: string, arg: RequestType): Pr
     status: "initial-touched",
     createTime: new Date(),
     updateTime: null,
+    refList: [],
     permission: PERMISSION_DEFAULT
   };
   try {

@@ -2,19 +2,7 @@ import {Resister} from "../server";
 import Driver from "nekostore/lib/Driver";
 import {AddRoomPresetDataRequest, LikeStore} from "../@types/socket";
 import {addDirect} from "./add-direct";
-import {PermissionNode, StoreObj} from "../@types/store";
 import {ApplicationError} from "../error/ApplicationError";
-import {
-  ActorGroup, ChatTabInfo,
-  CutInDeclareInfo,
-  DiceAndPips,
-  DiceType,
-  GroupChatTabInfo,
-  ResourceMasterStore,
-  RoomData,
-  Scene,
-  SceneLayer
-} from "../@types/data";
 import {setEvent} from "../utility/server";
 import {findSingle, getSocketDocSnap} from "../utility/collection";
 
@@ -34,7 +22,7 @@ async function addRoomPresetData(driver: Driver, socket: any, arg: RequestType):
   const roomCollectionPrefix = snap.data!.roomCollectionPrefix;
   console.log(`【addRoomPresetData】roomCollectionPrefix: ${roomCollectionPrefix}`);
 
-  const sceneLayerList: SceneLayer[] = [
+  const sceneLayerList: SceneLayerStore[] = [
     { type: "floor-tile", defaultOrder: 1, isSystem: true },
     { type: "map-mask", defaultOrder: 2, isSystem: true },
     { type: "map-marker", defaultOrder: 3, isSystem: true },
@@ -80,7 +68,7 @@ async function addRoomPresetData(driver: Driver, socket: any, arg: RequestType):
       defaultValue: "0"
     }
   ];
-  const diceTypeList: (Partial<StoreObj<DiceType>> & { data: DiceType })[] = [];
+  const diceTypeList: (Partial<StoreData<DiceTypeStore>> & { data: DiceTypeStore })[] = [];
   let pipsNum: number = 0;
   Object.keys(arg.diceMaterial).forEach(faceNum => {
     arg.diceMaterial[faceNum].forEach(diceType => {
@@ -110,7 +98,7 @@ async function addRoomPresetData(driver: Driver, socket: any, arg: RequestType):
   /* --------------------------------------------------
    * ダイスタイプのプリセットデータ投入
    */
-  const diceTypeKeyList = await addDirect<DiceType>(driver, socket, {
+  const diceTypeKeyList = await addDirect<DiceTypeStore>(driver, socket, {
     collection: `${roomCollectionPrefix}-DATA-dice-type-list`,
     list: diceTypeList
   }, true, current, total);
@@ -119,7 +107,7 @@ async function addRoomPresetData(driver: Driver, socket: any, arg: RequestType):
   /* --------------------------------------------------
    * ダイス目のプリセットデータ投入
    */
-  const diceAndPipsList: (Partial<StoreObj<DiceAndPips>> & { data: DiceAndPips })[] = [];
+  const diceAndPipsList: (Partial<StoreData<DiceAndPipsStore>> & { data: DiceAndPipsStore })[] = [];
   let diceTypeIdx: number = 0;
   Object.keys(arg.diceMaterial).forEach(faceNum => {
     arg.diceMaterial[faceNum].forEach(diceType => {
@@ -135,7 +123,7 @@ async function addRoomPresetData(driver: Driver, socket: any, arg: RequestType):
       })));
     });
   });
-  await addDirect<DiceAndPips>(driver, socket, {
+  await addDirect<DiceAndPipsStore>(driver, socket, {
     collection: `${roomCollectionPrefix}-DATA-dice-and-pips-list`,
     list: diceAndPipsList
   }, true, current, total);
@@ -144,7 +132,7 @@ async function addRoomPresetData(driver: Driver, socket: any, arg: RequestType):
   /* --------------------------------------------------
    * カットインデータのプリセットデータ投入
    */
-  await addDirect<CutInDeclareInfo>(driver, socket, {
+  await addDirect<CutInStore>(driver, socket, {
     collection: `${roomCollectionPrefix}-DATA-cut-in-list`,
     list: arg.cutInDataList.map(data => ({ ownerType: null, owner: null, data }))
   }, true, current, total);
@@ -154,7 +142,7 @@ async function addRoomPresetData(driver: Driver, socket: any, arg: RequestType):
    * マップデータのプリセットデータ投入
    */
   const sceneData = arg.sceneData;
-  const sceneKeyList = await addDirect<Scene>(driver, socket, {
+  const sceneKeyList = await addDirect<SceneStore>(driver, socket, {
     collection: `${roomCollectionPrefix}-DATA-scene-list`,
     list: [{ ownerType: null, owner: null, data: sceneData }]
   }, true, current, total);
@@ -163,7 +151,7 @@ async function addRoomPresetData(driver: Driver, socket: any, arg: RequestType):
   /* --------------------------------------------------
    * マップレイヤーのプリセットデータ投入
    */
-  await addDirect<SceneLayer>(driver, socket, {
+  await addDirect<SceneLayerStore>(driver, socket, {
     collection: `${roomCollectionPrefix}-DATA-scene-layer-list`,
     list: sceneLayerList.map(data => ({ ownerType: null, owner: null, data }))
   }, true, current, total);
@@ -172,7 +160,7 @@ async function addRoomPresetData(driver: Driver, socket: any, arg: RequestType):
   /* --------------------------------------------------
    * 部屋データのプリセットデータ投入
    */
-  await addDirect<RoomData>(driver, socket, {
+  await addDirect<RoomDataStore>(driver, socket, {
     collection: `${roomCollectionPrefix}-DATA-room-data`,
     list: [{
       ownerType: null,
@@ -188,7 +176,7 @@ async function addRoomPresetData(driver: Driver, socket: any, arg: RequestType):
 
   // ActorGroupのIDを取得する関数
   const getActorGroupKey = async (name: string): Promise<string> => {
-    const actorGroupDoc = await findSingle<StoreObj<ActorGroup>>(
+    const actorGroupDoc = await findSingle<StoreData<ActorGroupStore>>(
       driver,
       `${roomCollectionPrefix}-DATA-actor-group-list`,
       "data.name",
@@ -207,10 +195,12 @@ async function addRoomPresetData(driver: Driver, socket: any, arg: RequestType):
     type: "group",
     key: await getActorGroupKey("GameMasters")
   };
-  await addDirect<ChatTabInfo>(driver, socket, {
+  await addDirect<ChatTabStore>(driver, socket, {
     collection: `${roomCollectionPrefix}-DATA-chat-tab-list`,
     list: [
       {
+        owner: null,
+        ownerType: null,
         permission: {
           view: { type: "none", list: [] },
           edit: { type: "allow", list: [gameMastersPermission] },
@@ -230,7 +220,7 @@ async function addRoomPresetData(driver: Driver, socket: any, arg: RequestType):
   /* --------------------------------------------------
    * グループチャットタブのプリセットデータ投入
    */
-  await addDirect<GroupChatTabInfo>(driver, socket, {
+  await addDirect<GroupChatTabStore>(driver, socket, {
     collection: `${roomCollectionPrefix}-DATA-group-chat-tab-list`,
     list: [
       {

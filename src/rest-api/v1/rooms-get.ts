@@ -2,7 +2,6 @@ import {SYSTEM_COLLECTION, WebIfResister} from "../../server";
 import Driver from "nekostore/lib/Driver";
 import {setWebIfEvent} from "../../utility/server";
 import {Request, Response} from "express";
-import {StoreObj} from "../../@types/store";
 import {RoomStore, TokenStore} from "../../@types/data";
 
 // インタフェース
@@ -19,7 +18,7 @@ async function roomsGet(
   const isAdmin = !!tokenInfo;
   const authorizedValue = (value: any) => isAdmin ? value : undefined;
 
-  const c = driver.collection<StoreObj<RoomStore>>(SYSTEM_COLLECTION.ROOM_LIST);
+  const c = driver.collection<StoreData<RoomStore>>(SYSTEM_COLLECTION.ROOM_LIST);
   const roomInfoList = (await c.get()).docs
     .filter(doc => doc.exists());
 

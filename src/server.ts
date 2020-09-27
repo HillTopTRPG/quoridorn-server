@@ -41,13 +41,12 @@ import resistRoomsGetApi from "./rest-api/v1/rooms-get";
 import resistTokenGetApi from "./rest-api/v1/token-get";
 import {HashAlgorithmType} from "./utility/password";
 import { Db } from "mongodb";
-import {Permission, StoreObj} from "./@types/store";
 import {Message} from "./@types/socket";
 import {ApplicationError} from "./error/ApplicationError";
 import {SystemError} from "./error/SystemError";
 import {compareVersion, getFileRow, TargetVersion} from "./utility/GitHub";
 import {accessLog} from "./utility/logger";
-import {RoomStore, SocketStore, SocketUserStore, TokenStore, TouchierStore, UserStore} from "./@types/data";
+import {RoomStore, SocketStore, TokenStore, TouchierStore} from "./@types/data";
 import * as Minio from "minio";
 import {releaseTouch} from "./utility/touch";
 import {findList, findSingle, getSocketDocSnap} from "./utility/collection";
@@ -198,7 +197,7 @@ async function logout(driver: Driver, socketId: string): Promise<void> {
 
   const socketData: SocketStore = snap.data!;
   if (socketData.roomKey && socketData.userKey) {
-    const roomDoc = await findSingle<StoreObj<RoomStore>>(
+    const roomDoc = await findSingle<StoreData<RoomStore>>(
       driver,
       SYSTEM_COLLECTION.ROOM_LIST,
       "key",
@@ -209,7 +208,7 @@ async function logout(driver: Driver, socketId: string): Promise<void> {
     const roomData = roomDoc.data.data!;
 
     // ログアウト処理
-    const userDoc = await findSingle<StoreObj<UserStore>>(
+    const userDoc = await findSingle<StoreData<UserStore>>(
       driver,
       `${roomData.roomCollectionPrefix}-DATA-user-list`,
       "key",
@@ -226,7 +225,7 @@ async function logout(driver: Driver, socketId: string): Promise<void> {
       await roomDoc.ref.update({ data: roomData });
     }
 
-    const socketUserDoc = await findSingle<StoreObj<SocketUserStore>>(
+    const socketUserDoc = await findSingle<StoreData<SocketUserStore>>(
       driver,
       `${roomData.roomCollectionPrefix}-DATA-socket-user-list`,
       "data.socketId",
@@ -401,7 +400,7 @@ async function main(): Promise<void> {
 
 async function initDataBase(driver: Driver): Promise<void> {
   // 部屋情報の入室人数を0人にリセット
-  (await driver.collection<StoreObj<RoomStore>>(SYSTEM_COLLECTION.ROOM_LIST).get()).docs.forEach(async roomDoc => {
+  (await driver.collection<StoreData<RoomStore>>(SYSTEM_COLLECTION.ROOM_LIST).get()).docs.forEach(async roomDoc => {
     if (roomDoc.exists() && roomDoc.data.data) {
       const roomData = roomDoc.data.data!;
       roomData.memberNum = 0;
@@ -411,7 +410,7 @@ async function initDataBase(driver: Driver): Promise<void> {
       });
 
       const roomUserCollectionName = `${roomCollectionPrefix}-DATA-user-list`;
-      (await driver.collection<StoreObj<UserStore>>(roomUserCollectionName).get()).docs.forEach(async userDoc => {
+      (await driver.collection<StoreData<UserStore>>(roomUserCollectionName).get()).docs.forEach(async userDoc => {
         if (userDoc.exists() && userDoc.data.data) {
           const userData = userDoc.data.data!;
           userData.login = 0;
@@ -445,7 +444,7 @@ async function initDataBase(driver: Driver): Promise<void> {
   });
 
   // Socket接続情報を全削除
-  (await driver.collection<StoreObj<SocketStore>>(SYSTEM_COLLECTION.SOCKET_LIST).get()).docs.forEach(async doc => {
+  (await driver.collection<StoreData<SocketStore>>(SYSTEM_COLLECTION.SOCKET_LIST).get()).docs.forEach(async doc => {
     if (doc.exists()) {
       await doc.ref.delete();
     }

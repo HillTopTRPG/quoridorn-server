@@ -2,7 +2,6 @@ import {Resister} from "../server";
 import Driver from "nekostore/lib/Driver";
 import {UpdateDataRequest} from "../@types/socket";
 import {releaseTouchData} from "./release-touch-data";
-import {StoreObj} from "../@types/store";
 import {setEvent} from "../utility/server";
 import {updateResourceMasterRelation} from "../utility/data-resource-master";
 import {procAsyncSplit} from "../utility/async";
@@ -19,7 +18,7 @@ const relationCollectionTable: {
     driver: Driver,
     socket: any,
     collection: string,
-    option: (Partial<StoreObj<any>> & { key: string; continuous?: boolean; })
+    option: (Partial<StoreData<any>> & { key: string; continuous?: boolean; })
   ) => Promise<void>
 } = {
   "resource-master-list": updateResourceMasterRelation,
@@ -51,7 +50,7 @@ export async function updateSingleData<T>(
   driver: Driver,
   socket: any,
   collectionName: string,
-  data: (Partial<StoreObj<T>> & { key: string; continuous?: boolean; })
+  data: (Partial<StoreData<T>> & { key: string; continuous?: boolean; })
 ): Promise<void> {
   const {roomCollectionSuffix} = splitCollectionName(collectionName);
   const callUpdateFunc = relationCollectionTable[roomCollectionSuffix] || updateSimple;

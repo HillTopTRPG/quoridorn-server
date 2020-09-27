@@ -2,7 +2,6 @@ import {Resister, SYSTEM_COLLECTION} from "../server";
 import {ApplicationError} from "../error/ApplicationError";
 import Driver from "nekostore/lib/Driver";
 import {TouchRoomRequest} from "../@types/socket";
-import {StoreObj} from "../@types/store";
 import {RoomStore} from "../@types/data";
 import {checkViewer, getRoomInfo} from "../utility/collection";
 import {setEvent} from "../utility/server";
@@ -33,7 +32,7 @@ export async function touchRoomModify(driver: Driver, socketId: string, arg: Req
 
   const updateTime = doc.data.updateTime;
 
-  const updateInfo: Partial<StoreObj<RoomStore>> = {
+  const updateInfo: Partial<StoreData<RoomStore>> = {
     exclusionOwner: socketId,
     lastExclusionOwner: socketId,
     status: "modify-touched",

@@ -1,4 +1,3 @@
-import {StoreObj} from "../@types/store";
 import {Resister} from "../server";
 import Driver from "nekostore/lib/Driver";
 import {AddDirectRequest} from "../@types/socket";
@@ -24,8 +23,8 @@ export function getAddRelationCollectionMap(): {
     driver: Driver,
     socket: any,
     collectionName: string,
-    data: Partial<StoreObj<any>> & { data: any }
-  ) => Promise<DocumentSnapshot<StoreObj<any>> | null>
+    data: Partial<StoreData<any>> & { data: any }
+  ) => Promise<DocumentSnapshot<StoreData<any>> | null>
 } {
   return {
     "resource-master-list": addResourceMasterRelation,
@@ -62,7 +61,7 @@ export async function addDirect<T>(
   const { roomCollectionSuffix } = splitCollectionName(arg.collection);
   const callAddFunc = addRelationCollectionMap[roomCollectionSuffix] || addSimple;
 
-  const addSingleData = async (data: Partial<StoreObj<T>> & { data: T }, idx: number): Promise<void> => {
+  const addSingleData = async (data: Partial<StoreData<T>> & { data: T }, idx: number): Promise<void> => {
     // 進捗報告(処理中)
     if (sendNotify) notifyProgress(socket, total, nestNum + idx);
 
