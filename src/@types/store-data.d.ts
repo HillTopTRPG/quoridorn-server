@@ -368,5 +368,6 @@ type UserStore = {
   type: UserType;
   login: number;
   password: string;
+  isExported: boolean;
   token: string;
 };

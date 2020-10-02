@@ -4,11 +4,18 @@ import {SocketStore} from "../@types/data";
 import {setEvent} from "../utility/server";
 import {getSocketDocSnap} from "../utility/collection";
 import {addDirect} from "./add-direct";
+import {ImportRequest} from "../@types/socket";
 
 // インタフェース
 const eventName = "import-data";
-type RequestType = StoreData<any>[];
+type RequestType = ImportRequest;
 type ResponseType = void;
+
+const collectionOrderList: string[] = [
+  "user-list",
+  "actor-list",
+  "media-list"
+];
 
 /**
  * データインポート処理
@@ -25,7 +32,7 @@ async function importData(driver: Driver, socket: any, arg: RequestType): Promis
     [collection: string]: (Partial<StoreData<any>> & { data: any })[]
   } = {};
 
-  arg.forEach(a => {
+  arg.list.forEach(a => {
     const listMapElm = listMap[a.collection];
     if (listMapElm) {
       listMapElm.push({
@@ -51,11 +58,20 @@ async function importData(driver: Driver, socket: any, arg: RequestType): Promis
   });
 
   await Object.keys(listMap)
+    .sort((cn1, cn2) => {
+      let cn1Index = collectionOrderList.findIndex(cn => cn === cn1);
+      let cn2Index = collectionOrderList.findIndex(cn => cn === cn2);
+      if (cn1Index === cn2Index) return 0;
+      if (cn1Index === -1) return 1;
+      if (cn2Index === -1) return -1;
+      return cn1Index < cn2Index ? -1 : 1;
+    })
     .map(collection => {
       return async () => {
         await addDirect<any>(driver, socket, {
           collection: `${roomCollectionPrefix}-DATA-${collection}`,
-          list: listMap[collection]
+          list: listMap[collection],
+          importType: arg.importType
         })
       };
     })

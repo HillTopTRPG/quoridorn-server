@@ -30,7 +30,7 @@ export async function addUser(
       ownerType: null,
       owner: null,
       order: -1,
-      data: {name, password, token, type, login: 1 }
+      data: {name, password, token, type, login: 1, isExported: false }
     }]
   }, false))[0];
 

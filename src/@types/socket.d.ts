@@ -15,7 +15,7 @@ type WindowSettings = {
   counterRemocon: WindowSetting;
 };
 
-export type RoomInfoExtend = {
+type RoomInfoExtend = {
   visitable: boolean; // 見学許可
   isFitGrid: boolean; // マップオブジェクトをセルに自動調整するか
   isViewDice: boolean; // ダイスを表示するか
@@ -28,115 +28,118 @@ export type RoomInfoExtend = {
   windowSettings: WindowSettings;
 };
 
-export type BaseRoomInfo = {
+type BaseRoomInfo = {
   name: string;
   bcdiceServer: string;
   system: string;
   extend?: RoomInfoExtend; // 一時的措置
 };
 
-export type RoomLoginInfo = {
+type RoomLoginInfo = {
   roomKey: string;
   roomNo: number;
   roomPassword: string;
 };
 
-export type RoomLoginRequest = RoomLoginInfo;
+type RoomLoginRequest = RoomLoginInfo;
 
 type UserType = "GM" | "PL" | "VISITOR";
 
-export type UserLoginRequest = {
+type UserLoginRequest = {
   name: string;
   type?: UserType;
   password: string;
 };
 
-export type UserLoginResponse = {
+type UserLoginResponse = {
   userKey: string;
   token: string;
 }
 
-export type TouchRoomRequest = {
+type TouchRoomRequest = {
   roomNo: number;
 };
-export type ReleaseTouchRoomRequest = TouchRoomRequest
+type ReleaseTouchRoomRequest = TouchRoomRequest
 
-export type CreateRoomRequest = RoomLoginInfo & BaseRoomInfo & {
+type CreateRoomRequest = RoomLoginInfo & BaseRoomInfo & {
   roomCreatePassword?: string;
 };
-export type DeleteRoomRequest = RoomLoginInfo;
+type DeleteRoomRequest = RoomLoginInfo;
 
-export type ClientRoomInfo = BaseRoomInfo & {
+type ClientRoomInfo = BaseRoomInfo & {
   memberNum: number;
   hasPassword: boolean;
 };
-export type Message = {
+type Message = {
   title: string;
   descriptions: string[];
   termsOfUse: string;
 };
-export type GetRoomListResponse = {
+type GetRoomListResponse = {
   roomList: StoreData<ClientRoomInfo>[] | null;
   message: Message;
   isNeedRoomCreatePassword: boolean;
 };
 
-export type RoomViewResponse = {
+type RoomViewResponse = {
   changeType: ChangeType;
   data?: StoreData<ClientRoomInfo>;
   id: string;
 };
 
-export type LoginResponse = ClientRoomInfo & {
+type LoginResponse = ClientRoomInfo & {
   roomCollectionPrefix: string;
   storageId: string;
 };
 
-export type GetVersionResponse = {
+type GetVersionResponse = {
   version: string;
   title: string;
   targetClient: TargetVersion;
 };
 
-export type TouchDataRequest<T> = {
+type TouchDataRequest<T> = {
   collection: string;
   list: (Partial<StoreData<T>> & { key: string; continuous?: boolean; })[];
 };
-export type DeleteFileRequest = {
+type DeleteFileRequest = {
   urlList: string[];
 };
-export type TouchModifyDataRequest<T> = TouchDataRequest<T>;
-export type ReleaseTouchDataRequest<T> = TouchDataRequest<T>;
+type TouchModifyDataRequest<T> = TouchDataRequest<T>;
+type ReleaseTouchDataRequest<T> = TouchDataRequest<T>;
 
-export type AddDirectRequest<T> = {
+type ImportType = "add" | "update" | "all-cover";
+
+type AddDirectRequest<T> = {
   collection: string;
   list: (Partial<StoreData<T>> & { data: T })[];
+  importType?: ImportType;
 };
-export type DeleteDataRequest<T> = TouchDataRequest<T>;
-export type UpdateDataRequest<T> = TouchDataRequest<T> & {
+type DeleteDataRequest<T> = TouchDataRequest<T>;
+type UpdateDataRequest<T> = TouchDataRequest<T> & {
   list: (Partial<StoreData<T>> & { key: string, continuous?: boolean })[];
 };
 
-export type SendDataRequest = {
+type SendDataRequest = {
   targetList: string[],
   data: any;
 };
 
-export type UploadMediaInfo = MediaStore & (
-  | { dataLocation: "direct"; }
+type UploadMediaInfo = MediaStore & { key?: string } & (
+  | { dataLocation: "direct" }
   | {
-    dataLocation: "server";
-    blob: Blob;
-    arrayBuffer: string;
-  }
-);
+  dataLocation: "server";
+  blob: Blob;
+  arrayBuffer: string;
+}
+  );
 
-export type UploadMediaRequest = {
+type UploadMediaRequest = {
   uploadMediaInfoList: UploadMediaInfo[];
   option: Partial<StoreData<any>>;
 };
 
-export type UploadMediaResponse = {
+type UploadMediaResponse = {
   key: string;
   rawPath: string;
   url: string;
@@ -170,4 +173,9 @@ type AddRoomPresetDataRequest = {
     allGroupChatTabName: string;
     nameLabel: string;
   };
+};
+
+type ImportRequest = {
+  importType: ImportType;
+  list: StoreData<any>[];
 };

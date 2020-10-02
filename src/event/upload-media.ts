@@ -5,7 +5,7 @@ import * as path from "path";
 import {SocketStore} from "../@types/data";
 import {setEvent} from "../utility/server";
 import {notifyProgress} from "../utility/emit";
-import {getSocketDocSnap} from "../utility/collection";
+import {findSingle, getSocketDocSnap} from "../utility/collection";
 import {addDirect} from "./add-direct";
 import uuid = require("uuid");
 
@@ -25,38 +25,68 @@ async function uploadMedia(driver: Driver, socket: any, arg: RequestType): Promi
   const socketData: SocketStore = snap.data!;
   const storageId = socketData.storageId!;
   const roomCollectionPrefix = socketData.roomCollectionPrefix;
+  const mediaListCCName = `${roomCollectionPrefix}-DATA-media-list`;
 
   const uploadMediaInfoList = arg.uploadMediaInfoList;
   const total = uploadMediaInfoList.length * 2;
 
-  const mediaList: MediaStore[] = [];
+  const mediaList: Partial<StoreData<MediaStore>>[] = [];
   const rawPathList: string[] = arg.uploadMediaInfoList.map(umi => umi.rawPath);
+  const duplicateMediaList: StoreData<MediaStore>[] = [];
 
   const uploadFunc = async (info: UploadMediaInfo, idx: number): Promise<void> => {
     // 進捗報告
     notifyProgress(socket, total, idx);
-    const mediaFileId = uuid.v4();
+    let mediaFileId = "";
 
-    // アップロード
+    console.log(info.urlType, info.url, info.rawPath);
+
+    let volatileKey: string | undefined = undefined;
+
     if (info.dataLocation === "server") {
+      const hashSameMedia = await findSingle<StoreData<MediaStore>>(
+        driver,
+        mediaListCCName,
+        "data.rawPath",
+        info.rawPath
+      );
+      if (hashSameMedia && hashSameMedia.exists()) {
+        duplicateMediaList.push(hashSameMedia.data);
+        return;
+      }
+      // アップロード
+      mediaFileId = uuid.v4();
       const filePath = path.join(storageId, mediaFileId);
       await s3Client!.putObject(bucket, filePath, info.arrayBuffer);
-
       // XXX 以下の方法だと、「https://~~」が「http:/~~」になってしまうことが判明したので、単純連結に変更
       // urlList.push(path.join(accessUrl, filePath));
       info.url = accessUrl + filePath;
+    } else {
+      const hashSameMedia = await findSingle<StoreData<MediaStore>>(
+        driver,
+        mediaListCCName,
+        "data.url",
+        info.url
+      );
+      if (hashSameMedia && hashSameMedia.exists()) {
+        duplicateMediaList.push(hashSameMedia.data);
+        return;
+      }
     }
 
     mediaList.push({
-      name: info.name,
-      rawPath: info.rawPath,
-      mediaFileId,
-      tag: info.tag,
-      url: info.url,
-      urlType: info.urlType,
-      iconClass: info.iconClass,
-      imageSrc: info.imageSrc,
-      dataLocation: info.dataLocation
+      key: info.key,
+      data: {
+        name: info.name,
+        rawPath: info.rawPath,
+        mediaFileId,
+        tag: info.tag,
+        url: info.url,
+        urlType: info.urlType,
+        iconClass: info.iconClass,
+        imageSrc: info.imageSrc,
+        dataLocation: info.dataLocation
+      }
     });
   };
 
@@ -66,12 +96,12 @@ async function uploadMedia(driver: Driver, socket: any, arg: RequestType): Promi
     .reduce((prev, curr) => prev.then(curr), Promise.resolve());
 
   // mediaListに追加
-  const mediaListCCName = `${roomCollectionPrefix}-DATA-media-list`;
-  const keyList: string[] = await addDirect(driver, socket, {
+  const keyList: string[] = await addDirect<MediaStore>(driver, socket, {
     collection: mediaListCCName,
     list: mediaList.map(data => ({
       ...arg.option,
-      data
+      key: data.key,
+      data: data.data!
     }))
   }, true, uploadMediaInfoList.length, total);
 
@@ -81,10 +111,10 @@ async function uploadMedia(driver: Driver, socket: any, arg: RequestType): Promi
   return keyList.map((key, idx) => ({
     key,
     rawPath: rawPathList[idx],
-    url: mediaList[idx].url,
-    name: mediaList[idx].name,
-    tag: mediaList[idx].tag,
-    urlType: mediaList[idx].urlType
+    url: mediaList[idx].data!.url,
+    name: mediaList[idx].data!.name,
+    tag: mediaList[idx].data!.tag,
+    urlType: mediaList[idx].data!.urlType
   }));
 }
 
