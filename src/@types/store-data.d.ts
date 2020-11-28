@@ -24,6 +24,7 @@ type ActorStore = {
   standImagePosition: number; // 1〜12
   pieceKeyList: string[]; // コマのID一覧
   statusKey: string; // ステータスへの参照
+  isExported: boolean;
 };
 
 type CardDeckBigStore = {

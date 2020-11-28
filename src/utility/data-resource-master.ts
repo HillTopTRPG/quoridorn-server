@@ -5,12 +5,14 @@ import {findList, findSingle, resistCollectionName, splitCollectionName} from ".
 import {procAsyncSplit} from "./async";
 import {addSimple, deleteSimple, updateSimple} from "./data";
 import DocumentSnapshot from "nekostore/lib/DocumentSnapshot";
+import {ImportLevel} from "../@types/socket";
 
 export async function addResourceMasterRelation(
   driver: Driver,
   socket: any,
   collectionName: string,
-  data: Partial<StoreData<ResourceMasterStore>> & { data: ResourceMasterStore }
+  data: Partial<StoreData<ResourceMasterStore>> & { data: ResourceMasterStore },
+  importLevel?: ImportLevel
 ): Promise<DocumentSnapshot<StoreData<ResourceMasterStore>> | null> {
   const roomCollectionPrefix = collectionName.replace(/-DATA-.+$/, "");
   // まずはリソース定義を追加
@@ -20,55 +22,76 @@ export async function addResourceMasterRelation(
 
   const resourceMaster =  data.data;
 
-  const addResources = async (keyList: string[], ownerType: string) => {
-    // リソースインスタンスを追加
-    await addDirect<ResourceStore>(driver, socket, {
-      collection: `${roomCollectionPrefix}-DATA-resource-list`,
-      list: keyList.map(key => ({
-        ownerType,
-        owner: key,
-        order: -1,
-        data: {
-          resourceMasterKey: resourceMasterKey,
-          type: resourceMaster.type,
-          value: resourceMaster.defaultValue
-        }
-      }))
-    }, false);
-  };
+  // リソース追加
+  // importLevel:full :: インポートデータに含まれているのでこの処理は不要
+  // importLevel:user :: 他のactorに紐づくデータは含まれていないのでこの処理は必要
+  // importLevel:actor:: 他のactorに紐づくデータは含まれていないのでこの処理は必要
+  // importLevel:part :: インポートデータに含まれていないのでこの処理は必要
+  if (importLevel !== "full") {
+    const addResources = async (keyList: string[], ownerType: string) => {
+      // リソースインスタンスを追加
+      await addDirect<ResourceStore>(driver, socket, {
+        collection: `${roomCollectionPrefix}-DATA-resource-list`,
+        list: keyList.map(key => ({
+          ownerType,
+          owner: key,
+          order: -1,
+          data: {
+            resourceMasterKey: resourceMasterKey,
+            type: resourceMaster.type,
+            value: resourceMaster.defaultValue
+          }
+        }))
+      }, false);
+    };
 
-  // 自動付与（アクター）なら、リソース連携
-  if (resourceMaster.isAutoAddActor) {
-    // アクター一覧を取得
-    const actorCCName = `${roomCollectionPrefix}-DATA-actor-list`;
-    const keyList = (await findList<StoreData<ActorStore>>(driver, actorCCName))!.map(
-      doc => doc.data!.key
-    );
-    await addResources(keyList, "actor-list");
+    // 自動付与（アクター）なら、リソース連携
+    if (resourceMaster.isAutoAddActor) {
+      // アクター一覧を取得
+      const actorCCName = `${roomCollectionPrefix}-DATA-actor-list`;
+      const keyList = (await findList<StoreData<ActorStore>>(driver, actorCCName))!.map(
+          doc => doc.data!.key
+      );
+      await addResources(keyList, "actor-list");
+    }
+
+    // 自動付与（コマ）なら、リソース連携
+    if (resourceMaster.isAutoAddMapObject) {
+      // アクター一覧を取得
+      const sceneObjectCCName = `${roomCollectionPrefix}-DATA-scene-object-list`;
+      const keyList = (await findList<StoreData<SceneAndObjectStore>>(
+          driver,
+          sceneObjectCCName,
+          [{property: "data.type", operand: "==", value: "character"}]
+      ))!.map(doc => doc.data!.key);
+      await addResources(keyList, "scene-object-list");
+    }
   }
 
-  // 自動付与（コマ）なら、リソース連携
-  if (resourceMaster.isAutoAddMapObject) {
-    // アクター一覧を取得
-    const sceneObjectCCName = `${roomCollectionPrefix}-DATA-scene-object-list`;
-    const keyList = (await findList<StoreData<SceneAndObjectStore>>(
-      driver,
-      sceneObjectCCName,
-      [{ property: "data.type", operand: "==", value: "character" }]
-    ))!.map(doc => doc.data!.key);
-    await addResources(keyList, "scene-object-list");
-  }
-
-  if (resourceMaster.isAutoAddActor || resourceMaster.isAutoAddMapObject) {
-    // イニシアティブカラムインスタンスを追加
-    const initiativeColumnCollectionName = `${roomCollectionPrefix}-DATA-initiative-column-list`;
-    await addSimple(
-      driver,
-      socket,
-      initiativeColumnCollectionName,
-      { ownerType: null, owner: null, data: { resourceMasterKey } }
-    );
-    await resistCollectionName(driver, initiativeColumnCollectionName);
+  // イニシアティブカラムインスタンスを追加
+  // importLevel:full :: インポートデータに含まれているのでこの処理は不要
+  // importLevel:user :: インポートデータに含まれているのでこの処理は不要
+  // importLevel:actor:: インポートデータに含まれているのでこの処理は不要
+  // importLevel:part :: インポートデータに含まれているのでこの処理は不要
+  if (!importLevel) {
+    if (resourceMaster.isAutoAddActor || resourceMaster.isAutoAddMapObject) {
+      const initiativeColumnCollectionName = `${roomCollectionPrefix}-DATA-initiative-column-list`;
+      const initiativeColumnData = await findSingle(
+        driver,
+        initiativeColumnCollectionName,
+        "data.resourceMasterKey",
+        resourceMasterKey
+      );
+      if (!initiativeColumnData) {
+        await addSimple(
+          driver,
+          socket,
+          initiativeColumnCollectionName,
+          { ownerType: null, owner: null, data: { resourceMasterKey } }
+        );
+        await resistCollectionName(driver, initiativeColumnCollectionName);
+      }
+    }
   }
 
   return doc;

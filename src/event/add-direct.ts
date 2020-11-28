@@ -1,6 +1,6 @@
 import {Resister} from "../server";
 import Driver from "nekostore/lib/Driver";
-import {AddDirectRequest} from "../@types/socket";
+import {AddDirectRequest, ImportLevel} from "../@types/socket";
 import {addActorRelation} from "../utility/data-actor";
 import {addUserRelation} from "../utility/data-user";
 import {resistCollectionName, splitCollectionName} from "../utility/collection";
@@ -18,14 +18,17 @@ const eventName = "add-direct";
 type RequestType<T> = AddDirectRequest<T>;
 type ResponseType = string[];
 
-export function getAddRelationCollectionMap(): {
+type ProcessMap = {
   [collectionSuffixName: string]: (
-    driver: Driver,
-    socket: any,
-    collectionName: string,
-    data: Partial<StoreData<any>> & { data: any }
+      driver: Driver,
+      socket: any,
+      collectionName: string,
+      data: Partial<StoreData<any>> & { data: any },
+      importLevel?: ImportLevel
   ) => Promise<DocumentSnapshot<StoreData<any>> | null>
-} {
+}
+
+export function getAddRelationCollectionMap(): ProcessMap {
   return {
     "resource-master-list": addResourceMasterRelation,
     "actor-list": addActorRelation,
@@ -70,7 +73,8 @@ export async function addDirect<T>(
       driver,
       socket,
       arg.collection,
-      data
+      data,
+      arg.importLevel
     );
     if (!doc) return;
     keyList.push(doc.data!.key);

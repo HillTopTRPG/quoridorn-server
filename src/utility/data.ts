@@ -26,9 +26,6 @@ export async function touchCheck<T>(
 
 export async function multipleTouchCheck(driver: Driver, collectionName: string, whereStr: string, value: string): Promise<DocumentChange<StoreData<any>>[]> {
   const docs = (await findList<StoreData<any>>(driver, collectionName, [{ property: whereStr, operand: "==", value }]))!;
-  if (docs.length) {
-    throw new ApplicationError(`No such.`, { collectionName, keyList: docs.map(doc => doc.data!.key) });
-  }
   const lockingDocs = docs.filter(d => d.data!.exclusionOwner);
   if (lockingDocs.length) {
     throw new ApplicationError(`Already touched.`, { collectionName, keyList: lockingDocs.map(doc => doc.data!.key ) });

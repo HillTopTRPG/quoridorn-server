@@ -108,12 +108,16 @@ type DeleteFileRequest = {
 type TouchModifyDataRequest<T> = TouchDataRequest<T>;
 type ReleaseTouchDataRequest<T> = TouchDataRequest<T>;
 
-type ImportType = "add" | "update" | "all-cover";
+type ImportLevel =
+  | "full" // 部屋データ全体
+  | "user" // ユーザーデータ
+  | "actor" // アクターデータ
+  | "part"; // 個別データ
 
 type AddDirectRequest<T> = {
   collection: string;
   list: (Partial<StoreData<T>> & { data: T })[];
-  importType?: ImportType;
+  importLevel?: ImportLevel;
 };
 type DeleteDataRequest<T> = TouchDataRequest<T>;
 type UpdateDataRequest<T> = TouchDataRequest<T> & {
@@ -176,6 +180,5 @@ type AddRoomPresetDataRequest = {
 };
 
 type ImportRequest = {
-  importType: ImportType;
-  list: StoreData<any>[];
+  [importLevel in ImportLevel]: StoreData<any>[];
 };
