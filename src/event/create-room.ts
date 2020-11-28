@@ -113,11 +113,10 @@ async function createRoom(driver: Driver, exclusionOwner: string, arg: RequestTy
   const actorGroupCCName = `${roomCollectionPrefix}-DATA-actor-group-list`;
   const actorGroupCC = driver.collection<StoreData<ActorGroupStore>>(actorGroupCCName);
 
-  const key = uuid.v4();
   const addGroup = async (name: string, order: number) => {
     await actorGroupCC.add({
       collection: "actor-group-list",
-      key,
+      key: uuid.v4(),
       ownerType: null,
       owner: null,
       order,
