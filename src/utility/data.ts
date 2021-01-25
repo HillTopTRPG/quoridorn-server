@@ -5,6 +5,8 @@ import {PERMISSION_DEFAULT} from "../server";
 import {findList, findSingle, getData, getMaxOrder, getOwner, splitCollectionName} from "./collection";
 import DocumentChange from "nekostore/src/DocumentChange";
 import uuid from "uuid";
+import {procAsyncSplit} from "./async";
+import {deleteDataPackage} from "../event/delete-data-package";
 const matchAll = require("match-all");
 
 export async function touchCheck<T>(
@@ -341,5 +343,71 @@ export async function updateSimple<T>(
     await doc.ref.update(updateInfo);
   } catch (err) {
     throw new ApplicationError(`Failure update doc.`, updateInfo);
+  }
+}
+
+export class RelationalDataDeleter {
+  constructor(
+    private driver: Driver,
+    private roomCollectionPrefix: string,
+    private key: string
+  ) {}
+
+  public async deleteForce(
+    collectionSuffix: string,
+    targetProperty: string
+  ): Promise<void> {
+    await procAsyncSplit(
+      (await findList<StoreData<any>>(
+          this.driver,
+          `${this.roomCollectionPrefix}-DATA-${collectionSuffix}`,
+          [{ property: targetProperty, operand: "==", value: this.key }])
+      ).map(doc => doc.ref.delete())
+    );
+  }
+
+  private relationList: { ccName: string; targetProperty: string; }[] = [];
+
+  public addRelation(
+    collectionSuffix: string,
+    targetProperty: string
+  ): RelationalDataDeleter {
+    this.relationList.push({
+      ccName: `${this.roomCollectionPrefix}-DATA-${collectionSuffix}`,
+      targetProperty
+    });
+    return this;
+  }
+
+  public async allDelete(socket: any) {
+    const changeInfoList: {
+      documentChangeList: DocumentChange<StoreData<any>>[];
+      ccName: string;
+    }[] = [];
+
+    const checker = async (relation: { ccName: string; targetProperty: string; }): Promise<void> => {
+      changeInfoList.push({
+        documentChangeList: await multipleTouchCheck(
+          this.driver,
+          relation.ccName,
+          relation.targetProperty,
+          this.key
+        ),
+        ccName: relation.ccName
+      });
+    };
+
+    // 非同期処理で順次消していく
+    await this.relationList
+      .map(data => () => checker(data))
+      .reduce((prev, curr) => prev.then(curr), Promise.resolve());
+
+    // 非同期処理で順次消していく
+    await changeInfoList
+      .map(data => () => deleteDataPackage(this.driver, socket, {
+        collection: data.ccName,
+        list: data.documentChangeList.map(d => ({ key: d.data!.key }))
+      }))
+      .reduce((prev, curr) => prev.then(curr), Promise.resolve());
   }
 }

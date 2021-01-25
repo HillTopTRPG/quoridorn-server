@@ -2,7 +2,7 @@ import Driver from "nekostore/lib/Driver";
 import {addDirect} from "../event/add-direct";
 import {findList, getData, resistCollectionName, splitCollectionName} from "./collection";
 import {addActorRelation} from "./data-actor";
-import {addSimple, deleteSimple, getDataForDelete, multipleTouchCheck, touchCheck} from "./data";
+import {addSimple, deleteSimple, getDataForDelete, RelationalDataDeleter, touchCheck} from "./data";
 import DocumentSnapshot from "nekostore/lib/DocumentSnapshot";
 import {updateDataPackage} from "../event/update-data-package";
 import {deleteDataPackage} from "../event/delete-data-package";
@@ -155,56 +155,13 @@ export async function deleteSceneObjectRelation(
   const docSnap: DocumentSnapshot<StoreData<SceneObjectStore>> = await getDataForDelete(driver, collectionName, key);
   const sceneObject = docSnap.data!;
   const roomCollectionPrefix = collectionName.replace(/-DATA-.+$/, "");
-
-  switch (sceneObject.data!.type) {
-    case "character": // non-break
-    case "map-mask": // non-break
-    case "chit": // non-break
-    case "map-marker":
-      // memoが削除できる状態かをチェック
-      const memoCCName = `${roomCollectionPrefix}-DATA-memo-list`;
-      const memoDocChangeList = await multipleTouchCheck(driver, memoCCName, "owner", key);
-
-      // memoの削除
-      if (memoDocChangeList.length) {
-        await deleteDataPackage(driver, socket, {
-          collection: memoCCName,
-          list: memoDocChangeList.map(m => ({ key: m.data!.key }))
-        }, false);
-      }
-      break;
-    default:
-  }
-
-  // SceneAndObjectが削除できる状態かをチェック
-  const sceneAndObjectCCName = `${roomCollectionPrefix}-DATA-scene-and-object-list`;
-  const sceneAndObjectDocChangeList = await multipleTouchCheck(driver, sceneAndObjectCCName, "data.objectKey", key);
-
-  // SceneAndObjectの削除
-  if (sceneAndObjectDocChangeList.length) {
-    await deleteDataPackage(driver, socket, {
-      collection: sceneAndObjectCCName,
-      list: sceneAndObjectDocChangeList.map(sao => ({ key: sao.data!.key }))
-    }, false);
-  }
+  const deleter: RelationalDataDeleter = new RelationalDataDeleter(driver, roomCollectionPrefix, key);
 
   if (sceneObject.data!.type === "character") {
-    // リソースが削除できる状態かをチェック
-    const resourceCCName = `${roomCollectionPrefix}-DATA-resource-list`;
-    const resourceDocChangeList = await multipleTouchCheck(driver, resourceCCName, "owner", key);
-
-    // アクターが削除できる状態かをチェック
+    // アクター取得
     const actorKey = sceneObject.data!.actorKey!;
     const actorListCollectionName = `${roomCollectionPrefix}-DATA-actor-list`;
     const actorDoc = await touchCheck<ActorStore>(driver, actorListCollectionName, actorKey);
-
-    // リソースの削除
-    if (resourceDocChangeList.length) {
-      await deleteDataPackage(driver, socket, {
-        collection: resourceCCName,
-        list: resourceDocChangeList.map(r => ({ key: r.data!.key }))
-      }, false);
-    }
 
     // アクターの更新／削除
     const pieceKeyList: string[] = actorDoc.data!.data!.pieceKeyList;
@@ -225,7 +182,24 @@ export async function deleteSceneObjectRelation(
         list: [{ key: actorKey }]
       }, false);
     }
+
+    // リソースを強制的に削除
+    await deleter.deleteForce("resource-list", "owner");
   }
+
+  switch (sceneObject.data!.type) {
+    case "character": // non-break
+    case "map-mask": // non-break
+    case "chit": // non-break
+    case "map-marker":
+      // その他欄を強制的に削除
+      await deleter.deleteForce("memo-list", "owner");
+      break;
+    default:
+  }
+
+  // SceneAndObjectを強制的に削除
+  await deleter.deleteForce("scene-and-object-list", "data.objectKey");
 
   await deleteSimple<SceneObjectStore>(driver, socket, collectionName, key);
 }

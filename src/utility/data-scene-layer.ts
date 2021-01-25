@@ -1,7 +1,6 @@
 import Driver from "nekostore/lib/Driver";
 import {addDirect} from "../event/add-direct";
-import {addSimple, deleteSimple, multipleTouchCheck} from "./data";
-import {deleteDataPackage} from "../event/delete-data-package";
+import {addSimple, deleteSimple, RelationalDataDeleter} from "./data";
 import {findList, splitCollectionName} from "./collection";
 import DocumentSnapshot from "nekostore/lib/DocumentSnapshot";
 import {ImportLevel} from "../@types/socket";
@@ -56,18 +55,10 @@ export async function deleteSceneLayerRelation(
   key: string
 ): Promise<void> {
   const {roomCollectionPrefix} = splitCollectionName(collectionName);
+  const deleter: RelationalDataDeleter = new RelationalDataDeleter(driver, roomCollectionPrefix, key);
 
-  // SceneAndObjectが削除できる状態かをチェック
-  const sceneAndLayerCCName = `${roomCollectionPrefix}-DATA-scene-and-layer-list`;
-  const sceneAndLayerDocChangeList = await multipleTouchCheck(driver, sceneAndLayerCCName, "data.layerKey", key);
-
-  // SceneAndObjectの削除
-  if (sceneAndLayerDocChangeList.length) {
-    await deleteDataPackage(driver, socket, {
-      collection: sceneAndLayerCCName,
-      list: sceneAndLayerDocChangeList.map(sal => ({ key: sal.data!.key }))
-    }, false);
-  }
+  // SceneAndLayerを強制的に削除
+  await deleter.deleteForce("scene-and-layer-list", "data.layerKey");
 
   await deleteSimple<any>(driver, socket, collectionName, key);
 }

@@ -14,6 +14,7 @@ function arrayChunk(list: any[], size = 1) {
  * @param promiseList
  */
 export async function procAsyncSplit(promiseList: Promise<any>[]) {
+  if (!promiseList.length) return;
   const totalStart = process.hrtime();
   await arrayChunk(promiseList, 6)
     .map((list: Promise<void>[]) => async () => {
