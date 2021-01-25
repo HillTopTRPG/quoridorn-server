@@ -9,5 +9,5 @@ class MongoSample(object):
     def collection_names(self):
         return self.db.collection_names()
 
-mongo = MongoSample('test')
+mongo = MongoSample('quoridorn-1-0-0a57')
 print(mongo.collection_names())
