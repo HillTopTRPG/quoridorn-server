@@ -117,6 +117,12 @@ export async function deleteResourceMasterRelation(
     "data.resourceMasterKey"
   );
 
+  // カウンターリモコンを強制的に削除
+  await deleter.deleteForce(
+    "counter-remocon-list",
+    "data.resourceMasterKey"
+  );
+
   // 最後に本体を削除
   await deleteSimple(driver, socket, collectionName, key);
 }
