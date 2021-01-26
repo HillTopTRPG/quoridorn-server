@@ -2,8 +2,7 @@ import Driver from "nekostore/lib/Driver";
 import DocumentChange from "nekostore/lib/DocumentChange";
 import {addDirect} from "../event/add-direct";
 import {findList, findSingle, resistCollectionName, splitCollectionName} from "./collection";
-import {procAsyncSplit} from "./async";
-import {addSimple, deleteSimple, updateSimple} from "./data";
+import {addSimple, deleteSimple, RelationalDataDeleter, updateSimple} from "./data";
 import DocumentSnapshot from "nekostore/lib/DocumentSnapshot";
 import {ImportLevel} from "../@types/socket";
 
@@ -104,23 +103,24 @@ export async function deleteResourceMasterRelation(
   key: string
 ): Promise<void> {
   const {roomCollectionPrefix} = splitCollectionName(collectionName);
+  const deleter: RelationalDataDeleter = new RelationalDataDeleter(driver, roomCollectionPrefix, key);
 
   // イニシアティブ表の列を強制的に削除
-  await procAsyncSplit(
-    (await findList<StoreData<InitiativeColumnStore>>(
-      driver,
-      `${roomCollectionPrefix}-DATA-initiative-column-list`,
-      [{ property: "data.resourceMasterKey", operand: "==", value: key }])
-    )!.map(doc => doc.ref.delete())
+  await deleter.deleteForce(
+    "initiative-column-list",
+    "data.resourceMasterKey"
   );
 
   // リソースを強制的に削除
-  await procAsyncSplit(
-    (await findList<StoreData<ResourceStore>>(
-        driver,
-        `${roomCollectionPrefix}-DATA-resource-list`,
-        [{ property: "data.resourceMasterKey", operand: "==", value: key }])
-    )!.map(doc => doc.ref.delete())
+  await deleter.deleteForce(
+    "resource-list",
+    "data.resourceMasterKey"
+  );
+
+  // カウンターリモコンを強制的に削除
+  await deleter.deleteForce(
+    "counter-remocon-list",
+    "data.resourceMasterKey"
   );
 
   // 最後に本体を削除

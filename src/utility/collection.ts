@@ -91,13 +91,13 @@ export async function findList<T>(
   driver: Driver,
   collectionName: string,
   options: { property: string; operand: "=="; value: any }[] = []
-): Promise<DocumentChange<T>[] | null> {
+): Promise<DocumentChange<T>[]> {
   let c: Query<T> = driver.collection<T>(collectionName);
   options.forEach(o => {
     c = c.where(o.property, o.operand, o.value);
   });
   const docs = (await c.get()).docs;
-  if (!docs) return null;
+  if (!docs) return [];
   return docs.filter(item => item && item.exists());
 }
 

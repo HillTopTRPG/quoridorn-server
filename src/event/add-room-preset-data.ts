@@ -61,8 +61,8 @@ async function addRoomPresetData(driver: Driver, socket: any, arg: RequestType):
         imageDirection: null
       },
       refProperty: null,
-      min: -999,
-      max: 1000,
+      min: -100,
+      max: 100,
       interval: 1,
       selectionStr: null,
       defaultValue: "0"
@@ -85,6 +85,25 @@ async function addRoomPresetData(driver: Driver, socket: any, arg: RequestType):
     });
   });
 
+  const counterRemoconList: CounterRemoconStore[] = [
+    {
+      name: "万能±",
+      modifyType: "plus-minus",
+      resourceMasterKey: null,
+      value: "",
+      targetType: "every-one",
+      messageFormat: "{0}の{1}を{2}した({3})"
+    },
+    {
+      name: "万能=",
+      modifyType: "substitute",
+      resourceMasterKey: null,
+      value: "",
+      targetType: "every-one",
+      messageFormat: "{0}の{1}を{2}した({3})"
+    }
+  ];
+
   const total =
     diceTypeList.length +
     pipsNum +
@@ -92,6 +111,7 @@ async function addRoomPresetData(driver: Driver, socket: any, arg: RequestType):
     sceneLayerList.length +
     resourceMasterList.length +
     arg.likeList.length +
+    counterRemoconList.length +
     4;
   let current = 0;
 
@@ -253,6 +273,15 @@ async function addRoomPresetData(driver: Driver, socket: any, arg: RequestType):
   await addDirect<LikeStore>(driver, socket, {
     collection: `${roomCollectionPrefix}-DATA-like-list`,
     list: arg.likeList.map(data => ({ owner: null, ownerType: null, data }))
+  }, true, current, total);
+  current += arg.likeList.length;
+
+  /* --------------------------------------------------
+   * カウンターリモコンのプリセットデータ投入
+   */
+  await addDirect<CounterRemoconStore>(driver, socket, {
+    collection: `${roomCollectionPrefix}-DATA-counter-remocon-list`,
+    list: counterRemoconList.map(data => ({ ownerType: null, owner: null, data }))
   }, true, current, total);
 }
 

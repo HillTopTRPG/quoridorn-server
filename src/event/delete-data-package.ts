@@ -29,6 +29,8 @@ export async function deleteDataPackage(
   nestNum: number = 0,
   nestNumTotal: number = 0
 ): Promise<ResponseType> {
+  if (!arg.list.length) return;
+
   // タッチチェック
   await procAsyncSplit(arg.list.map(data => touchCheck(
     driver,

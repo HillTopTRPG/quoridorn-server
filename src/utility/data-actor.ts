@@ -1,7 +1,7 @@
 import Driver from "nekostore/lib/Driver";
 import {addDirect} from "../event/add-direct";
 import {getOwner, resistCollectionName, splitCollectionName} from "./collection";
-import {addSimple, deleteSimple} from "./data";
+import {addSimple, deleteSimple, RelationalDataDeleter} from "./data";
 import {addActorGroup, deleteActorGroup} from "./data-actor-group";
 import {procAsyncSplit} from "./async";
 import DocumentSnapshot from "nekostore/lib/DocumentSnapshot";
@@ -97,26 +97,16 @@ export async function deleteActorRelation(
   actorKey: string
 ): Promise<void> {
   const roomCollectionPrefix = collectionName.replace(/-DATA-.+$/, "");
+  const deleter: RelationalDataDeleter = new RelationalDataDeleter(driver, roomCollectionPrefix, actorKey);
 
   // アクターグループ「All」から削除
   await deleteActorGroup(driver, roomCollectionPrefix, "All", actorKey);
 
   // ステータスを強制的に削除
-  const statusCollectionName = `${roomCollectionPrefix}-DATA-status-list`;
-  const statusColumnCC = driver.collection<ActorStatusStore>(statusCollectionName);
-  await procAsyncSplit(
-    (await statusColumnCC.where("owner", "==", actorKey).get())
-    .docs
-    .map(doc => doc.ref.delete())
-  );
+  await deleter.deleteForce("status-list", "owner");
 
   // リソースを強制的に削除
-  const resourceCC = driver.collection<ResourceStore>(`${roomCollectionPrefix}-DATA-resource-list`);
-  await procAsyncSplit(
-    (await resourceCC.where("owner", "==", actorKey).get())
-    .docs
-    .map(doc => doc.ref.delete())
-  );
+  await deleter.deleteForce("resource-list", "owner");
 
   // 最後に本体を削除
   await deleteSimple(driver, socket, collectionName, actorKey);
