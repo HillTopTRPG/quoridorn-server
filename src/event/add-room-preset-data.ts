@@ -194,18 +194,18 @@ async function addRoomPresetData(driver: Driver, socket: any, arg: RequestType):
   }, true, current, total);
   current += 1;
 
-  // ActorGroupのIDを取得する関数
-  const getActorGroupKey = async (name: string): Promise<string> => {
-    const actorGroupDoc = await findSingle<StoreData<ActorGroupStore>>(
+  // AuthorityGroupのIDを取得する関数
+  const getAuthorityGroupKey = async (name: string): Promise<string> => {
+    const authorityGroupDoc = await findSingle<StoreData<AuthorityGroupStore>>(
       driver,
-      `${roomCollectionPrefix}-DATA-actor-group-list`,
+      `${roomCollectionPrefix}-DATA-authority-group-list`,
       "data.name",
       name
     );
-    if (!actorGroupDoc) {
-      throw new ApplicationError(`ActorGroup: ${name} is not exist.`);
+    if (!authorityGroupDoc) {
+      throw new ApplicationError(`AuthorityGroup: ${name} is not exist.`);
     }
-    return actorGroupDoc.data!.key;
+    return authorityGroupDoc.data!.key;
   };
 
   /* --------------------------------------------------
@@ -213,7 +213,7 @@ async function addRoomPresetData(driver: Driver, socket: any, arg: RequestType):
    */
   const gameMastersPermission: PermissionNode = {
     type: "group",
-    key: await getActorGroupKey("GameMasters")
+    key: await getAuthorityGroupKey("GameMasters")
   };
   await addDirect<ChatTabStore>(driver, socket, {
     collection: `${roomCollectionPrefix}-DATA-chat-tab-list`,
@@ -249,7 +249,7 @@ async function addRoomPresetData(driver: Driver, socket: any, arg: RequestType):
         data: {
           name: arg.language.allGroupChatTabName,
           isSystem: true,
-          actorGroupKey: await getActorGroupKey("All"),
+          authorityGroupKey: await getAuthorityGroupKey("All"),
           isSecret: false,
           outputChatTabKey: null
         }

@@ -1,8 +1,8 @@
 /**
- * actorGroupCCのデータ定義
+ * authorityGroupCCのデータ定義
  * 任意のユーザとキャラクターのグループとして管理するための情報
  */
-type ActorGroupStore = {
+type AuthorityGroupStore = {
   name: string;
   isSystem: boolean;
   list: GroupRef[];
@@ -170,7 +170,7 @@ type DiceAndPipsStore = {
 type GroupChatTabStore = {
   name: string;
   isSystem: boolean;
-  actorGroupKey: string;
+  authorityGroupKey: string;
   isSecret: boolean;
   outputChatTabKey: string | null;
 };

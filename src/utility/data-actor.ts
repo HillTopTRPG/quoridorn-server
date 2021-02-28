@@ -2,8 +2,7 @@ import Driver from "nekostore/lib/Driver";
 import {addDirect} from "../event/add-direct";
 import {getOwner, resistCollectionName, splitCollectionName} from "./collection";
 import {addSimple, deleteSimple, RelationalDataDeleter} from "./data";
-import {addActorGroup, deleteActorGroup} from "./data-actor-group";
-import {procAsyncSplit} from "./async";
+import {addAuthorityGroup, deleteAuthorityGroup} from "./data-authority-group";
 import DocumentSnapshot from "nekostore/lib/DocumentSnapshot";
 import {ImportLevel} from "../@types/socket";
 
@@ -32,7 +31,9 @@ export async function addActorRelation(
   // importLevel:part :: インポートデータに含まれていないのでこの処理は必要
   if (importLevel !== "full") {
     const owner = await getOwner(driver, socket.id, data.owner || undefined);
-    await addActorGroup(driver, roomCollectionPrefix, "All", actorKey, "actor", owner);
+    if (owner) {
+      await addAuthorityGroup(driver, roomCollectionPrefix, "All", actorKey, "actor", owner);
+    }
   }
 
   // ステータスを追加
@@ -100,7 +101,7 @@ export async function deleteActorRelation(
   const deleter: RelationalDataDeleter = new RelationalDataDeleter(driver, roomCollectionPrefix, actorKey);
 
   // アクターグループ「All」から削除
-  await deleteActorGroup(driver, roomCollectionPrefix, "All", actorKey);
+  await deleteAuthorityGroup(driver, roomCollectionPrefix, "All", actorKey);
 
   // ステータスを強制的に削除
   await deleter.deleteForce("status-list", "owner");

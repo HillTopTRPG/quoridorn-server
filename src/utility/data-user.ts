@@ -3,7 +3,7 @@ import {ImportLevel, UserLoginResponse, UserType} from "../@types/socket";
 import {hash} from "./password";
 import {hashAlgorithm, PERMISSION_OWNER} from "../server";
 import {findSingle, getSocketDocSnap, resistCollectionName} from "./collection";
-import {addActorGroup} from "./data-actor-group";
+import {addAuthorityGroup} from "./data-authority-group";
 import {addActorRelation} from "./data-actor";
 import uuid = require("uuid");
 import {addDirect} from "../event/add-direct";
@@ -107,14 +107,14 @@ export async function addUserRelation(
     await resistCollectionName(driver, actorCollectionName);
 
     // アクターグループに追加
-    const fixedAddActorGroup = async (groupName: string) => {
-      await addActorGroup(driver, roomCollectionPrefix, groupName, actorKey, "user", userKey);
+    const fixedAddAuthorityGroup = async (groupName: string) => {
+      await addAuthorityGroup(driver, roomCollectionPrefix, groupName, actorKey, "user", userKey);
     };
-    await fixedAddActorGroup("All");
-    await fixedAddActorGroup("Users");
-    if (user.type === "PL") await fixedAddActorGroup("Players");
-    if (user.type === "GM") await fixedAddActorGroup("GameMasters");
-    if (user.type === "VISITOR") await fixedAddActorGroup("Visitors");
+    await fixedAddAuthorityGroup("All");
+    await fixedAddAuthorityGroup("Users");
+    if (user.type === "PL") await fixedAddAuthorityGroup("Players");
+    if (user.type === "GM") await fixedAddAuthorityGroup("GameMasters");
+    if (user.type === "VISITOR") await fixedAddAuthorityGroup("Visitors");
   }
 
   // チャットパレット（デフォルト）を登録
