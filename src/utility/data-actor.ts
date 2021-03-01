@@ -148,7 +148,7 @@ export async function deleteActorRelation(
   );
 
   // SceneObjectを強制的に削除
-  await deleter.deleteForce("scene-object-list", "owner");
+  await deleter.deleteForce("scene-object-list", "data.actorKey");
 
   // 最後に本体を削除
   await deleteSimple(driver, socket, collectionName, actorKey);
