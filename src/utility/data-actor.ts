@@ -113,7 +113,7 @@ export async function deleteActorRelation(
   const sceneObjectList: StoreData<SceneObjectStore>[] = (await findList<StoreData<SceneObjectStore>>(
     driver,
     `${roomCollectionPrefix}-DATA-scene-object-list`,
-    [{ property: "owner", operand: "==", value: actorKey }]
+    [{ property: "data.actorKey", operand: "==", value: actorKey }]
   )).map(soc => soc.data!);
 
   // SceneObjectに紐づくその他欄を強制的に削除
