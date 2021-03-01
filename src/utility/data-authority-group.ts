@@ -1,5 +1,6 @@
 import Driver from "nekostore/lib/Driver";
 import {findSingle} from "./collection";
+import {procAsyncSplit} from "./async";
 
 export async function addAuthorityGroup(
   driver: Driver,
@@ -31,16 +32,23 @@ export async function addAuthorityGroup(
 export async function deleteAuthorityGroup(
   driver: Driver,
   roomCollectionPrefix: string,
-  groupName: string,
   actorKey: string
 ): Promise<void> {
   const authorityGroupCollectionName = `${roomCollectionPrefix}-DATA-authority-group-list`;
   const authorityGroupCollection = driver.collection<StoreData<AuthorityGroupStore>>(authorityGroupCollectionName);
 
-  const groupDoc = (await authorityGroupCollection.where("data.name", "==", groupName).get()).docs[0];
-  const data: AuthorityGroupStore = groupDoc.data!.data!;
-  const idx = data.list.findIndex(l => l.actorKey === actorKey);
-  data.list.splice(idx, 1);
+  const groupDocList = (await authorityGroupCollection.get()).docs;
 
-  await groupDoc.ref.update({ data });
+  await procAsyncSplit(
+    groupDocList
+      .filter(
+        ag => ag.data!.data!.list.some(gr => gr.actorKey === actorKey && gr.type === "actor")
+      )
+      .map(ag => {
+        const data: AuthorityGroupStore = ag.data!.data!;
+        const idx = data.list.findIndex(l => l.actorKey === actorKey);
+        data.list.splice(idx, 1);
+        return ag.ref.update({ data });
+      })
+  );
 }

@@ -5,8 +5,8 @@ import {addActorRelation} from "./data-actor";
 import {addSimple, deleteSimple, getDataForDelete, RelationalDataDeleter, touchCheck} from "./data";
 import DocumentSnapshot from "nekostore/lib/DocumentSnapshot";
 import {updateDataPackage} from "../event/update-data-package";
-import {deleteDataPackage} from "../event/delete-data-package";
 import {ImportLevel} from "../@types/socket";
+import {deleteAuthorityGroup} from "./data-authority-group";
 
 export async function addSceneObjectRelation(
   driver: Driver,
@@ -177,10 +177,19 @@ export async function deleteSceneObjectRelation(
         }]
       });
     } else {
-      await deleteDataPackage(driver, socket, {
-        collection: actorListCollectionName,
-        list: [{ key: actorKey }]
-      }, false);
+      // アクターを強制削除する
+
+      // アクターグループから削除
+      await deleteAuthorityGroup(driver, roomCollectionPrefix, actorKey);
+
+      // ステータスを強制的に削除
+      await deleter.deleteForce("status-list", "owner", actorKey);
+
+      // リソースを強制的に削除
+      await deleter.deleteForce("resource-list", "owner", actorKey);
+
+      // アクター本体を削除
+      await deleteSimple(driver, socket, actorListCollectionName, actorKey);
     }
 
     // リソースを強制的に削除
