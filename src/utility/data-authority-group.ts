@@ -1,6 +1,7 @@
 import Driver from "nekostore/lib/Driver";
-import {findSingle} from "./collection";
+import {findSingle, splitCollectionName} from "./collection";
 import {procAsyncSplit} from "./async";
+import {deleteSimple, RelationalDataDeleter} from "./data";
 
 export async function addAuthorityGroup(
   driver: Driver,
@@ -27,6 +28,25 @@ export async function addAuthorityGroup(
 
   data.list.push({ type, actorKey: key, userKey });
   await groupDoc!.ref.update({ data });
+}
+
+export async function deleteAuthorityGroupRelation(
+  driver: Driver,
+  socket: any,
+  collectionName: string,
+  key: string
+): Promise<void> {
+  const {roomCollectionPrefix} = splitCollectionName(collectionName);
+  const deleter: RelationalDataDeleter = new RelationalDataDeleter(driver, roomCollectionPrefix, key);
+
+  // グループチャットタブを強制的に削除
+  await deleter.deleteForce(
+    "group-chat-tab-list",
+    "data.authorityGroupKey"
+  );
+
+  // 最後に本体を削除
+  await deleteSimple(driver, socket, collectionName, key);
 }
 
 export async function deleteAuthorityGroup(

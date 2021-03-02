@@ -11,6 +11,7 @@ import {deleteSceneLayerRelation} from "../utility/data-scene-layer";
 import {deleteSceneRelation} from "../utility/data-scene";
 import {deleteActorRelation} from "../utility/data-actor";
 import {splitCollectionName} from "../utility/collection";
+import {deleteAuthorityGroupRelation} from "../utility/data-authority-group";
 
 // インタフェース
 const eventName = "delete-data";
@@ -71,6 +72,7 @@ export async function deleteSingleData(
     "scene-object-list": deleteSceneObjectRelation,
     "scene-layer-list": deleteSceneLayerRelation,
     "scene-list": deleteSceneRelation,
+    "authority-group-list": deleteAuthorityGroupRelation,
   };
   const {roomCollectionSuffix} = splitCollectionName(collectionName);
   const callAddFunc = deleteRelationCollectionMap[roomCollectionSuffix] || deleteSimple;
