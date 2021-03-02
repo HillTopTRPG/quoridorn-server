@@ -110,12 +110,12 @@ async function createRoom(driver: Driver, exclusionOwner: string, arg: RequestTy
   }
 
   // 部屋に付随する情報の生成
-  const actorGroupCCName = `${roomCollectionPrefix}-DATA-actor-group-list`;
-  const actorGroupCC = driver.collection<StoreData<ActorGroupStore>>(actorGroupCCName);
+  const authorityGroupCCName = `${roomCollectionPrefix}-DATA-authority-group-list`;
+  const authorityGroupCC = driver.collection<StoreData<AuthorityGroupStore>>(authorityGroupCCName);
 
   const addGroup = async (name: string, order: number) => {
-    await actorGroupCC.add({
-      collection: "actor-group-list",
+    await authorityGroupCC.add({
+      collection: "authority-group-list",
       key: uuid.v4(),
       ownerType: null,
       owner: null,
@@ -150,7 +150,7 @@ async function createRoom(driver: Driver, exclusionOwner: string, arg: RequestTy
     throw err;
   }
 
-  await resistCollectionName(driver, actorGroupCCName);
+  await resistCollectionName(driver, authorityGroupCCName);
 
   // 接尾句を返却
   return roomCollectionPrefix;

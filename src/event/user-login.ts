@@ -93,25 +93,24 @@ async function userLogin(driver: Driver, socket: any, arg: RequestType): Promise
         if (type === "PL") return "Players";
         return type === "GM" ? "GameMasters" : "Visitors";
       };
-      userData.type = arg.type;
 
-      const actorGroupCollectionName = `${roomCollectionPrefix}-DATA-actor-group-list`;
+      const authorityGroupCollectionName = `${roomCollectionPrefix}-DATA-authority-group-list`;
 
-      const oldGroupDoc = await findSingle<StoreData<ActorGroupStore>>(
+      const oldGroupDoc = await findSingle<StoreData<AuthorityGroupStore>>(
         driver,
-        actorGroupCollectionName,
+        authorityGroupCollectionName,
         "data.name",
         getGroupName(userData.type)
       );
-      const newGroupDoc = await findSingle<StoreData<ActorGroupStore>>(
+      const newGroupDoc = await findSingle<StoreData<AuthorityGroupStore>>(
         driver,
-        actorGroupCollectionName,
+        authorityGroupCollectionName,
         "data.name",
         getGroupName(arg.type)
       );
       if (oldGroupDoc && newGroupDoc) {
         // 元のグループから削除
-        const oldGroupData: ActorGroupStore = oldGroupDoc.data!.data!;
+        const oldGroupData: AuthorityGroupStore = oldGroupDoc.data!.data!;
         const idx = oldGroupData.list.findIndex(g => g.userKey === userKey);
         const elm = oldGroupData.list.splice(idx, 1)[0];
         await oldGroupDoc.ref.update({
@@ -119,12 +118,13 @@ async function userLogin(driver: Driver, socket: any, arg: RequestType): Promise
         });
 
         // 新しいグループに追加
-        const newGroupData: ActorGroupStore = newGroupDoc.data!.data!;
+        const newGroupData: AuthorityGroupStore = newGroupDoc.data!.data!;
         newGroupData.list.push(elm);
         await newGroupDoc.ref.update({
           data: newGroupData
         });
       }
+      userData.type = arg.type;
     }
 
     // 人数更新

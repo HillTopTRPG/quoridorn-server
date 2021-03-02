@@ -355,13 +355,14 @@ export class RelationalDataDeleter {
 
   public async deleteForce(
     collectionSuffix: string,
-    targetProperty: string
+    targetProperty: string,
+    key: string = ""
   ): Promise<void> {
     await procAsyncSplit(
       (await findList<StoreData<any>>(
           this.driver,
           `${this.roomCollectionPrefix}-DATA-${collectionSuffix}`,
-          [{ property: targetProperty, operand: "==", value: this.key }])
+          [{ property: targetProperty, operand: "==", value: key || this.key }])
       ).map(doc => doc.ref.delete())
     );
   }

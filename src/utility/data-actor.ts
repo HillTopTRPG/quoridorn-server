@@ -1,11 +1,11 @@
 import Driver from "nekostore/lib/Driver";
 import {addDirect} from "../event/add-direct";
-import {getOwner, resistCollectionName, splitCollectionName} from "./collection";
+import {findList, getOwner, resistCollectionName, splitCollectionName} from "./collection";
 import {addSimple, deleteSimple, RelationalDataDeleter} from "./data";
-import {addActorGroup, deleteActorGroup} from "./data-actor-group";
-import {procAsyncSplit} from "./async";
+import {addAuthorityGroup, deleteAuthorityGroup} from "./data-authority-group";
 import DocumentSnapshot from "nekostore/lib/DocumentSnapshot";
 import {ImportLevel} from "../@types/socket";
+import {procAsyncSplit} from "./async";
 
 export async function addActorRelation(
   driver: Driver,
@@ -32,7 +32,9 @@ export async function addActorRelation(
   // importLevel:part :: インポートデータに含まれていないのでこの処理は必要
   if (importLevel !== "full") {
     const owner = await getOwner(driver, socket.id, data.owner || undefined);
-    await addActorGroup(driver, roomCollectionPrefix, "All", actorKey, "actor", owner);
+    if (owner) {
+      await addAuthorityGroup(driver, roomCollectionPrefix, "All", actorKey, "actor", owner);
+    }
   }
 
   // ステータスを追加
@@ -99,14 +101,54 @@ export async function deleteActorRelation(
   const roomCollectionPrefix = collectionName.replace(/-DATA-.+$/, "");
   const deleter: RelationalDataDeleter = new RelationalDataDeleter(driver, roomCollectionPrefix, actorKey);
 
-  // アクターグループ「All」から削除
-  await deleteActorGroup(driver, roomCollectionPrefix, "All", actorKey);
+  // アクターグループから削除
+  await deleteAuthorityGroup(driver, roomCollectionPrefix, actorKey);
 
   // ステータスを強制的に削除
   await deleter.deleteForce("status-list", "owner");
 
   // リソースを強制的に削除
   await deleter.deleteForce("resource-list", "owner");
+
+  const sceneObjectList: StoreData<SceneObjectStore>[] = (await findList<StoreData<SceneObjectStore>>(
+    driver,
+    `${roomCollectionPrefix}-DATA-scene-object-list`,
+    [{ property: "data.actorKey", operand: "==", value: actorKey }]
+  )).map(soc => soc.data!);
+
+  // SceneObjectに紐づくその他欄を強制的に削除
+  await procAsyncSplit(
+    sceneObjectList.filter(sceneObject => {
+      switch (sceneObject.data!.type) {
+        case "character": // non-break
+        case "map-mask": // non-break
+        case "chit": // non-break
+        case "map-marker":
+          return true;
+        default:
+          return false;
+      }
+    }).map(
+      sceneObject => deleter.deleteForce("memo-list", "owner", sceneObject.key)
+    )
+  );
+
+  // SceneObjectに紐づくSceneAndObjectを強制的に削除
+  await procAsyncSplit(
+    sceneObjectList.map(
+      sceneObject => deleter.deleteForce("scene-and-object-list", "data.objectKey", sceneObject.key)
+    )
+  );
+
+  // SceneObjectに紐づくリソースを強制的に削除
+  await procAsyncSplit(
+    sceneObjectList.map(
+      sceneObject => deleter.deleteForce("resource-list", "owner", sceneObject.key)
+    )
+  );
+
+  // SceneObjectを強制的に削除
+  await deleter.deleteForce("scene-object-list", "data.actorKey");
 
   // 最後に本体を削除
   await deleteSimple(driver, socket, collectionName, actorKey);
