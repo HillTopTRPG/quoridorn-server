@@ -66,6 +66,7 @@ async function createRoom(driver: Driver, exclusionOwner: string, arg: RequestTy
     }
     throw new ApplicationError(`Failure hash.`, { hashAlgorithm });
   }
+  const roomNo = arg.roomNo;
   delete arg.roomNo;
 
   const roomCollectionPrefix = uuid.v4();
@@ -99,7 +100,7 @@ async function createRoom(driver: Driver, exclusionOwner: string, arg: RequestTy
   // Socket情報の更新
   const updateSocketInfo: Partial<SocketStore> = {
     roomKey: arg.roomKey,
-    roomNo: arg.roomNo,
+    roomNo: roomNo,
     roomCollectionPrefix,
     storageId
   };
