@@ -97,7 +97,12 @@ async function createRoom(driver: Driver, exclusionOwner: string, arg: RequestTy
   }
 
   // Socket情報の更新
-  const updateSocketInfo: Partial<SocketStore> = { roomKey: arg.roomKey, roomCollectionPrefix, storageId };
+  const updateSocketInfo: Partial<SocketStore> = {
+    roomKey: arg.roomKey,
+    roomNo: arg.roomNo,
+    roomCollectionPrefix,
+    storageId
+  };
   try {
     await socketDocSnap.ref.update(updateSocketInfo);
   } catch (err) {

@@ -257,6 +257,10 @@ type ResourceStore = {
  */
 type RoomDataStore = {
   name: string;
+  roomNo: number;
+  bcdiceServer: string; // BCDiceサーバー
+  bcdiceVersion: string; // BCDiceAPIバージョン
+  system: string; // BCDiceSystem
   sceneKey: string;
   settings: RoomInfoExtend;
 };

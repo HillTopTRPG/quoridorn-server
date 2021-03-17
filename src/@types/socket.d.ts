@@ -1,33 +1,6 @@
 import {ChangeType} from "nekostore/lib/DocumentChange";
 import {TargetVersion} from "../utility/GitHub";
 
-type WindowSetting =
-  | "not-use" // 使えなくします
-  | "free" // 特に指定はありません
-  | "init-view" // 入室時に表示します
-  | "always-open"; // 常に開いています。閉じることはできません。
-
-type WindowSettings = {
-  chat: WindowSetting;
-  resource: WindowSetting;
-  initiative: WindowSetting;
-  chatPalette: WindowSetting;
-  counterRemocon: WindowSetting;
-};
-
-type RoomInfoExtend = {
-  visitable: boolean; // 見学許可
-  isFitGrid: boolean; // マップオブジェクトをセルに自動調整するか
-  isViewDice: boolean; // ダイスを表示するか
-  isViewCutIn: boolean; // カットインを表示するか
-  isDrawGridId: boolean; // マップ座標を表示するか
-  mapRotatable: boolean; // マップを回転させるか
-  isDrawGridLine: boolean; // マップ罫線を表示するか
-  isShowStandImage: boolean; // 立ち絵を表示するか,
-  isShowRotateMarker: boolean; // マップオブジェクトの回転マーカーを表示するか
-  windowSettings: WindowSettings;
-};
-
 type BaseRoomInfo = {
   name: string;
   bcdiceServer: string;
@@ -167,6 +140,9 @@ type LikeStore = {
 
 type AddRoomPresetDataRequest = {
   roomName: string;
+  bcdiceServer: string; // BCDiceサーバー
+  bcdiceVersion: string; // BCDiceAPIバージョン
+  system: string; // BCDiceSystem
   roomExtendInfo: RoomInfoExtend;
   sceneData: SceneStore;
   cutInDataList: CutInStore[];

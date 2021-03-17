@@ -20,6 +20,7 @@ type ResponseType = void;
 async function addRoomPresetData(driver: Driver, socket: any, arg: RequestType): Promise<ResponseType> {
   const snap = (await getSocketDocSnap(driver, socket.id));
   const roomCollectionPrefix = snap.data!.roomCollectionPrefix;
+  const roomNo: number = snap.data!.roomNo!;
   console.log(`【addRoomPresetData】roomCollectionPrefix: ${roomCollectionPrefix}`);
 
   const sceneLayerList: SceneLayerStore[] = [
@@ -186,9 +187,13 @@ async function addRoomPresetData(driver: Driver, socket: any, arg: RequestType):
       ownerType: null,
       owner: null,
       data: {
+        name: arg.roomName,
+        roomNo,
+        bcdiceServer: arg.bcdiceServer,
+        bcdiceVersion: arg.bcdiceVersion,
+        system: arg.system,
         sceneKey: sceneKeyList[0],
         settings: arg.roomExtendInfo,
-        name: arg.roomName
       }
     }]
   }, true, current, total);

@@ -25,6 +25,7 @@ export type TokenStore = {
 export type SocketStore = {
   socketId: string;
   roomKey: string | null;
+  roomNo: number | null;
   roomCollectionPrefix: string | null;
   storageId: string | null;
   userKey: string | null;
