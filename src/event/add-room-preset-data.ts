@@ -1,6 +1,6 @@
 import {Resister} from "../server";
 import Driver from "nekostore/lib/Driver";
-import {AddRoomPresetDataRequest, LikeStore} from "../@types/socket";
+import {AddRoomPresetDataRequest, LikeStore, OriginalTableStore} from "../@types/socket";
 import {addDirect} from "./add-direct";
 import {ApplicationError} from "../error/ApplicationError";
 import {setEvent} from "../utility/server";
@@ -112,6 +112,7 @@ async function addRoomPresetData(driver: Driver, socket: any, arg: RequestType):
     sceneLayerList.length +
     resourceMasterList.length +
     arg.likeList.length +
+    arg.originalTableList.length +
     counterRemoconList.length +
     4;
   let current = 0;
@@ -280,6 +281,15 @@ async function addRoomPresetData(driver: Driver, socket: any, arg: RequestType):
     list: arg.likeList.map(data => ({ owner: null, ownerType: null, data }))
   }, true, current, total);
   current += arg.likeList.length;
+
+  /* --------------------------------------------------
+   * オリジナル表のプリセットデータ投入
+   */
+  await addDirect<OriginalTableStore>(driver, socket, {
+    collection: `${roomCollectionPrefix}-DATA-original-table-list`,
+    list: arg.originalTableList.map(data => ({ owner: null, ownerType: null, data }))
+  }, true, current, total);
+  current += arg.originalTableList.length;
 
   /* --------------------------------------------------
    * カウンターリモコンのプリセットデータ投入
