@@ -13,16 +13,20 @@ const eventName = "update-data";
 type RequestType = UpdateDataRequest<any>;
 type ResponseType = void;
 
-const relationCollectionTable: {
+type ProcessMap = {
   [collectionSuffixName: string]: (
     driver: Driver,
     socket: any,
     collection: string,
     option: (Partial<StoreData<any>> & { key: string; continuous?: boolean; })
   ) => Promise<void>
-} = {
-  "resource-master-list": updateResourceMasterRelation,
-};
+}
+
+export function getAddRelationCollectionMap(): ProcessMap {
+  return {
+    "resource-master-list": updateResourceMasterRelation,
+  };
+}
 
 /**
  * データ編集処理
@@ -54,6 +58,7 @@ export async function updateSingleData<T>(
 ): Promise<void> {
   const {roomCollectionSuffix} = splitCollectionName(collectionName);
   console.log("### updateSingleData");
+  const relationCollectionTable = await getAddRelationCollectionMap();
   console.log(!!relationCollectionTable[roomCollectionSuffix]);
   console.log(relationCollectionTable[roomCollectionSuffix]);
   const callUpdateFunc = relationCollectionTable[roomCollectionSuffix] || updateSimple;
