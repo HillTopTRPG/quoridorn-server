@@ -140,15 +140,23 @@ export async function updateResourceMasterRelation(
   collectionName: string,
   data: (Partial<StoreData<ResourceMasterStore>> & { key: string; continuous?: boolean; })
 ): Promise<void> {
+  console.log("#### updateResourceMasterRelation");
   await updateSimple(driver, socket, collectionName, data);
   const {roomCollectionPrefix} = splitCollectionName(collectionName);
 
+  console.log(!data.data);
   if (!data.data) return;
 
   const isAutoAddActor = data.data.isAutoAddActor;
   const isAutoAddMapObject = data.data.isAutoAddMapObject;
   const type = data.data.type;
   const defaultValue = data.data.defaultValue;
+  console.log(JSON.stringify({
+    isAutoAddActor,
+    isAutoAddMapObject,
+    type,
+    defaultValue
+  }, null, "  "));
 
   const resourceCCName = `${roomCollectionPrefix}-DATA-resource-list`;
   const resourceDocs = (await findList<StoreData<ResourceStore>>(
@@ -226,6 +234,9 @@ export async function updateResourceMasterRelation(
     "data.resourceMasterKey",
     data.key
   ))!;
+
+  console.log("POINT XRP");
+  console.log(JSON.stringify(list, null, "  "));
 
   if (isAutoAddActor || isAutoAddMapObject) {
     // リソースインスタンスを追加
