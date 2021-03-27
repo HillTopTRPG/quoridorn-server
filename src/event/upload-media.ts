@@ -39,8 +39,6 @@ async function uploadMedia(driver: Driver, socket: any, arg: RequestType): Promi
     notifyProgress(socket, total, idx);
     let mediaFileId = "";
 
-    console.log(info.urlType, info.url, info.rawPath);
-
     let volatileKey: string | undefined = undefined;
 
     if (info.dataLocation === "server") {

@@ -57,7 +57,6 @@ export async function updateSingleData<T>(
   data: (Partial<StoreData<T>> & { key: string; continuous?: boolean; })
 ): Promise<void> {
   const {roomCollectionSuffix} = splitCollectionName(collectionName);
-  console.log("### updateSingleData");
   const relationCollectionTable = await getAddRelationCollectionMap();
   console.log(!!relationCollectionTable[roomCollectionSuffix]);
   console.log(relationCollectionTable[roomCollectionSuffix]);
