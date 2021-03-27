@@ -223,26 +223,19 @@ export async function updateResourceMasterRelation(
             },
             false
           );
-          isInitiativeColumnOperation = true;
         }
-      }
-    } else {
-      if (!isInitiativeColumnOperation) {
-        if (initiativeColumnDoc && initiativeColumnDoc.exists()) {
-          if (!(await findList<StoreData<ResourceMasterStore>>(
-            driver,
-            collectionName,
-            [{ property: `data.${prop}`, operand: "==", value: true }]
-          ))!.length) {
-            await initiativeColumnDoc.ref.delete();
-            isInitiativeColumnOperation = true;
-          }
-        }
+        isInitiativeColumnOperation = true;
       }
     }
   };
   await func("actor-list", "isAutoAddActor");
   await func("scene-object-list", "isAutoAddMapObject");
+
+  if (!data.data!.isAutoAddActor && !data.data!.isAutoAddMapObject) {
+    if (initiativeColumnDoc && initiativeColumnDoc.exists()) {
+      await initiativeColumnDoc.ref.delete();
+    }
+  }
 
   if (list.length) {
     await addDirect<ResourceStore>(
