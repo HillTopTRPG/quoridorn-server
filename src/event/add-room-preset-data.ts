@@ -33,7 +33,7 @@ async function addRoomPresetData(driver: Driver, socket: any, arg: RequestType):
   ];
   const resourceMasterList: ResourceMasterStore[] = [
     {
-      label: arg.language.nameLabel,
+      name: arg.language.nameLabel,
       type: "ref-normal",
       systemColumnType: "name",
       isAutoAddActor: false,
@@ -51,7 +51,7 @@ async function addRoomPresetData(driver: Driver, socket: any, arg: RequestType):
       defaultValue: ""
     },
     {
-      label: "INI",
+      name: "INI",
       type: "number",
       systemColumnType: "initiative",
       isAutoAddActor: false,
