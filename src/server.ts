@@ -186,6 +186,7 @@ async function addSocketList(driver: Driver, socketId: string): Promise<void> {
   await driver.collection<SocketStore>(SYSTEM_COLLECTION.SOCKET_LIST).add({
     socketId,
     roomKey: null,
+    roomNo: null,
     roomCollectionPrefix: null,
     storageId: null,
     userKey: null,

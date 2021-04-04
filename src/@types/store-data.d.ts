@@ -225,7 +225,7 @@ type PublicMemoStore = {
 };
 
 type ResourceMasterStore = {
-  label: string;
+  name: string;
   type: ResourceType;
   systemColumnType: "name" | "initiative" | null; // システム列の種類
   isAutoAddActor: boolean; // アクターに自動付与するかどうか
@@ -257,6 +257,10 @@ type ResourceStore = {
  */
 type RoomDataStore = {
   name: string;
+  roomNo: number;
+  bcdiceServer: string; // BCDiceサーバー
+  bcdiceVersion: string; // BCDiceAPIバージョン
+  system: string; // BCDiceSystem
   sceneKey: string;
   settings: RoomInfoExtend;
 };

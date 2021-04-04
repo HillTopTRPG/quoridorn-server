@@ -1,6 +1,6 @@
 import {Resister} from "../server";
 import Driver from "nekostore/lib/Driver";
-import {AddRoomPresetDataRequest, LikeStore} from "../@types/socket";
+import {AddRoomPresetDataRequest, LikeStore, OriginalTableStore} from "../@types/socket";
 import {addDirect} from "./add-direct";
 import {ApplicationError} from "../error/ApplicationError";
 import {setEvent} from "../utility/server";
@@ -20,7 +20,8 @@ type ResponseType = void;
 async function addRoomPresetData(driver: Driver, socket: any, arg: RequestType): Promise<ResponseType> {
   const snap = (await getSocketDocSnap(driver, socket.id));
   const roomCollectionPrefix = snap.data!.roomCollectionPrefix;
-  console.log(`【addRoomPresetData】roomCollectionPrefix: ${roomCollectionPrefix}`);
+  const roomNo: number = snap.data!.roomNo!;
+  // console.log(`【addRoomPresetData】roomCollectionPrefix: ${roomCollectionPrefix}`);
 
   const sceneLayerList: SceneLayerStore[] = [
     { type: "floor-tile", defaultOrder: 1, isSystem: true },
@@ -32,7 +33,7 @@ async function addRoomPresetData(driver: Driver, socket: any, arg: RequestType):
   ];
   const resourceMasterList: ResourceMasterStore[] = [
     {
-      label: arg.language.nameLabel,
+      name: arg.language.nameLabel,
       type: "ref-normal",
       systemColumnType: "name",
       isAutoAddActor: false,
@@ -50,7 +51,7 @@ async function addRoomPresetData(driver: Driver, socket: any, arg: RequestType):
       defaultValue: ""
     },
     {
-      label: "INI",
+      name: "INI",
       type: "number",
       systemColumnType: "initiative",
       isAutoAddActor: false,
@@ -111,6 +112,7 @@ async function addRoomPresetData(driver: Driver, socket: any, arg: RequestType):
     sceneLayerList.length +
     resourceMasterList.length +
     arg.likeList.length +
+    arg.originalTableList.length +
     counterRemoconList.length +
     4;
   let current = 0;
@@ -186,9 +188,13 @@ async function addRoomPresetData(driver: Driver, socket: any, arg: RequestType):
       ownerType: null,
       owner: null,
       data: {
+        name: arg.roomName,
+        roomNo,
+        bcdiceServer: arg.bcdiceServer,
+        bcdiceVersion: arg.bcdiceVersion,
+        system: arg.system,
         sceneKey: sceneKeyList[0],
         settings: arg.roomExtendInfo,
-        name: arg.roomName
       }
     }]
   }, true, current, total);
@@ -275,6 +281,15 @@ async function addRoomPresetData(driver: Driver, socket: any, arg: RequestType):
     list: arg.likeList.map(data => ({ owner: null, ownerType: null, data }))
   }, true, current, total);
   current += arg.likeList.length;
+
+  /* --------------------------------------------------
+   * オリジナル表のプリセットデータ投入
+   */
+  await addDirect<OriginalTableStore>(driver, socket, {
+    collection: `${roomCollectionPrefix}-DATA-original-table-list`,
+    list: arg.originalTableList.map(data => ({ owner: null, ownerType: null, data }))
+  }, true, current, total);
+  current += arg.originalTableList.length;
 
   /* --------------------------------------------------
    * カウンターリモコンのプリセットデータ投入

@@ -145,8 +145,6 @@ export async function updateResourceMasterRelation(
 
   if (!data.data) return;
 
-  const isAutoAddActor = data.data.isAutoAddActor;
-  const isAutoAddMapObject = data.data.isAutoAddMapObject;
   const type = data.data.type;
   const defaultValue = data.data.defaultValue;
 
@@ -166,7 +164,6 @@ export async function updateResourceMasterRelation(
     doc.data!.data!.type = updateInfo.type!;
     await doc.ref.update(doc.data!);
   };
-
   // 直列の非同期で全部実行する
   await resourceDocs
     .filter(doc => doc.data!.data!.type !== type)
@@ -177,49 +174,6 @@ export async function updateResourceMasterRelation(
    * 必要なリソースを追加（フラグの変更によるリソースの削除は行わない）
    */
   const list: (Partial<StoreData<ResourceStore>> & { data: ResourceStore })[] = [];
-
-  if (isAutoAddActor) {
-    (await findList<StoreData<ActorStore>>(driver, `${roomCollectionPrefix}-DATA-actor-list`))!
-      .filter(actorDoc =>
-        !resourceDocs.some(
-          rDoc => rDoc.data!.ownerType === "actor-list" && rDoc.data!.owner === actorDoc.data!.key
-        )
-      )
-      .forEach(actorDoc => {
-        list.push({
-          ownerType: "actor-list",
-          owner: actorDoc.data!.key,
-          order: -1,
-          data: {
-            resourceMasterKey: data.key,
-            type: data.data!.type,
-            value: data.data!.defaultValue
-          }
-        });
-      });
-  }
-
-  if (isAutoAddMapObject) {
-    (await findList<StoreData<SceneAndObjectStore>>(driver, `${roomCollectionPrefix}-DATA-scene-object-list`))!
-      .filter(sceneObjectDoc =>
-        !resourceDocs.some(
-          rDoc => rDoc.data!.ownerType === "scene-object-list" && rDoc.data!.owner === sceneObjectDoc.data!.key
-        )
-      )
-      .forEach(sceneObjectDoc => {
-        list.push({
-          ownerType: "scene-object-list",
-          owner: sceneObjectDoc.data!.key,
-          order: -1,
-          data: {
-            resourceMasterKey: data.key,
-            type: data.data!.type,
-            value: data.data!.defaultValue
-          }
-        });
-      });
-  }
-
   const initiativeColumnDoc = (await findSingle<StoreData<InitiativeColumnStore>>(
     driver,
     `${roomCollectionPrefix}-DATA-initiative-column-list`,
@@ -227,39 +181,71 @@ export async function updateResourceMasterRelation(
     data.key
   ))!;
 
-  if (isAutoAddActor || isAutoAddMapObject) {
-    // リソースインスタンスを追加
-    if (list.length) {
-      await addDirect<ResourceStore>(
-        driver,
-        socket,
-        {
-          collection: `${roomCollectionPrefix}-DATA-resource-list`,
-          list
-        },
-        false
-      )
-    }
+  let isInitiativeColumnOperation = false;
 
-    // イニシアティブ表の表示に追加
-    if (!initiativeColumnDoc || !initiativeColumnDoc.exists()) {
-      await addDirect<InitiativeColumnStore>(
-        driver,
-        socket,
-        {
-          collection: `${roomCollectionPrefix}-DATA-initiative-column-list`,
-          list: [{
-            ownerType: null,
-            owner: null,
-            data: { resourceMasterKey: data.key }
-          }]
-        },
-        false
+  const func = async (
+    ownerType: string,
+    prop: keyof ResourceMasterStore
+  ) => {
+    if (data.data![prop]) {
+      list.push(
+        ...(await findList<StoreData<any>>(
+          driver,
+          `${roomCollectionPrefix}-DATA-${ownerType}`
+        ))!
+          .filter(doc => !resourceDocs.some(
+            rDoc => rDoc.data!.ownerType === ownerType &&
+              rDoc.data!.owner === doc.data!.key
+          ))
+          .map(doc => ({
+            ownerType: ownerType,
+            owner: doc.data!.key,
+            order: -1,
+            data: {
+              resourceMasterKey: data.key,
+              type: data.data!.type,
+              value: data.data!.defaultValue
+            }
+          }))
       );
+      if (!isInitiativeColumnOperation) {
+        if (!initiativeColumnDoc || !initiativeColumnDoc.exists()) {
+          await addDirect<InitiativeColumnStore>(
+            driver,
+            socket,
+            {
+              collection: `${roomCollectionPrefix}-DATA-initiative-column-list`,
+              list: [{
+                ownerType: null,
+                owner: null,
+                data: { resourceMasterKey: data.key }
+              }]
+            },
+            false
+          );
+        }
+        isInitiativeColumnOperation = true;
+      }
     }
-  } else {
+  };
+  await func("actor-list", "isAutoAddActor");
+  await func("scene-object-list", "isAutoAddMapObject");
+
+  if (!data.data!.isAutoAddActor && !data.data!.isAutoAddMapObject) {
     if (initiativeColumnDoc && initiativeColumnDoc.exists()) {
       await initiativeColumnDoc.ref.delete();
     }
+  }
+
+  if (list.length) {
+    await addDirect<ResourceStore>(
+      driver,
+      socket,
+      {
+        collection: `${roomCollectionPrefix}-DATA-resource-list`,
+        list
+      },
+      false
+    )
   }
 }

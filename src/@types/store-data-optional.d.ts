@@ -190,22 +190,6 @@ type ResourceType =
   | "color";
 
 /**
- * 部屋の追加情報
- */
-type RoomInfoExtend = {
-  visitable: boolean; // 見学許可
-  isFitGrid: boolean; // マップオブジェクトをセルに自動調整するか
-  isViewDice: boolean; // ダイスを表示するか
-  isViewCutIn: boolean; // カットインを表示するか
-  isDrawGridId: boolean; // マップ座標を表示するか
-  mapRotatable: boolean; // マップを回転させるか
-  isDrawGridLine: boolean; // マップ罫線を表示するか
-  isShowStandImage: boolean; // 立ち絵を表示するか,
-  isShowRotateMarker: boolean; // マップオブジェクトの回転マーカーを表示するか
-  windowSettings: WindowSettings;
-};
-
-/**
  * マップレイヤーの種別
  */
 type SceneLayerType =
@@ -285,6 +269,22 @@ type UrlType = "youtube" | "image" | "music" | "setting" | "unknown";
 
 type UserType = "GM" | "PL" | "VISITOR";
 
+/**
+ * 部屋の追加情報
+ */
+type RoomInfoExtend = {
+  visitable: boolean; // 見学許可
+  isFitGrid: boolean; // マップオブジェクトをセルに自動調整するか
+  isViewDice: boolean; // ダイスを表示するか
+  isViewCutIn: boolean; // カットインを表示するか
+  isDrawGridId: boolean; // マップ座標を表示するか
+  mapRotatable: boolean; // マップを回転させるか
+  isShowStandImage: boolean; // 立ち絵を表示するか,
+  standImageGridNum: number; // 立ち絵を表示する位置の数
+  isShowRotateMarker: boolean; // マップオブジェクトの回転マーカーを表示するか
+  windowSettings: WindowSettings;
+};
+
 type WindowSetting =
   | "not-use" // 使えなくします
   | "free" // 特に指定はありません
@@ -293,8 +293,7 @@ type WindowSetting =
 
 type WindowSettings = {
   chat: WindowSetting;
-  resource: WindowSetting;
   initiative: WindowSetting;
-  chatPalette: WindowSetting;
-  counterRemocon: WindowSetting;
+  "chat-palette": WindowSetting;
+  "counter-remocon": WindowSetting;
 };
