@@ -60,8 +60,8 @@ export async function updateSingleData<T>(
 ): Promise<void> {
   const {roomCollectionSuffix} = splitCollectionName(collectionName);
   const relationCollectionTable = await getAddRelationCollectionMap();
-  console.log(!!relationCollectionTable[roomCollectionSuffix]);
-  console.log(relationCollectionTable[roomCollectionSuffix]);
+  // console.log(!!relationCollectionTable[roomCollectionSuffix]);
+  // console.log(relationCollectionTable[roomCollectionSuffix]);
   const callUpdateFunc = relationCollectionTable[roomCollectionSuffix] || updateSimple;
   await callUpdateFunc(driver, socket, collectionName, data);
 }

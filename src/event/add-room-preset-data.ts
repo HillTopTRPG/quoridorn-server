@@ -21,7 +21,7 @@ async function addRoomPresetData(driver: Driver, socket: any, arg: RequestType):
   const snap = (await getSocketDocSnap(driver, socket.id));
   const roomCollectionPrefix = snap.data!.roomCollectionPrefix;
   const roomNo: number = snap.data!.roomNo!;
-  console.log(`【addRoomPresetData】roomCollectionPrefix: ${roomCollectionPrefix}`);
+  // console.log(`【addRoomPresetData】roomCollectionPrefix: ${roomCollectionPrefix}`);
 
   const sceneLayerList: SceneLayerStore[] = [
     { type: "floor-tile", defaultOrder: 1, isSystem: true },
