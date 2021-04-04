@@ -7,6 +7,7 @@ import {updateResourceMasterRelation} from "../utility/data-resource-master";
 import {procAsyncSplit} from "../utility/async";
 import {updateSimple} from "../utility/data";
 import {splitCollectionName} from "../utility/collection";
+import {updateRoomDataRelation} from "../utility/data-room";
 
 // インタフェース
 const eventName = "update-data";
@@ -25,6 +26,7 @@ type ProcessMap = {
 export function getAddRelationCollectionMap(): ProcessMap {
   return {
     "resource-master-list": updateResourceMasterRelation,
+    "room-data": updateRoomDataRelation,
   };
 }
 

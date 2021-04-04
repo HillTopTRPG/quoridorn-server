@@ -4,6 +4,7 @@ import {TargetVersion} from "../utility/GitHub";
 type BaseRoomInfo = {
   name: string;
   bcdiceServer: string;
+  bcdiceVersion: string;
   system: string;
   extend?: RoomInfoExtend; // 一時的措置
 };
