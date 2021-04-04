@@ -34,6 +34,7 @@ export async function updateRoomDataRelation(
   doc.data!.data!.bcdiceServer = data.data!.bcdiceServer;
   doc.data!.data!.bcdiceVersion = data.data!.bcdiceVersion;
   doc.data!.updateTime = new Date();
+  doc.data!.data!.extend = data.data!.settings;
 
   await doc.ref.update(doc.data!);
 }
