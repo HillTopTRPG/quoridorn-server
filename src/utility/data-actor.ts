@@ -64,29 +64,31 @@ export async function addActorRelation(
   }
 
   // リソースを追加
-  // importLevel:full :: インポートデータに含まれているのでこの処理は不要
-  // importLevel:user :: インポートデータに含まれていないのでこの処理は必要
-  // importLevel:actor:: インポートデータに含まれていないのでこの処理は必要
-  // importLevel:part :: インポートデータに含まれていないのでこの処理は必要
-  if (importLevel !== "full") {
-    const resourceMasterCCName = `${roomCollectionPrefix}-DATA-resource-master-list`;
-    const resourceMasterCC = driver.collection<StoreData<ResourceMasterStore>>(resourceMasterCCName);
-    const resourceMasterDocList = (await resourceMasterCC.where("data.isAutoAddActor", "==", true).get()).docs;
+  if (data.data!.type !== "chat-only") {
+    // importLevel:full :: インポートデータに含まれているのでこの処理は不要
+    // importLevel:user :: インポートデータに含まれていないのでこの処理は必要
+    // importLevel:actor:: インポートデータに含まれていないのでこの処理は必要
+    // importLevel:part :: インポートデータに含まれていないのでこの処理は必要
+    if (importLevel !== "full") {
+      const resourceMasterCCName = `${roomCollectionPrefix}-DATA-resource-master-list`;
+      const resourceMasterCC = driver.collection<StoreData<ResourceMasterStore>>(resourceMasterCCName);
+      const resourceMasterDocList = (await resourceMasterCC.where("data.isAutoAddActor", "==", true).get()).docs;
 
-    // リソースインスタンスを追加
-    await addDirect<ResourceStore>(driver, socket, {
-      collection: `${roomCollectionPrefix}-DATA-resource-list`,
-      list: resourceMasterDocList.map(rmDoc => ({
-        ownerType: "actor-list",
-        owner: actorKey,
-        order: -1,
-        data: {
-          resourceMasterKey: rmDoc.data!.key,
-          type: rmDoc.data!.data!.type,
-          value: rmDoc.data!.data!.defaultValue
-        }
-      }))
-    }, false);
+      // リソースインスタンスを追加
+      await addDirect<ResourceStore>(driver, socket, {
+        collection: `${roomCollectionPrefix}-DATA-resource-list`,
+        list: resourceMasterDocList.map(rmDoc => ({
+          ownerType: "actor-list",
+          owner: actorKey,
+          order: -1,
+          data: {
+            resourceMasterKey: rmDoc.data!.key,
+            type: rmDoc.data!.data!.type,
+            value: rmDoc.data!.data!.defaultValue
+          }
+        }))
+      }, false);
+    }
   }
 
   return doc;
