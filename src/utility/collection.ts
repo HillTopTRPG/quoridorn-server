@@ -43,7 +43,7 @@ export async function resistCollectionName(driver: Driver, collectionName: strin
  */
 export async function getRoomInfo(
   driver: Driver,
-  roomNo: number,
+  roomNo?: number,
   option: GetDataOption<RoomStore> = {}
 ): Promise<DocumentChange<StoreData<RoomStore>> | null> {
   const doc = await findSingle<StoreData<RoomStore>>(
@@ -171,6 +171,8 @@ export async function getSocketDocSnap(
   driver: Driver,
   socketId: string
 ): Promise<DocumentSnapshot<SocketStore>> {
+  console.log("getSocketDocSnap");
+  console.error(socketId);
   const socketDocSnap = await findSingle<SocketStore>(
     driver,
     SYSTEM_COLLECTION.SOCKET_LIST,

@@ -16,6 +16,7 @@ const uuid = require("uuid");
 export function setEvent<T, U>(driver: Driver, socket: any, eventName: string, func: (driver: Driver, arg: T, permission?: Permission) => Promise<U>) {
   const resultEvent = `result-${eventName}`;
   socket.on(eventName, async (arg: T) => {
+    console.log(`socket.on ${eventName}`);
     const logArg = arg ? JSON.parse(JSON.stringify(arg)) : null;
     if (eventName === "upload-media") {
       logArg.uploadMediaInfoList.forEach((info: UploadMediaInfo) => {
@@ -69,6 +70,7 @@ export function sendError(
  * @param path
  * @param authenticationType
  * @param func
+ * @param requestHandlers
  */
 export function setWebIfEvent(
   webApp: any,
@@ -143,7 +145,11 @@ async function requireToken(
 }
 
 /* トークンが正しいか検証する。 */
-async function verifyToken(driver: Driver, authenticationType: "empty" | "server" | "room" | "user", token: string): Promise<TokenStore | string> {
+async function verifyToken(
+  driver: Driver,
+  authenticationType: "empty" | "server" | "room" | "user",
+  token: string
+): Promise<TokenStore | string> {
   const c = driver.collection<TokenStore>(SYSTEM_COLLECTION.TOKEN_LIST);
   const tokenDoc = (await c.where("token", "==", token).get()).docs[0];
 

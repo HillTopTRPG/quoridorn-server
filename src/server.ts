@@ -4,8 +4,7 @@ import Driver from "nekostore/lib/Driver";
 import Store from "nekostore/src/store/Store";
 import MongoStore from "nekostore/lib/store/MongoStore";
 import MemoryStore from "nekostore/lib/store/MemoryStore";
-import fs from "fs";
-import YAML from "yaml";
+import * as YAML from "yaml";
 import {Interoperability, ServerSetting, StorageSetting} from "./@types/server";
 import * as path from "path";
 import resistGetVersionEvent from "./event/get-version";
@@ -30,6 +29,9 @@ import resistAddRoomPresetDataEvent from "./event/add-room-preset-data";
 import resistDeleteDataPackageEvent from "./event/delete-data-package";
 import resistImportDataEvent from "./event/import-data";
 import resistGetApi from "./rest-api/v1/get";
+import resistMediaPost from "./rest-api/v1/media-post";
+import resistDownloadRoom from "./rest-api/v1/download-room";
+import resistUploadRoom from "./rest-api/v1/upload-room";
 import resistRoomChatPostApi from "./rest-api/v1/room-chat-post";
 import resistRoomDeleteApi from "./rest-api/v1/room-delete";
 import resistRoomGetApi from "./rest-api/v1/room-get";
@@ -40,7 +42,7 @@ import resistRoomUsersGetApi from "./rest-api/v1/room-users-get";
 import resistRoomsGetApi from "./rest-api/v1/rooms-get";
 import resistTokenGetApi from "./rest-api/v1/token-get";
 import {HashAlgorithmType} from "./utility/password";
-import { Db } from "mongodb";
+import {Db, MongoClient} from "mongodb";
 import {Message} from "./@types/socket";
 import {ApplicationError} from "./error/ApplicationError";
 import {SystemError} from "./error/SystemError";
@@ -50,27 +52,10 @@ import {RoomStore, SocketStore, TokenStore, TouchierStore} from "./@types/data";
 import * as Minio from "minio";
 import {releaseTouch} from "./utility/touch";
 import {findList, findSingle, getSocketDocSnap} from "./utility/collection";
-import {Request, Response, NextFunction} from "express";
-const co = require("co");
 const cors = require('cors');
 const express = require('express');
-const webApp = express();
 const bodyParser = require('body-parser');
-const http = require("http");
-
-webApp.use(bodyParser.json({
-  inflate: true,
-  limit: '100kb',
-  type: 'application/json',
-  strict: true
-}));
-webApp.use(cors());
-webApp.use((_: Request, res: Response, next: NextFunction) => {
-  res.header("Access-Control-Allow-Origin", "*");
-  res.header("Access-Control-Allow-Headers", "Authorization");
-  next();
-});
-const server = http.createServer(webApp);
+import * as fs from "fs";
 
 export const PERMISSION_DEFAULT: Permission = {
   view: { type: "none", list: [] },
@@ -93,6 +78,9 @@ export const targetClient: TargetVersion = {
   to: null
 };
 
+/***********************************************************************************************************************
+ * サーバに設定されている利用規約やサーバ名などの情報をまとめて取得する
+ */
 export function getMessage(): Message {
   const termsOfUse: string = fs.readFileSync(path.resolve(__dirname, "../message/termsOfUse.txt"), "utf8");
   const message: Message = YAML.parse(fs.readFileSync(path.resolve(__dirname, "../message/message.yaml"), "utf8"));
@@ -100,6 +88,9 @@ export function getMessage(): Message {
   return message;
 }
 
+/***********************************************************************************************************************
+ * ハッシュアルゴリズムの決定
+ */
 require('dotenv').config();
 if (!process.env.npm_package_version) {
   throw new SystemError(`The version is not set in package.json.`);
@@ -115,6 +106,9 @@ if (hashAlgorithmStr === "argon2") {
 }
 export const hashAlgorithm: HashAlgorithmType = hashAlgorithmStr;
 
+/***********************************************************************************************************************
+ * s3設定
+ */
 const storageSetting: StorageSetting = YAML.parse(fs.readFileSync(path.resolve(__dirname, "../config/storage.yaml"), "utf8"));
 const clientOption = {
   endPoint: storageSetting.endPoint,
@@ -126,6 +120,9 @@ const clientOption = {
 export const bucket = storageSetting.bucket;
 export const accessUrl = storageSetting.accessUrl;
 
+/***********************************************************************************************************************
+ * s3サービスへの接続および疎通確認
+ */
 let _s3Client: Minio.Client | null = null;
 try {
   _s3Client = new Minio.Client(clientOption);
@@ -139,7 +136,6 @@ try {
     console.error(err);
     return;
   });
-
 } catch (err) {
   console.error("S3 Storage connect failure. ");
   console.error("Please review your settings. (src: config/storage.yaml)");
@@ -149,7 +145,7 @@ try {
 }
 export const s3Client = _s3Client;
 
-/**
+/***********************************************************************************************************************
  * データストアにおいてサーバプログラムが直接参照するコレクションテーブルの名前
  */
 export namespace SYSTEM_COLLECTION {
@@ -163,23 +159,18 @@ export namespace SYSTEM_COLLECTION {
   export const TOKEN_LIST = `token-list-${serverSetting.secretCollectionSuffix}`;
 }
 
+/***********************************************************************************************************************
+ * DBをセットアップする
+ */
 async function getStore(setting: ServerSetting): Promise<{store: Store, db?: Db}> {
-  return new Promise((resolve, reject) => {
-    if (setting.storeType === "mongodb") {
-      co(function* () {
-        const MongoClient = require("mongodb").MongoClient;
-        const client = yield MongoClient.connect(setting.mongodbConnectionStrings, { useNewUrlParser: true, useUnifiedTopology: true });
-        const dbNameSuffix = interoperability[0].server.replace(/\./g, "-");
-        const db = client.db(`quoridorn-${dbNameSuffix}`);
-        resolve({ store: new MongoStore({ db }), db });
-      }).catch((err: any) => {
-        console.error(err.stack);
-        reject(err);
-      });
-    } else {
-      resolve({ store: new MemoryStore() });
-    }
-  });
+  if (setting.storeType === "mongodb") {
+    const client = await MongoClient.connect(setting.mongodbConnectionStrings, { useNewUrlParser: true, useUnifiedTopology: true });
+    const dbNameSuffix = interoperability[0].server.replace(/\./g, "-");
+    const db = client.db(`quoridorn-${dbNameSuffix}`);
+    return { store: new MongoStore({ db }), db };
+  } else {
+    return { store: new MemoryStore() };
+  }
 }
 
 async function addSocketList(driver: Driver, socketId: string): Promise<void> {
@@ -285,9 +276,55 @@ async function main(): Promise<void> {
     // DBを誰も接続してない状態にする
     await initDataBase(driver);
 
+    const expressApp = express();
+    expressApp.use(bodyParser.json({
+      inflate: true,
+      limit: '100kb',
+      type: 'application/json',
+      strict: true
+    }));
+    expressApp.use(cors({
+      origin: true,
+      credentials: true,
+      methods: ["GET", "POST", "DELETE"],
+      allowedHeaders: "authorization",
+      exposedHeaders: ["Content-Disposition", "Content-Type"]
+    }));
+    // expressApp.use((_: Request, res: Response, next: NextFunction) => {
+    //   res.header("Access-Control-Allow-Origin", "*");
+    //   res.header("Access-Control-Allow-Headers", "Authorization");
+    //   next();
+    // });
+
+    // const webApp = expressApp.listen(serverSetting.port);
+
+    const http = require("http");
+    const httpServer = http.createServer(expressApp);
+    httpServer.listen(serverSetting.port);
+    // const io = new Server();
+    // io.listen(httpServer);
+
+    const io = require("socket.io")(httpServer, {
+      // transports: ["websocket", "polling"],
+      cors: {
+        origin: "*",
+        // methods: ["GET", "POST"],
+        // allowedHeaders: ["my-custom-header"],
+        credentials: true
+      }
+    }
+    );
+    // io.listen();
+
+    console.log(serverSetting.port);
+    // httpServer.listen(serverSetting.port);
+
     // REST APIの各リクエストに対する処理の登録
     [
       resistGetApi,
+      resistMediaPost,
+      resistDownloadRoom,
+      resistUploadRoom,
       resistRoomChatPostApi,
       resistRoomDeleteApi,
       resistRoomGetApi,
@@ -297,18 +334,15 @@ async function main(): Promise<void> {
       resistRoomUsersGetApi,
       resistRoomsGetApi,
       resistTokenGetApi
-    ].forEach((r: WebIfResister) => r(webApp, driver, db));
+    ].forEach((r: WebIfResister) => r(expressApp, driver, db));
 
-    const io = require("socket.io").listen(server);
-    server.listen(serverSetting.port);
-
-    // 🐧ハート💖ビート🕺
-    io.set("heartbeat interval", 5000);
-    io.set("heartbeat timeout", 15000);
+    // server.listen(serverSetting.port);
 
     console.log(`Quoridorn Server is Ready. (version: ${process.env.npm_package_version})`);
 
     io.on("connection", async (socket: any) => {
+      console.log("########");
+
       accessLog(socket.id, "CONNECTED");
       
       // 接続情報に追加
@@ -429,7 +463,7 @@ async function initDataBase(driver: Driver): Promise<void> {
     .filter(doc => doc && doc.exists())
     .map(doc => doc.data!.socketId)
     .filter((socketId, i, self) => self.indexOf(socketId) === i)
-    .map(socketId => new Promise(async (resolve, reject) => {
+    .map(socketId => new Promise<void>(async (resolve, reject) => {
       try {
         await releaseTouch(driver, socketId);
         resolve();

@@ -29,7 +29,7 @@ async function deleteRoom(driver: Driver, socket: any, arg: RequestType, db?: Db
 
   // タッチ解除
   await releaseTouchRoom(driver, socketId, {
-    roomNo: arg.roomNo
+    roomNo: arg.roomNo!
   }, true);
 
   // 部屋一覧の更新
@@ -48,7 +48,7 @@ async function deleteRoom(driver: Driver, socket: any, arg: RequestType, db?: Db
 
   // 部屋パスワードチェック
   try {
-    if (!await verify(data.roomPassword, arg.roomPassword, hashAlgorithm)) {
+    if (!await verify(data.roomPassword!, arg.roomPassword, hashAlgorithm)) {
       // パスワードチェックで引っかかった
       return false;
     }

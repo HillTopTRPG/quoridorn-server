@@ -1,7 +1,7 @@
 import {CreateRoomRequest} from "../@types/socket";
 import {PERMISSION_DEFAULT, hashAlgorithm, Resister, serverSetting} from "../server";
 import {hash} from "../utility/password";
-import uuid from "uuid";
+import * as uuid from "uuid";
 import Driver from "nekostore/lib/Driver";
 import DocumentSnapshot from "nekostore/lib/DocumentSnapshot";
 import {ApplicationError} from "../error/ApplicationError";
@@ -26,7 +26,7 @@ async function createRoom(driver: Driver, exclusionOwner: string, arg: RequestTy
 
   // タッチ解除
   await releaseTouchRoom(driver, exclusionOwner, {
-    roomNo: arg.roomNo
+    roomNo: arg.roomNo!
   }, true);
 
   // 部屋一覧の更新

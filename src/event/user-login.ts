@@ -42,7 +42,7 @@ async function userLogin(driver: Driver, socket: any, arg: RequestType): Promise
     throw new ApplicationError(`No such room.`, { roomKey });
 
   // ユーザコレクションの取得とユーザ情報更新
-  const roomCollectionPrefix = roomDoc.data.data.roomCollectionPrefix;
+  const roomCollectionPrefix = roomDoc.data.data.roomCollectionPrefix!;
   const userDoc = await findSingle<StoreData<UserStore>>(
     driver,
     `${roomCollectionPrefix}-DATA-user-list`,

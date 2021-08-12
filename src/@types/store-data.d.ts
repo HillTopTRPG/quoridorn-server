@@ -196,6 +196,7 @@ type LikeStore = {
 type MediaStore = {
   name: string;
   rawPath: string;
+  hash: string;
   mediaFileId: string;
   tag: string;
   url: string;

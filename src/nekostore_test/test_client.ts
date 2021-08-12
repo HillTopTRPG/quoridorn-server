@@ -3,9 +3,9 @@ import SocketDriver from "nekostore/lib/driver/socket";
 import * as Socket from "socket.io-client";
 import QuerySnapshot from "nekostore/lib/QuerySnapshot";
 
-// const host = "http://127.0.0.1";
-const host = "wss://quori-dev.onlinesession.app";
-// const port = 8000;
+const host = "http://localhost";
+// const host = "wss://quori-dev.onlinesession.app";
+const port = 8000;
 
 interface Data {
   foo: string;

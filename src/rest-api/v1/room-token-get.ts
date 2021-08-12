@@ -33,7 +33,7 @@ async function roomTokenGet(
 
   if (!isAdmin) {
     const roomPassword = req.headers.authorization!;
-    const hashPassword = roomInfo.data!.data!.roomPassword;
+    const hashPassword = roomInfo.data!.data!.roomPassword!;
 
     // 部屋パスワードチェック
     try {
@@ -52,7 +52,7 @@ async function roomTokenGet(
       driver,
       "room",
       roomNo,
-      roomInfo.data!.data!.roomCollectionPrefix,
+      roomInfo.data!.data!.roomCollectionPrefix!,
       roomInfo.data!.data!.storageId,
       null
     )

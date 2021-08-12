@@ -79,7 +79,7 @@ async function roomUserTokenGet(
       driver,
       "user",
       roomInfo.data!.order,
-      roomInfo.data!.data!.roomCollectionPrefix,
+      roomInfo.data!.data!.roomCollectionPrefix!,
       roomInfo.data!.data!.storageId,
       userKey
     )

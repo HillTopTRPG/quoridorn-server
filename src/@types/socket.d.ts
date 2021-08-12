@@ -11,7 +11,7 @@ type BaseRoomInfo = {
 
 type RoomLoginInfo = {
   roomKey: string;
-  roomNo: number;
+  roomNo?: number;
   roomPassword: string;
 };
 
@@ -62,7 +62,7 @@ type RoomViewResponse = {
 };
 
 type LoginResponse = ClientRoomInfo & {
-  roomCollectionPrefix: string;
+  roomCollectionPrefix?: string;
   storageId: string;
 };
 
@@ -107,8 +107,8 @@ type UploadMediaInfo = MediaStore & { key?: string } & (
   | { dataLocation: "direct" }
   | {
   dataLocation: "server";
-  blob: Blob;
-  arrayBuffer: string;
+  blob?: Blob;
+  arrayBuffer?: string;
 }
   );
 

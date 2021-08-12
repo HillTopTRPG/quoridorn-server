@@ -4,10 +4,11 @@ import {ApplicationError} from "../error/ApplicationError";
 import {PERMISSION_DEFAULT} from "../server";
 import {findList, findSingle, getData, getMaxOrder, getOwner, splitCollectionName} from "./collection";
 import DocumentChange from "nekostore/src/DocumentChange";
-import uuid from "uuid";
+import * as uuid from "uuid";
 import {procAsyncSplit} from "./async";
 import {deleteDataPackage} from "../event/delete-data-package";
 const matchAll = require("match-all");
+const crypto = require("crypto");
 
 export async function touchCheck<T>(
   driver: Driver,
@@ -69,6 +70,18 @@ async function getAllReference(
   return refList;
 }
 
+function getTargetPropertyValueList(data: any, property: string): string[] {
+  const regExp = new RegExp(`"${property}": ?"([^"]+)"`, "g");
+  return matchAll(JSON.stringify(data), regExp)
+    .toArray()
+    .filter(
+      (mediaKey: string, index: number, list: string[]) =>
+        list.findIndex(
+          l => l === mediaKey
+        ) === index
+    );
+}
+
 async function updateMediaKeyRefList<T>(
   driver: Driver,
   roomCollectionPrefix: string,
@@ -78,17 +91,9 @@ async function updateMediaKeyRefList<T>(
   operation: "add" | "delete" | "update",
   originalData?: T
 ): Promise<void> {
-  const regExp = new RegExp(`"mediaKey": ?"([^"]+)"`, "g");
   const mediaListCollectionName = `${roomCollectionPrefix}-DATA-media-list`;
 
-  const mediaKeyList: string[] = matchAll(JSON.stringify(data), regExp)
-    .toArray()
-    .filter(
-      (mediaKey: string, index: number, list: string[]) =>
-        list.findIndex(
-          l => l === mediaKey
-        ) === index
-    );
+  const mediaKeyList = getTargetPropertyValueList(data, "mediaKey");
 
   const simple = async (operation: "add" | "delete", mediaKeyList: string[]): Promise<void> => {
     if (!mediaKeyList.length) return;
@@ -108,14 +113,7 @@ async function updateMediaKeyRefList<T>(
     return await simple(operation, mediaKeyList);
   }
 
-  const originalMediaKeyList: string[] = matchAll(JSON.stringify(originalData), regExp)
-    .toArray()
-    .filter(
-      (mediaKey: string, index: number, list: string[]) =>
-        list.findIndex(
-          l => l === mediaKey
-        ) === index
-    );
+  const originalMediaKeyList = getTargetPropertyValueList(originalData, "mediaKey");
 
   await simple("delete", originalMediaKeyList.filter(
     originalKey => !mediaKeyList.some(key => key === originalKey)
@@ -140,6 +138,12 @@ async function deleteRefList(doc: DocumentSnapshot<StoreData<any>> | null, type:
     doc.data.refList.splice(index, 1);
     await doc.ref.update({ refList: doc.data.refList });
   }
+}
+
+export async function getAllCollection(driver: Driver, roomCollectionPrefix: string): Promise<string[]> {
+  const collectionNameCollectionName = `${roomCollectionPrefix}-DATA-collection-list`;
+  return (await findList<{ name: string }>(driver, collectionNameCollectionName))!
+    .map(doc => doc.data!.name);
 }
 
 export async function addSimple<T>(
@@ -411,4 +415,12 @@ export class RelationalDataDeleter {
       }))
       .reduce((prev, curr) => prev.then(curr), Promise.resolve());
   }
+}
+
+export function getFileHash(arrayBuffer: ArrayBuffer | string) {
+  return crypto.createHash('sha512').update(arrayBuffer).digest('hex');
+}
+
+export function equals(data1: any, data2: any) {
+  return JSON.stringify(data1) === JSON.stringify(data2);
 }

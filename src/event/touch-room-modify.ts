@@ -19,6 +19,7 @@ type ResponseType = void;
  * @param arg 部屋番号
  */
 export async function touchRoomModify(driver: Driver, socketId: string, arg: RequestType): Promise<ResponseType> {
+  console.log("touchRoomModify");
   const doc = await getRoomInfo(driver, arg.roomNo);
 
   if (!await checkViewer(driver, socketId))

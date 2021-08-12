@@ -26,7 +26,7 @@ async function roomLogin(driver: Driver, exclusionOwner: string, arg: RequestTyp
 
   // タッチ解除
   await releaseTouchRoom(driver, exclusionOwner, {
-    roomNo: arg.roomNo
+    roomNo: arg.roomNo!
   }, true);
 
   // 部屋一覧の更新
@@ -47,7 +47,7 @@ async function roomLogin(driver: Driver, exclusionOwner: string, arg: RequestTyp
   // 部屋パスワードチェック
   let verifyResult;
   try {
-    verifyResult = await verify(data.roomPassword, arg.roomPassword, hashAlgorithm);
+    verifyResult = await verify(data.roomPassword!, arg.roomPassword, hashAlgorithm);
   } catch (err) {
     throw new SystemError(`Verify process fatal error. room-no=${arg.roomNo}`);
   }
@@ -66,7 +66,7 @@ async function roomLogin(driver: Driver, exclusionOwner: string, arg: RequestTyp
     throw new ApplicationError(`Failure update doc.`, updateInfo);
   }
 
-  return data.roomCollectionPrefix;
+  return data.roomCollectionPrefix!;
 }
 
 const resist: Resister = (driver: Driver, socket: any): void => {

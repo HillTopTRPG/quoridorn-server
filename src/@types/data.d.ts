@@ -1,7 +1,7 @@
 import {LoginResponse} from "./socket";
 
 export type RoomStore = LoginResponse & {
-  roomPassword: string;
+  roomPassword?: string;
 };
 
 export type TouchierStore = {

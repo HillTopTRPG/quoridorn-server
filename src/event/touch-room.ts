@@ -20,7 +20,7 @@ type ResponseType = void;
  * @param arg 部屋番号
  */
 async function touchRoom(driver: Driver, socketId: string, arg: RequestType): Promise<ResponseType> {
-  const c = await driver.collection<StoreData<RoomStore>>(SYSTEM_COLLECTION.ROOM_LIST);
+  const c = driver.collection<StoreData<RoomStore>>(SYSTEM_COLLECTION.ROOM_LIST);
 
   const doc = await getRoomInfo(driver, arg.roomNo, { collectionReference: c });
 
@@ -35,7 +35,7 @@ async function touchRoom(driver: Driver, socketId: string, arg: RequestType): Pr
     key,
     ownerType: null,
     owner: null,
-    order: arg.roomNo,
+    order: arg.roomNo!,
     exclusionOwner: socketId,
     lastExclusionOwner: socketId,
     status: "initial-touched",
