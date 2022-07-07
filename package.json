@@ -42,7 +42,7 @@
     "log4js": "^6.1.0",
     "match-all": "^1.2.6",
     "minio": "^7.0.15",
-    "moment": "^2.24.0",
+    "moment": "^2.29.4",
     "mongodb": "^3.3.2",
     "nekostore": "^0.6.0",
     "node-gyp": "^7.1.0",
